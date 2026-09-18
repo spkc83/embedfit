@@ -1,0 +1,27 @@
+{
+  "project": "EmbedFit",
+  "status": "implementation bootstrap",
+  "recommended_first_prompt": "prompts/START_IMPLEMENTATION.md",
+  "authoritative_docs": [
+    "AGENTS.md",
+    "CONTEXT.md",
+    "SPEC.md",
+    "ARCHITECTURE.md",
+    "IMPLEMENTATION_PLAN.md",
+    "ACCEPTANCE_CRITERIA.md",
+    "TEST_STRATEGY.md",
+    "SECURITY_PRIVACY.md"
+  ],
+  "adrs": [
+    "docs/adrs/0001-project-name.md",
+    "docs/adrs/0002-two-stage-training.md",
+    "docs/adrs/0003-backbone-provider-abstraction.md",
+    "docs/adrs/0004-offline-core-tests.md",
+    "docs/adrs/0005-financial-domain-boundary.md"
+  ],
+  "agent_entrypoints": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "CODEX.md"
+  ]
+}
