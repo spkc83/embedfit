@@ -1,7 +1,7 @@
 {
   "project": "EmbedFit",
-  "status": "implementation bootstrap",
-  "recommended_first_prompt": "prompts/START_IMPLEMENTATION.md",
+  "status": "in development; see TASKS.md for milestone state",
+  "recommended_first_prompt": "prompts/CONTINUE.md",
   "authoritative_docs": [
     "AGENTS.md",
     "CONTEXT.md",
@@ -17,7 +17,8 @@
     "docs/adrs/0002-two-stage-training.md",
     "docs/adrs/0003-backbone-provider-abstraction.md",
     "docs/adrs/0004-offline-core-tests.md",
-    "docs/adrs/0005-financial-domain-boundary.md"
+    "docs/adrs/0005-financial-domain-boundary.md",
+    "docs/adrs/0006-core-dependencies-and-testing-utilities.md"
   ],
   "agent_entrypoints": [
     "AGENTS.md",
