@@ -11,6 +11,7 @@ from embedfit.data.dataset import ImageDataset
 from embedfit.evaluation.calibration import brier_score
 from embedfit.evaluation.classification import classification_metrics, pr_auc, roc_auc
 from embedfit.exceptions import ConfigurationError, UndefinedMetricError
+from embedfit.heads.linear import LinearHead
 from embedfit.heads.registry import create_head
 from embedfit.model import EmbedFitModel
 from embedfit.representation import train_representation, validate_representation_setup
@@ -21,7 +22,7 @@ from embedfit.utils.seed import set_seed
 
 logger = logging.getLogger(__name__)
 
-_IMPLEMENTED_MODES = ("frozen", "supcon", "pair")
+_IMPLEMENTED_MODES = ("frozen", "supcon", "pair", "end_to_end")
 
 
 @dataclass(frozen=True)
@@ -115,6 +116,14 @@ class Trainer:
                 "would replace. Leave args.head at its default to keep the instance, or create "
                 "the model with a head name."
             )
+        if args.training_mode == "end_to_end" and (
+            model.head_name is None or args.head not in (default_head, "linear")
+        ):
+            raise ConfigurationError(
+                "training_mode='end_to_end' trains its own linear classifier, which becomes the "
+                "model's head; create the model with a head name and leave args.head at its "
+                "default or 'linear'."
+            )
         if model.label_mapping is None:
             raise ConfigurationError(
                 "Trainer needs the model's class labels; pass labels=[...] when creating the model."
@@ -196,15 +205,22 @@ class Trainer:
             self.model.freeze_backbone()
         self.model.eval()
 
-        if self.model.head_name is not None and self.model.head_name != self.args.head:
+        if result is not None and result.classifier is not None:
+            # ADR 0002: end-to-end is a baseline in which the classifier is trained with the
+            # backbone, so there is no separate head-fitting phase.
+            self.model.head = LinearHead.from_module(result.classifier, seed=self.args.seed)
+            self.model.head_name = "linear"
+            logger.info("Phase 2/2 (head): skipped, the linear classifier was trained in phase 1")
+        elif self.model.head_name is not None and self.model.head_name != self.args.head:
             self.model.head = create_head(self.args.head)
             self.model.head_name = self.args.head
-        logger.info("Phase 2/2 (head): fitting %s", type(self.model.head).__name__)
-        self.model.fit_head(
-            self.train_dataset.images,
-            self.train_dataset.labels,
-            batch_size=self.args.eval_batch_size,
-        )
+        if result is None or result.classifier is None:
+            logger.info("Phase 2/2 (head): fitting %s", type(self.model.head).__name__)
+            self.model.fit_head(
+                self.train_dataset.images,
+                self.train_dataset.labels,
+                batch_size=self.args.eval_batch_size,
+            )
         self._last_output = TrainOutput(
             training_mode=self.args.training_mode,
             num_train_samples=len(self.train_dataset),

@@ -128,7 +128,7 @@ def test_fit_head_input_validation(datasets):
 
 def test_trainer_rejects_bad_configuration_before_training(datasets):
     train, _ = datasets
-    with pytest.raises(ConfigurationError, match=r"'triplet' is not available.*'pair'"):
+    with pytest.raises(ConfigurationError, match=r"'triplet' is not available.*'end_to_end'"):
         Trainer(make_model(), TrainingArguments(training_mode="triplet"), train)
     frozen = TrainingArguments(training_mode="frozen")
     with pytest.raises(ConfigurationError, match="class labels"):
