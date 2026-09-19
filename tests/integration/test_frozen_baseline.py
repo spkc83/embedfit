@@ -246,3 +246,62 @@ def test_logs_name_phases_and_counts_but_no_sample_content(caplog):
     assert f"{len(train)} samples" in caplog.text
     for forbidden in ("000123456789", "account_number", "4321", "sid-", "173", "vertical"):
         assert forbidden not in caplog.text
+
+
+def test_evaluate_matches_metrics_computed_from_predictions(datasets):
+    from embedfit.evaluation import brier_score, classification_metrics, pr_auc, roc_auc
+
+    train, test = datasets
+    model = make_model(positive_label="horizontal")
+    trainer = Trainer(model, TrainingArguments(training_mode="frozen"), train, eval_dataset=test)
+    trainer.train()
+    results = trainer.evaluate()
+
+    output = trainer.predict()
+    scores = output.probabilities[:, LABELS.index("horizontal")]
+    expected = classification_metrics(
+        test.labels, output.predictions, labels=LABELS, positive_label="horizontal"
+    )
+    for name, metric in (("roc_auc", roc_auc), ("pr_auc", pr_auc), ("brier_score", brier_score)):
+        expected[name] = metric(test.labels, scores, positive_label="horizontal")
+    assert results == pytest.approx(expected)
+    assert results["roc_auc"] > 0.5 and 0 <= results["brier_score"] <= 1
+    assert trainer.evaluate(train)["accuracy"] >= results["accuracy"]  # Explicit dataset wins.
+
+
+def test_evaluate_without_positive_label_reports_only_label_metrics(datasets):
+    train, test = datasets
+    trainer = Trainer(make_model(), TrainingArguments(training_mode="frozen"), train)
+    trainer.train()
+    results = trainer.evaluate(test)
+    assert set(results) == {
+        "accuracy",
+        "balanced_accuracy",
+        "macro_precision",
+        "macro_recall",
+        "macro_f1",
+        "weighted_f1",
+    }
+
+
+def test_evaluate_reports_undefined_metrics_as_nan_with_a_warning(datasets, caplog):
+    train, test = datasets
+    model = make_model(positive_label="horizontal")
+    trainer = Trainer(model, TrainingArguments(training_mode="frozen"), train)
+    trainer.train()
+    no_positives = ImageDataset([sample for sample in test if sample.label != "horizontal"])
+    with caplog.at_level(logging.WARNING, logger="embedfit"):
+        results = trainer.evaluate(no_positives)
+    assert np.isnan(results["roc_auc"]) and np.isnan(results["pr_auc"])
+    assert not np.isnan(results["brier_score"]) and not np.isnan(results["accuracy"])
+    assert "reported as NaN" in caplog.text
+
+
+def test_evaluate_needs_data(datasets):
+    train, _ = datasets
+    trainer = Trainer(make_model(), TrainingArguments(training_mode="frozen"), train)
+    trainer.train()
+    with pytest.raises(ConfigurationError, match="needs a dataset"):
+        trainer.evaluate()
+    with pytest.raises(ConfigurationError, match="empty dataset"):
+        trainer.evaluate(ImageDataset([]))
