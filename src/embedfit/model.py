@@ -12,43 +12,30 @@ from torch import nn
 from embedfit.backbones.base import ImageBackbone
 from embedfit.backbones.registry import create_backbone
 from embedfit.data.image import ImageLike
-from embedfit.exceptions import ConfigurationError, ImageInputError
+from embedfit.data.labels import LabelMapping
+from embedfit.exceptions import ConfigurationError, HeadNotFittedError, ImageInputError
+from embedfit.heads.base import ClassificationHead, validate_features
+from embedfit.heads.registry import create_head
 from embedfit.utils.device import resolve_device
 
 logger = logging.getLogger(__name__)
 
 
-def _validate_labels(
-    labels: Sequence[Hashable] | np.ndarray | None, positive_label: Hashable | None
-) -> tuple[Hashable, ...] | None:
+def _build_label_mapping(
+    labels: Sequence[Hashable] | np.ndarray | LabelMapping | None, positive_label: Hashable | None
+) -> LabelMapping | None:
     if labels is None:
         if positive_label is not None:
             raise ConfigurationError("positive_label requires labels to be given.")
         return None
-    if isinstance(labels, np.ndarray) and labels.ndim == 1:
-        labels = labels.tolist()
-    if isinstance(labels, str) or not isinstance(labels, Sequence):
-        raise ConfigurationError(
-            "labels must be a sequence of label values, e.g. a list or 1-D numpy array."
-        )
-    if len(labels) < 2:
-        raise ConfigurationError(f"labels must contain at least 2 classes, got {len(labels)}.")
-    try:
-        unique_count = len(set(labels))
-    except TypeError as exc:
-        raise ConfigurationError("labels must be hashable values such as str or int.") from exc
-    if unique_count != len(labels):
-        raise ConfigurationError("labels must be unique.")
-    # Compare types too: ``False == 0`` must not make False a member of [0, 1].
-    if positive_label is not None and not any(
-        type(label) is type(positive_label) and label == positive_label for label in labels
-    ):
+    mapping = labels if isinstance(labels, LabelMapping) else LabelMapping(labels)
+    if positive_label is not None and positive_label not in mapping:
         raise ConfigurationError("positive_label must be one of labels, with the same type.")
-    return tuple(labels)
+    return mapping
 
 
 class EmbedFitModel(nn.Module):
-    """An image-embedding model: a backbone and an embedding-normalisation policy.
+    """An image-embedding model: a backbone, an embedding policy, and a lightweight classifier.
 
     Args:
         backbone: The encoder. It owns all preprocessing.
@@ -57,20 +44,25 @@ class EmbedFitModel(nn.Module):
         positive_label: For binary tasks, the label that risk scores refer to. It is never
             inferred from label order.
         normalize_embeddings: Whether ``encode`` and ``forward`` L2-normalise embeddings by
-            default.
+            default. The head is fitted and applied on embeddings produced under this policy.
+        head: Classifier fitted by ``fit_head``: a registered head name or a configured
+            ``ClassificationHead`` instance, e.g.
+            ``LogisticRegressionHead(class_weight="balanced")``. ``head_name`` records the name,
+            or ``None`` for an instance.
 
     Raises:
         ConfigurationError: If ``backbone`` is not an ``ImageBackbone``, labels are fewer than
-            two or not unique, or ``positive_label`` is not among ``labels``.
+            two or not unique, ``positive_label`` is not among ``labels``, or ``head`` is unknown.
     """
 
     def __init__(
         self,
         backbone: ImageBackbone,
         *,
-        labels: Sequence[Hashable] | np.ndarray | None = None,
+        labels: Sequence[Hashable] | np.ndarray | LabelMapping | None = None,
         positive_label: Hashable | None = None,
         normalize_embeddings: bool = True,
+        head: str | ClassificationHead = "logistic_regression",
     ) -> None:
         super().__init__()
         if not isinstance(backbone, ImageBackbone):
@@ -78,18 +70,25 @@ class EmbedFitModel(nn.Module):
                 f"backbone must be an ImageBackbone, got {type(backbone).__name__}."
             )
         self.backbone = backbone
-        self.labels = _validate_labels(labels, positive_label)
+        if not isinstance(head, str | ClassificationHead):
+            raise ConfigurationError(
+                f"head must be a head name or a ClassificationHead, got {type(head).__name__}."
+            )
+        self.label_mapping = _build_label_mapping(labels, positive_label)
         self.positive_label = positive_label
         self.normalize_embeddings = normalize_embeddings
+        self.head: ClassificationHead = create_head(head) if isinstance(head, str) else head
+        self.head_name: str | None = head if isinstance(head, str) else None
 
     @classmethod
     def from_pretrained(
         cls,
         identifier: str,
         *,
-        labels: Sequence[Hashable] | np.ndarray | None = None,
+        labels: Sequence[Hashable] | np.ndarray | LabelMapping | None = None,
         positive_label: Hashable | None = None,
         normalize_embeddings: bool = True,
+        head: str | ClassificationHead = "logistic_regression",
         device: str | torch.device | None = None,
         **backbone_kwargs: Any,
     ) -> Self:
@@ -100,6 +99,7 @@ class EmbedFitModel(nn.Module):
             labels: See the class documentation.
             positive_label: See the class documentation.
             normalize_embeddings: See the class documentation.
+            head: See the class documentation.
             device: Where to place the model. ``None`` leaves it on CPU; ``"auto"`` selects
                 CUDA → MPS → CPU; an explicit device that is unavailable raises.
             **backbone_kwargs: Forwarded to the provider adapter, e.g. ``weights=None`` or
@@ -112,20 +112,27 @@ class EmbedFitModel(nn.Module):
             BackboneProviderError: If the identifier is malformed or its provider is unknown.
             ConfigurationError: If labels or the device are invalid.
         """
-        validated = _validate_labels(labels, positive_label)  # Fail before building weights.
+        # Validate cheap arguments before building weights.
+        mapping = _build_label_mapping(labels, positive_label)
         target = resolve_device(device) if device is not None else None
         backbone = create_backbone(identifier, **backbone_kwargs)
         model = cls(
             backbone,
-            labels=validated,
+            labels=mapping,
             positive_label=positive_label,
             normalize_embeddings=normalize_embeddings,
+            head=head,
         )
         if target is not None:
             model.to(target)
         model.eval()
         logger.info("Built %s: embedding dimension %d", backbone.identifier, backbone.embedding_dim)
         return model
+
+    @property
+    def labels(self) -> tuple[Hashable, ...] | None:
+        """The class labels in class-index order, or ``None`` if none were given."""
+        return self.label_mapping.labels if self.label_mapping is not None else None
 
     @property
     def embedding_dim(self) -> int:
@@ -226,3 +233,134 @@ class EmbedFitModel(nn.Module):
         result = torch.cat(chunks) if chunks else torch.empty(0, self.embedding_dim)
         logger.debug("Encoded %d images into dimension %d", len(items), self.embedding_dim)
         return result.numpy() if convert_to_numpy else result
+
+    def _features(
+        self,
+        images: ImageLike | Sequence[ImageLike] | None,
+        embeddings: np.ndarray | None,
+        batch_size: int,
+    ) -> np.ndarray:
+        if embeddings is not None and images is not None:
+            raise ConfigurationError("Pass exactly one of images or embeddings, not both.")
+        if embeddings is not None:
+            return validate_features(embeddings, expected_dim=self.embedding_dim)
+        if images is None:
+            raise ConfigurationError("Pass exactly one of images or embeddings.")
+        encoded = self.encode(images, batch_size=batch_size, convert_to_numpy=True)
+        assert isinstance(encoded, np.ndarray)
+        return encoded
+
+    def fit_head(
+        self,
+        images: Sequence[ImageLike] | None = None,
+        labels: Sequence[Hashable] | np.ndarray | None = None,
+        *,
+        embeddings: np.ndarray | None = None,
+        batch_size: int = 32,
+    ) -> None:
+        """Fit the classification head; the backbone is not updated.
+
+        Args:
+            images: Training images, encoded with the model's normalisation policy. Give
+                either ``images`` or ``embeddings``, never both.
+            labels: One label per sample. Every label must be one of the model's ``labels``,
+                and every model label must occur at least once.
+            embeddings: Precomputed ``[N, embedding_dim]`` embeddings. They must come from this
+                model's ``encode`` with its default normalisation, or predictions made from
+                images will not match.
+            batch_size: Images per forward pass when encoding.
+
+        Raises:
+            ConfigurationError: If the model has no ``labels``, inputs are inconsistent, a
+                label is unknown, or a class has no samples.
+        """
+        if self.label_mapping is None:
+            raise ConfigurationError(
+                "fit_head needs the model's class labels; pass labels=[...] when creating the "
+                "model. Class order is never inferred from the training data."
+            )
+        if labels is None:
+            raise ConfigurationError("fit_head requires labels.")
+        targets = self.label_mapping.encode(labels)
+        features = self._features(images, embeddings, batch_size)
+        self.head.fit(features, targets, num_classes=len(self.label_mapping))
+        logger.info(
+            "Fitted head on %d samples across %d classes", len(features), len(self.label_mapping)
+        )
+
+    def predict_proba(
+        self,
+        images: ImageLike | Sequence[ImageLike] | None = None,
+        *,
+        embeddings: np.ndarray | None = None,
+        batch_size: int = 32,
+    ) -> np.ndarray:
+        """Return class probabilities.
+
+        Args:
+            images: Images to classify. Give either ``images`` or ``embeddings``.
+            embeddings: Precomputed ``[N, embedding_dim]`` embeddings from this model.
+            batch_size: Images per forward pass when encoding.
+
+        Returns:
+            Array shaped ``[N, num_classes]``. Column ``i`` is the probability of
+            ``model.labels[i]``: the order given at construction, never sorted.
+
+        Raises:
+            HeadNotFittedError: If the head has not been fitted.
+        """
+        if not self.head.is_fitted:
+            raise HeadNotFittedError(
+                "The classification head is not fitted; call fit_head or Trainer.train first."
+            )
+        return self.head.predict_proba(self._features(images, embeddings, batch_size))
+
+    def predict(
+        self,
+        images: ImageLike | Sequence[ImageLike] | None = None,
+        *,
+        embeddings: np.ndarray | None = None,
+        batch_size: int = 32,
+    ) -> np.ndarray:
+        """Return the most probable label for each input.
+
+        Args:
+            images: Images to classify. Give either ``images`` or ``embeddings``.
+            embeddings: Precomputed ``[N, embedding_dim]`` embeddings from this model.
+            batch_size: Images per forward pass when encoding.
+
+        Returns:
+            Array shaped ``[N]`` of external labels (the values given as ``labels``).
+
+        Raises:
+            HeadNotFittedError: If the head has not been fitted.
+        """
+        probabilities = self.predict_proba(images, embeddings=embeddings, batch_size=batch_size)
+        assert self.label_mapping is not None  # A fitted head implies labels were given.
+        return self.label_mapping.decode(probabilities.argmax(axis=1))
+
+    def risk_score(
+        self,
+        images: ImageLike | Sequence[ImageLike] | None = None,
+        *,
+        embeddings: np.ndarray | None = None,
+        batch_size: int = 32,
+    ) -> np.ndarray:
+        """Return the probability of ``positive_label`` for each input; higher means riskier.
+
+        Returns:
+            Array shaped ``[N]`` with values in [0, 1].
+
+        Raises:
+            ConfigurationError: If the model was created without ``positive_label``. The
+                positive class is never inferred from label order.
+            HeadNotFittedError: If the head has not been fitted.
+        """
+        if self.positive_label is None or self.label_mapping is None:
+            raise ConfigurationError(
+                "risk_score needs an explicit positive class; pass positive_label=... when "
+                "creating the model."
+            )
+        probabilities = self.predict_proba(images, embeddings=embeddings, batch_size=batch_size)
+        column: np.ndarray = probabilities[:, self.label_mapping.index_of(self.positive_label)]
+        return column
