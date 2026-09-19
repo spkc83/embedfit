@@ -3,6 +3,7 @@
 import logging
 
 from embedfit._version import __version__
+from embedfit.benchmark import FewShotEvaluator
 from embedfit.data.dataset import ImageDataset
 from embedfit.exceptions import EmbedFitError
 from embedfit.model import EmbedFitModel
@@ -16,6 +17,7 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 __all__ = [
     "EmbedFitError",
     "EmbedFitModel",
+    "FewShotEvaluator",
     "ImageDataset",
     "RetrievalIndex",
     "Trainer",
