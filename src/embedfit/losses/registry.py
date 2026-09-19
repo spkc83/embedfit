@@ -6,11 +6,12 @@ from typing import Any
 from torch import nn
 
 from embedfit.exceptions import ConfigurationError
+from embedfit.losses.cosine_pair import CosinePairLoss
 from embedfit.losses.supcon import SupConLoss
 
 LossFactory = Callable[..., nn.Module]
 
-_LOSSES: dict[str, LossFactory] = {"supcon": SupConLoss}
+_LOSSES: dict[str, LossFactory] = {"supcon": SupConLoss, "cosine_pair": CosinePairLoss}
 
 
 def register_loss(name: str, factory: LossFactory, *, overwrite: bool = False) -> None:
@@ -18,8 +19,8 @@ def register_loss(name: str, factory: LossFactory, *, overwrite: bool = False) -
 
     Args:
         name: Non-empty name.
-        factory: Callable returning an ``nn.Module`` whose ``forward(embeddings, targets)``
-            returns a scalar loss; receives keyword options.
+        factory: Callable returning an ``nn.Module`` that computes a scalar loss; receives
+            keyword options.
         overwrite: Replace an existing registration instead of raising.
 
     Raises:

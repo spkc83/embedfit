@@ -2,5 +2,12 @@
 
 from embedfit.sampling.balanced import BalancedClassBatchSampler
 from embedfit.sampling.few_shot import sample_few_shot
+from embedfit.sampling.pairs import ImagePair, PairSampler, RelationshipRule
 
-__all__ = ["BalancedClassBatchSampler", "sample_few_shot"]
+__all__ = [
+    "BalancedClassBatchSampler",
+    "ImagePair",
+    "PairSampler",
+    "RelationshipRule",
+    "sample_few_shot",
+]
