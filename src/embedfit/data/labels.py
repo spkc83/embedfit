@@ -29,6 +29,11 @@ def same_label(first: Any, second: Any) -> bool:
         return False
 
 
+def label_key(label: Any) -> tuple[type, Any]:
+    """Return a hashable key that identifies a label by both type and value."""
+    return _key(label)
+
+
 class LabelMapping:
     """An ordered, immutable set of class labels.
 

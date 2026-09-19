@@ -303,3 +303,35 @@ class TestBackboneLoading:
         assert (loaded.backbone.image_size, loaded.backbone.mean) == (64, (0.4, 0.5, 0.6))
         assert np.allclose(loaded.encode(images), model.encode(images), atol=1e-5)
         assert np.allclose(loaded.predict_proba(images), model.predict_proba(images), atol=1e-5)
+
+
+def test_supcon_trained_model_survives_a_round_trip(tmp_path):
+    """dataset → trainer → representation training → head fit → predict → save → reload."""
+    labels = list(BAR_CLASSES[:3])
+    train = ImageDataset.from_lists(*make_bar_images(8, num_classes=3, seed=0))
+    images, _ = make_bar_images(5, num_classes=3, seed=1)
+    model = EmbedFitModel.from_pretrained("dummy/tiny", labels=labels, positive_label="diagonal")
+    untrained = model.encode(images)
+    args = TrainingArguments(
+        training_mode="supcon",
+        num_epochs=3,
+        batch_size=12,
+        learning_rate=1e-2,
+        num_workers=0,
+        output_dir=str(tmp_path / "run"),
+    )
+    trainer = Trainer(model, args, train)
+    trainer.train()
+    saved_to = trainer.save_model()
+
+    loaded = EmbedFitModel.from_pretrained(saved_to)
+    assert not np.allclose(loaded.encode(images), untrained, atol=1e-3)  # Adapted weights kept.
+    assert np.allclose(loaded.encode(images), model.encode(images), atol=1e-6)
+    assert np.allclose(loaded.predict_proba(images), model.predict_proba(images), atol=1e-6)
+    assert loaded.predict(images).tolist() == model.predict(images).tolist()
+
+    metadata = json.loads((saved_to / "training_metadata.json").read_text())
+    output = metadata["train_output"]
+    assert output["training_mode"] == "supcon" and output["representation_steps"] == 6
+    assert len(output["train_losses"]) == 3 and output["best_epoch"] == 3
+    assert metadata["training_arguments"]["learning_rate"] == 1e-2

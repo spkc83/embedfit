@@ -41,14 +41,16 @@ class TrainingArguments:
         mixed_precision: ``None``, ``"fp16"``, or ``"bf16"``.
         max_grad_norm: Gradient-clipping norm (> 0), or ``None`` to disable clipping.
         seed: Seed for every random number generator, in ``[0, 2**32 - 1]``.
-        num_workers: Data-loading worker processes (>= 0). Unused in ``frozen`` mode.
+        num_workers: Data-loading worker processes for representation training (>= 0). Each
+            worker costs start-up time, so 0 is faster on small datasets. Unused in ``frozen``
+            mode.
         device: ``None`` leaves the model on its current device; ``"auto"`` selects
             CUDA → MPS → CPU; any other value is an explicit request that never falls back.
         freeze_backbone_before_head: Freeze the backbone before the head is fitted. Must be
             true in ``frozen`` mode.
         head: Name of a registered classification head. A model created with a configured
             head instance keeps that instance; see ``Trainer``.
-        output_dir: Directory for checkpoints and saved models.
+        output_dir: Directory that saved models are written to.
         deterministic: Request deterministic torch algorithms (slower).
 
     Raises:

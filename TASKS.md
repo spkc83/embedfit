@@ -62,23 +62,23 @@ Legend:
 
 ## M4 Data safety
 
-- [ ] N-per-class sampling
-- [ ] Grouped split
-- [ ] Temporal split
-- [ ] Split overlap checker
-- [ ] Documentation for leakage
+- [x] N-per-class sampling
+- [x] Grouped split
+- [x] Temporal split
+- [x] Split overlap checker
+- [x] Documentation for leakage
 
 ## M5 SupCon
 
-- [ ] Balanced class batch sampler
-- [ ] SupCon loss
-- [ ] Unit tests for loss
-- [ ] Representation optimizer
-- [ ] Training loop
-- [ ] Validation loss
-- [ ] Best checkpoint restore
-- [ ] Freeze + head fit transition
-- [ ] Integration test demonstrating encoder weights change
+- [x] Balanced class batch sampler
+- [x] SupCon loss
+- [x] Unit tests for loss
+- [x] Representation optimizer
+- [x] Training loop
+- [x] Validation loss
+- [x] Best checkpoint restore
+- [x] Freeze + head fit transition
+- [x] Integration test demonstrating encoder weights change
 
 ## M6 Pairs
 
@@ -108,12 +108,12 @@ Legend:
 
 ## M9 Retrieval
 
-- [ ] brute-force cosine backend
-- [ ] retrieval result type
-- [ ] top-k
-- [ ] exclude self
-- [ ] retrieval metrics
-- [ ] leakage-safe exclusion by group
+- [x] brute-force cosine backend
+- [x] retrieval result type
+- [x] top-k
+- [x] exclude self
+- [x] retrieval metrics
+- [x] leakage-safe exclusion by group
 
 ## M10 Few-shot benchmark
 
