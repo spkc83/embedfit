@@ -30,6 +30,15 @@ class ImageBackbone(nn.Module, ABC):
         """Provider-qualified name, e.g. ``"torchvision/resnet18"``."""
 
     @property
+    def pooling(self) -> str:
+        """How per-image features are pooled into one vector.
+
+        ``"provider_default"`` means the checkpoint's canonical output. Adapters that offer a
+        choice override this; the value is stored in saved models.
+        """
+        return "provider_default"
+
+    @property
     @abstractmethod
     def embedding_dim(self) -> int:
         """Dimensionality of the vectors returned by ``forward_features``."""
@@ -64,7 +73,10 @@ class ImageBackbone(nn.Module, ABC):
     def save_pretrained(self, path: str | Path) -> None:
         """Write weights and the configuration needed to rebuild this backbone to ``path``.
 
-        Only weights, hyperparameters, and preprocessing settings may be written.
+        Only weights, hyperparameters, and preprocessing settings may be written. The settings
+        go in ``<path>/config.json`` as a JSON object with a ``"provider"`` key naming the
+        registered provider whose loader reads the directory back; saved models fingerprint
+        that file.
         """
 
     @staticmethod

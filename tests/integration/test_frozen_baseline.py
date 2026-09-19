@@ -223,7 +223,7 @@ def test_head_name_in_arguments_replaces_a_named_head_only(datasets, monkeypatch
         )
 
 
-def test_logs_name_phases_and_counts_but_no_sample_content(caplog):
+def test_logs_name_phases_and_counts_but_no_sample_content(caplog, logged_messages):
     caplog.set_level(logging.DEBUG, logger="embedfit")
     images, labels = make_bar_images(4, num_classes=2, seed=0)
     secret = {"account_number": "000123456789"}
@@ -242,10 +242,11 @@ def test_logs_name_phases_and_counts_but_no_sample_content(caplog):
     model = EmbedFitModel.from_pretrained("dummy/tiny", labels=list(BAR_CLASSES[:2]))
     Trainer(model, TrainingArguments(training_mode="frozen"), train).train()
 
-    assert "Phase 1/2" in caplog.text and "Phase 2/2" in caplog.text
-    assert f"{len(train)} samples" in caplog.text
+    messages = logged_messages()
+    assert "Phase 1/2" in messages and "Phase 2/2" in messages
+    assert f"{len(train)} samples" in messages
     for forbidden in ("000123456789", "account_number", "4321", "sid-", "173", "vertical"):
-        assert forbidden not in caplog.text
+        assert forbidden not in messages
 
 
 def test_evaluate_matches_metrics_computed_from_predictions(datasets):

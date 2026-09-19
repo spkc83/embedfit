@@ -1,7 +1,8 @@
 """``EmbedFitModel``: a backbone plus the embedding policy built around it."""
 
 import logging
-from collections.abc import Hashable, Sequence
+from collections.abc import Hashable, Mapping, Sequence
+from pathlib import Path
 from typing import Any, Self
 
 import numpy as np
@@ -13,12 +14,27 @@ from embedfit.backbones.base import ImageBackbone
 from embedfit.backbones.registry import create_backbone
 from embedfit.data.image import ImageLike
 from embedfit.data.labels import LabelMapping
-from embedfit.exceptions import ConfigurationError, HeadNotFittedError, ImageInputError
+from embedfit.exceptions import (
+    BackboneProviderError,
+    ConfigurationError,
+    HeadNotFittedError,
+    ImageInputError,
+)
 from embedfit.heads.base import ClassificationHead, validate_features
 from embedfit.heads.registry import create_head
+from embedfit.serialization import is_model_directory, load_model_as, save_model
 from embedfit.utils.device import resolve_device
 
 logger = logging.getLogger(__name__)
+
+_UNSET: Any = object()  # Distinguishes "not passed" from a passed default value.
+
+
+def _exists(path: str) -> bool:
+    try:
+        return Path(path).exists()
+    except OSError:  # e.g. a name too long for the file system.
+        return False
 
 
 def _build_label_mapping(
@@ -83,23 +99,28 @@ class EmbedFitModel(nn.Module):
     @classmethod
     def from_pretrained(
         cls,
-        identifier: str,
+        identifier: str | Path,
         *,
-        labels: Sequence[Hashable] | np.ndarray | LabelMapping | None = None,
-        positive_label: Hashable | None = None,
-        normalize_embeddings: bool = True,
-        head: str | ClassificationHead = "logistic_regression",
+        labels: Sequence[Hashable] | np.ndarray | LabelMapping | None = _UNSET,
+        positive_label: Hashable | None = _UNSET,
+        normalize_embeddings: bool = _UNSET,
+        head: str | ClassificationHead = _UNSET,
         device: str | torch.device | None = None,
         **backbone_kwargs: Any,
     ) -> Self:
-        """Build a model around a backbone named by a provider-qualified identifier.
+        """Build a model from a provider-qualified backbone identifier, or load a saved model.
 
         Args:
-            identifier: ``"<provider>/<name>"``, e.g. ``"torchvision/resnet18"``.
-            labels: See the class documentation.
-            positive_label: See the class documentation.
-            normalize_embeddings: See the class documentation.
-            head: See the class documentation.
+            identifier: ``"<provider>/<name>"``, e.g. ``"torchvision/resnet18"``; or the path
+                of a directory written by ``save_pretrained``. A directory containing
+                ``embedfit_config.json`` is a saved model and takes precedence, even when its
+                path also reads as an identifier; any other directory is never mistaken for
+                one. A saved model restores its own labels, positive label, normalisation
+                policy, and head, so only ``device`` may be passed with it.
+            labels: See the class documentation. Default: none.
+            positive_label: See the class documentation. Default: none.
+            normalize_embeddings: See the class documentation. Default: ``True``.
+            head: See the class documentation. Default: ``"logistic_regression"``.
             device: Where to place the model. ``None`` leaves it on CPU; ``"auto"`` selects
                 CUDA → MPS → CPU; an explicit device that is unavailable raises.
             **backbone_kwargs: Forwarded to the provider adapter, e.g. ``weights=None`` or
@@ -110,12 +131,51 @@ class EmbedFitModel(nn.Module):
 
         Raises:
             BackboneProviderError: If the identifier is malformed or its provider is unknown.
-            ConfigurationError: If labels or the device are invalid.
+            ConfigurationError: If labels or the device are invalid, any option other than
+                ``device`` is passed together with a saved model (whatever its value), the
+                saved model is incomplete or inconsistent, or ``identifier`` is an existing
+                path that is not a saved model.
         """
+        options = {
+            "labels": labels,
+            "positive_label": positive_label,
+            "normalize_embeddings": normalize_embeddings,
+            "head": head,
+        }
+        if isinstance(identifier, str | Path) and is_model_directory(identifier):
+            passed = sorted(
+                [name for name, value in options.items() if value is not _UNSET]
+                + list(backbone_kwargs)
+            )
+            if passed:
+                raise ConfigurationError(
+                    f"{passed} cannot be set when loading a saved model; the saved values "
+                    "are restored. Only device may be passed."
+                )
+            return load_model_as(cls, identifier, device=device)
+
+        not_a_bundle = ConfigurationError(
+            f"'{identifier}' is not a saved model directory: it has no embedfit_config.json."
+        )
+        if not isinstance(identifier, str):
+            raise not_a_bundle
+        if labels is _UNSET:
+            labels = None
+        if positive_label is _UNSET:
+            positive_label = None
+        if normalize_embeddings is _UNSET:
+            normalize_embeddings = True
+        if head is _UNSET:
+            head = "logistic_regression"
         # Validate cheap arguments before building weights.
         mapping = _build_label_mapping(labels, positive_label)
         target = resolve_device(device) if device is not None else None
-        backbone = create_backbone(identifier, **backbone_kwargs)
+        try:
+            backbone = create_backbone(identifier, **backbone_kwargs)
+        except BackboneProviderError as exc:
+            if _exists(identifier):  # A real path that is simply not a bundle.
+                raise not_a_bundle from exc
+            raise
         model = cls(
             backbone,
             labels=mapping,
@@ -364,3 +424,23 @@ class EmbedFitModel(nn.Module):
         probabilities = self.predict_proba(images, embeddings=embeddings, batch_size=batch_size)
         column: np.ndarray = probabilities[:, self.label_mapping.index_of(self.positive_label)]
         return column
+
+    def save_pretrained(
+        self, path: str | Path, *, training_metadata: Mapping[str, Any] | None = None
+    ) -> None:
+        """Save the model to a directory that ``from_pretrained`` can load.
+
+        The bundle holds the backbone's weights and preprocessing settings, the head's state,
+        the labels in class-index order, the positive label, and the normalisation policy. It
+        never holds training samples, identifiers, or metadata, and nothing is pickled.
+
+        Args:
+            path: Target directory; created if missing.
+            training_metadata: Optional JSON-serialisable aggregate facts about training.
+
+        Raises:
+            ConfigurationError: If a label is not a ``str``, ``int``, ``float``, or ``bool``,
+                the head does not support saving, or ``training_metadata`` is not
+                JSON-serialisable.
+        """
+        save_model(self, path, training_metadata=training_metadata)
