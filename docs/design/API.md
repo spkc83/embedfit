@@ -51,7 +51,17 @@ pred = model.predict(images)
 proba = model.predict_proba(images)
 ```
 
-`fit_head` may accept either images or precomputed embeddings via explicit argument/overload. Avoid ambiguous auto-detection when possible.
+### Head semantics
+
+- The model must be created with `labels`. Class order is exactly the order given; it is never inferred from training data or sorted.
+- `fit_head`, `predict`, `predict_proba`, and `risk_score` take either images (positionally) or precomputed `embeddings=`, never both. Precomputed embeddings must come from the same model's `encode` with its default normalisation; float64 input is cast to float32.
+- Training labels must all be known to the model (matching in value *and* type, so `True` is not `1`), and every model label must occur at least once. A missing class is an error rather than a silently absent probability column.
+- `predict_proba` returns `[N, num_classes]`; column `i` is the probability of `model.labels[i]`.
+- `predict` returns the external label values as a numpy array.
+- `risk_score` returns the `positive_label` column and raises if the model was created without `positive_label`.
+- Calling a prediction method before the head is fitted raises `HeadNotFittedError`.
+
+Heads are interchangeable: `EmbedFitModel(..., head=...)` accepts a registered name or a configured `ClassificationHead` instance such as `LogisticRegressionHead(class_weight="balanced")`, and `register_head` adds new names. An empty input yields zero rows.
 
 ## Trainer
 
@@ -73,6 +83,8 @@ trainer = Trainer(
 output = trainer.train()
 metrics = trainer.evaluate()
 ```
+
+`Trainer` validates its configuration when it is created: an unavailable `training_mode`, a model without labels, an empty training set, or training labels unknown to the model all raise before any work starts. `train()` seeds every random number generator from `args.seed`, runs the representation phase (skipped in `frozen` mode), freezes the backbone, and fits the head. A head *instance* given to the model is kept and fitted as configured, and `args.head` must then stay at its default; otherwise `args.head` names the head, replacing the model's only when the names differ. `freeze_backbone_before_head=False` is rejected in `frozen` mode. `evaluate()` is not available until the metrics module exists. `predict(dataset)` returns predictions, probabilities, the label of each probability column, and the dataset's true labels.
 
 ## Retrieval
 

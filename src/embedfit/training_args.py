@@ -1,0 +1,128 @@
+"""Training configuration, validated when it is created."""
+
+from dataclasses import dataclass
+
+from embedfit.exceptions import ConfigurationError
+from embedfit.heads.registry import available_heads
+
+TRAINING_MODES = ("frozen", "supcon", "pair", "triplet", "end_to_end")
+MIXED_PRECISION_MODES = (None, "fp16", "bf16")
+
+
+def _require(condition: bool, message: str) -> None:
+    if not condition:
+        raise ConfigurationError(message)
+
+
+def _is_int(value: object) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _is_number(value: object) -> bool:
+    return isinstance(value, int | float) and not isinstance(value, bool)
+
+
+@dataclass
+class TrainingArguments:
+    """Hyperparameters for ``Trainer``. Every field is validated in ``__post_init__``.
+
+    Attributes:
+        training_mode: ``"frozen"`` (no backbone updates), ``"supcon"``, ``"pair"``,
+            ``"triplet"``, or ``"end_to_end"``.
+        num_epochs: Representation-training epochs (>= 1). Unused in ``frozen`` mode.
+        batch_size: Representation-training batch size (>= 1). Unused in ``frozen`` mode.
+        eval_batch_size: Images per forward pass when encoding for head fitting and prediction.
+        learning_rate: Backbone learning rate (> 0).
+        weight_decay: Weight decay (>= 0).
+        warmup_ratio: Fraction of steps used for learning-rate warm-up, in [0, 1).
+        temperature: Contrastive-loss temperature (> 0).
+        triplet_margin: Triplet-loss margin (>= 0).
+        gradient_accumulation_steps: Batches per optimizer step (>= 1).
+        mixed_precision: ``None``, ``"fp16"``, or ``"bf16"``.
+        max_grad_norm: Gradient-clipping norm (> 0), or ``None`` to disable clipping.
+        seed: Seed for every random number generator, in ``[0, 2**32 - 1]``.
+        num_workers: Data-loading worker processes (>= 0). Unused in ``frozen`` mode.
+        device: ``None`` leaves the model on its current device; ``"auto"`` selects
+            CUDA → MPS → CPU; any other value is an explicit request that never falls back.
+        freeze_backbone_before_head: Freeze the backbone before the head is fitted. Must be
+            true in ``frozen`` mode.
+        head: Name of a registered classification head. A model created with a configured
+            head instance keeps that instance; see ``Trainer``.
+        output_dir: Directory for checkpoints and saved models.
+        deterministic: Request deterministic torch algorithms (slower).
+
+    Raises:
+        ConfigurationError: If any value is invalid. Raised at construction, never mid-training.
+    """
+
+    training_mode: str = "supcon"
+    num_epochs: int = 5
+    batch_size: int = 32
+    eval_batch_size: int = 64
+    learning_rate: float = 2e-5
+    weight_decay: float = 0.01
+    warmup_ratio: float = 0.0
+    temperature: float = 0.07
+    triplet_margin: float = 0.2
+    gradient_accumulation_steps: int = 1
+    mixed_precision: str | None = None
+    max_grad_norm: float | None = 1.0
+    seed: int = 42
+    num_workers: int = 4
+    device: str | None = None
+    freeze_backbone_before_head: bool = True
+    head: str = "logistic_regression"
+    output_dir: str = "./embedfit-output"
+    deterministic: bool = False
+
+    def __post_init__(self) -> None:
+        _require(
+            self.training_mode in TRAINING_MODES,
+            f"training_mode must be one of {list(TRAINING_MODES)}, got {self.training_mode!r}.",
+        )
+        for name in ("num_epochs", "batch_size", "eval_batch_size", "gradient_accumulation_steps"):
+            value = getattr(self, name)
+            _require(_is_int(value) and value >= 1, f"{name} must be an int >= 1, got {value!r}.")
+        _require(
+            _is_int(self.num_workers) and self.num_workers >= 0,
+            f"num_workers must be an int >= 0, got {self.num_workers!r}.",
+        )
+        _require(
+            _is_int(self.seed) and 0 <= self.seed <= 2**32 - 1,
+            f"seed must be an int in [0, 2**32 - 1], got {self.seed!r}.",
+        )
+        for name in ("learning_rate", "temperature"):
+            value = getattr(self, name)
+            _require(_is_number(value) and value > 0, f"{name} must be > 0, got {value!r}.")
+        for name in ("weight_decay", "triplet_margin"):
+            value = getattr(self, name)
+            _require(_is_number(value) and value >= 0, f"{name} must be >= 0, got {value!r}.")
+        _require(
+            _is_number(self.warmup_ratio) and 0 <= self.warmup_ratio < 1,
+            f"warmup_ratio must be in [0, 1), got {self.warmup_ratio!r}.",
+        )
+        _require(
+            self.max_grad_norm is None
+            or (_is_number(self.max_grad_norm) and self.max_grad_norm > 0),
+            f"max_grad_norm must be > 0 or None, got {self.max_grad_norm!r}.",
+        )
+        _require(
+            self.mixed_precision in MIXED_PRECISION_MODES,
+            f"mixed_precision must be one of {list(MIXED_PRECISION_MODES)}, "
+            f"got {self.mixed_precision!r}.",
+        )
+        _require(
+            self.head in available_heads(),
+            f"head must be one of {available_heads()}, got {self.head!r}.",
+        )
+        _require(
+            self.device is None or isinstance(self.device, str),
+            f"device must be a str or None, got {type(self.device).__name__}.",
+        )
+        for name in ("freeze_backbone_before_head", "deterministic"):
+            value = getattr(self, name)
+            _require(isinstance(value, bool), f"{name} must be a bool, got {value!r}.")
+        _require(
+            isinstance(self.output_dir, str) and bool(self.output_dir),
+            "output_dir must be a non-empty str.",
+        )

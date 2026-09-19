@@ -38,15 +38,15 @@ Legend:
 
 ## M2 Frozen baseline
 
-- [ ] Define `ClassificationHead`
-- [ ] Implement logistic regression head
-- [ ] Implement label mapping
-- [ ] Implement `fit_head`
-- [ ] Implement `predict`
-- [ ] Implement `predict_proba`
-- [ ] Implement `TrainingArguments`
-- [ ] Implement frozen `Trainer`
-- [ ] End-to-end synthetic test
+- [x] Define `ClassificationHead`
+- [x] Implement logistic regression head
+- [x] Implement label mapping
+- [x] Implement `fit_head`
+- [x] Implement `predict`
+- [x] Implement `predict_proba`
+- [x] Implement `TrainingArguments`
+- [x] Implement frozen `Trainer`
+- [x] End-to-end synthetic test
 
 ## M3 Metrics
 

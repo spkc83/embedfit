@@ -158,6 +158,7 @@ device: str | None = None
 freeze_backbone_before_head: bool = True
 head: str = "logistic_regression"
 output_dir: str = "./embedfit-output"
+deterministic: bool = False   # request deterministic torch algorithms (§23)
 ```
 
 ## 6. Input data

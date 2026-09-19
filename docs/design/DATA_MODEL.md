@@ -14,7 +14,9 @@ class ImageSample:
     metadata: Mapping[str, Any] | None = None
 ```
 
-The exact implementation may differ, but semantics should remain.
+`ImageDataset` holds these records. It accepts `ImageSample` objects or mappings with the same keys (unknown keys are rejected; extra fields belong under `metadata`), and any map-style `torch.utils.data.Dataset` that yields such mappings. `repr` of a sample or dataset shows field presence and counts only. Samples compare by identity, since array images have no well-defined equality, and `metadata` is kept as a read-only copy.
+
+Records are read once when the dataset is created. A source that decodes images inside `__getitem__` is therefore held in memory; storing file paths as `image` keeps decoding lazy, because paths are opened only when a batch is encoded.
 
 ## Label handling
 
