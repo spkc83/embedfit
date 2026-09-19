@@ -30,6 +30,15 @@ class ImageBackbone(nn.Module, ABC):
         """Provider-qualified name, e.g. ``"torchvision/resnet18"``."""
 
     @property
+    def pooling(self) -> str:
+        """How per-image features are pooled into one vector.
+
+        ``"provider_default"`` means the checkpoint's canonical output. Adapters that offer a
+        choice override this; the value is stored in saved models.
+        """
+        return "provider_default"
+
+    @property
     @abstractmethod
     def embedding_dim(self) -> int:
         """Dimensionality of the vectors returned by ``forward_features``."""

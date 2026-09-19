@@ -1,7 +1,8 @@
 """``EmbedFitModel``: a backbone plus the embedding policy built around it."""
 
 import logging
-from collections.abc import Hashable, Sequence
+from collections.abc import Hashable, Mapping, Sequence
+from pathlib import Path
 from typing import Any, Self
 
 import numpy as np
@@ -16,6 +17,7 @@ from embedfit.data.labels import LabelMapping
 from embedfit.exceptions import ConfigurationError, HeadNotFittedError, ImageInputError
 from embedfit.heads.base import ClassificationHead, validate_features
 from embedfit.heads.registry import create_head
+from embedfit.serialization import is_model_directory, load_model, save_model
 from embedfit.utils.device import resolve_device
 
 logger = logging.getLogger(__name__)
@@ -83,7 +85,7 @@ class EmbedFitModel(nn.Module):
     @classmethod
     def from_pretrained(
         cls,
-        identifier: str,
+        identifier: str | Path,
         *,
         labels: Sequence[Hashable] | np.ndarray | LabelMapping | None = None,
         positive_label: Hashable | None = None,
@@ -92,10 +94,15 @@ class EmbedFitModel(nn.Module):
         device: str | torch.device | None = None,
         **backbone_kwargs: Any,
     ) -> Self:
-        """Build a model around a backbone named by a provider-qualified identifier.
+        """Build a model from a provider-qualified backbone identifier, or load a saved model.
 
         Args:
-            identifier: ``"<provider>/<name>"``, e.g. ``"torchvision/resnet18"``.
+            identifier: ``"<provider>/<name>"``, e.g. ``"torchvision/resnet18"``; or the path
+                of a directory written by ``save_pretrained``. A path is recognised by the
+                ``embedfit_config.json`` inside it, so a directory that merely shares a
+                provider-style name is never mistaken for a saved model. A saved model
+                restores its own labels, positive label, normalisation policy, and head, so
+                only ``device`` may be passed with it.
             labels: See the class documentation.
             positive_label: See the class documentation.
             normalize_embeddings: See the class documentation.
@@ -110,8 +117,30 @@ class EmbedFitModel(nn.Module):
 
         Raises:
             BackboneProviderError: If the identifier is malformed or its provider is unknown.
-            ConfigurationError: If labels or the device are invalid.
+            ConfigurationError: If labels or the device are invalid, other options are passed
+                together with a saved model, or the saved model is incomplete or inconsistent.
         """
+        if isinstance(identifier, str | Path) and is_model_directory(identifier):
+            overrides = {
+                "labels": labels is not None,
+                "positive_label": positive_label is not None,
+                "normalize_embeddings": normalize_embeddings is not True,
+                "head": head != "logistic_regression",
+                **{name: True for name in backbone_kwargs},
+            }
+            passed = sorted(name for name, given in overrides.items() if given)
+            if passed:
+                raise ConfigurationError(
+                    f"{passed} cannot be set when loading a saved model; the saved values "
+                    "are restored. Only device may be passed."
+                )
+            loaded = load_model(identifier, device=device)
+            assert isinstance(loaded, cls)
+            return loaded
+        if not isinstance(identifier, str):
+            raise ConfigurationError(
+                f"'{identifier}' is not a saved model directory: it has no embedfit_config.json."
+            )
         # Validate cheap arguments before building weights.
         mapping = _build_label_mapping(labels, positive_label)
         target = resolve_device(device) if device is not None else None
@@ -364,3 +393,23 @@ class EmbedFitModel(nn.Module):
         probabilities = self.predict_proba(images, embeddings=embeddings, batch_size=batch_size)
         column: np.ndarray = probabilities[:, self.label_mapping.index_of(self.positive_label)]
         return column
+
+    def save_pretrained(
+        self, path: str | Path, *, training_metadata: Mapping[str, Any] | None = None
+    ) -> None:
+        """Save the model to a directory that ``from_pretrained`` can load.
+
+        The bundle holds the backbone's weights and preprocessing settings, the head's state,
+        the labels in class-index order, the positive label, and the normalisation policy. It
+        never holds training samples, identifiers, or metadata, and nothing is pickled.
+
+        Args:
+            path: Target directory; created if missing.
+            training_metadata: Optional JSON-serialisable aggregate facts about training.
+
+        Raises:
+            ConfigurationError: If a label is not a ``str``, ``int``, ``float``, or ``bool``,
+                the head does not support saving, or ``training_metadata`` is not
+                JSON-serialisable.
+        """
+        save_model(self, path, training_metadata=training_metadata)

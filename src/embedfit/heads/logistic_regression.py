@@ -1,6 +1,8 @@
 """scikit-learn logistic regression as a classification head."""
 
-from typing import Any
+import json
+from pathlib import Path
+from typing import Any, Self
 
 import numpy as np
 from sklearn.linear_model import LogisticRegression
@@ -22,6 +24,8 @@ class LogisticRegressionHead(ClassificationHead):
     Raises:
         ConfigurationError: If an option is invalid.
     """
+
+    registry_name = "logistic_regression"
 
     def __init__(
         self,
@@ -80,3 +84,75 @@ class LogisticRegressionHead(ClassificationHead):
             return np.empty((0, self._num_classes), dtype=np.float64)
         probabilities: np.ndarray = self._estimator.predict_proba(matrix)
         return probabilities
+
+    def save(self, path: str | Path) -> None:
+        """Write options to ``config.json`` and fitted parameters to ``parameters.npz``.
+
+        The estimator is stored as plain arrays (coefficients and intercepts), not as a pickle,
+        so loading a saved head never executes code from the file.
+        """
+        directory = Path(path)
+        directory.mkdir(parents=True, exist_ok=True)
+        config = {
+            "type": self.registry_name,
+            "C": self.C,
+            "max_iter": self.max_iter,
+            "class_weight": self.class_weight,
+            "seed": self.seed,
+            "fitted": self.is_fitted,
+            "num_classes": self._num_classes,
+            "feature_dim": self._feature_dim,
+        }
+        (directory / "config.json").write_text(json.dumps(config, indent=2) + "\n")
+        if self._estimator is not None:
+            np.savez(
+                directory / "parameters.npz",
+                coef=self._estimator.coef_,
+                intercept=self._estimator.intercept_,
+                n_iter=self._estimator.n_iter_,
+            )
+
+    @classmethod
+    def load(cls, path: str | Path) -> Self:
+        """Rebuild a head written by ``save``; a fitted head predicts identically.
+
+        Raises:
+            ConfigurationError: If files are missing, malformed, or inconsistent.
+        """
+        directory = Path(path)
+        try:
+            config = json.loads((directory / "config.json").read_text())
+            head = cls(
+                C=config["C"],
+                max_iter=config["max_iter"],
+                class_weight=config["class_weight"],
+                seed=config["seed"],
+            )
+            if not config["fitted"]:
+                return head
+            num_classes, feature_dim = config["num_classes"], config["feature_dim"]
+            with np.load(directory / "parameters.npz", allow_pickle=False) as parameters:
+                coef, intercept = parameters["coef"], parameters["intercept"]
+                n_iter = parameters["n_iter"]
+        except (OSError, KeyError, TypeError, ValueError) as exc:
+            raise ConfigurationError(
+                f"'{directory}' does not contain a valid saved LogisticRegressionHead."
+            ) from exc
+        # scikit-learn stores a single row of coefficients for a two-class problem.
+        rows = 1 if num_classes == 2 else num_classes
+        if coef.shape != (rows, feature_dim) or intercept.shape != (rows,):
+            raise ConfigurationError(
+                f"'{directory}' holds parameters shaped {coef.shape} and {intercept.shape}, "
+                f"which do not match {num_classes} classes and {feature_dim} features."
+            )
+        estimator = LogisticRegression(
+            C=head.C,
+            max_iter=head.max_iter,
+            class_weight=head.class_weight,
+            random_state=head.seed,
+        )
+        estimator.coef_, estimator.intercept_, estimator.n_iter_ = coef, intercept, n_iter
+        estimator.classes_ = np.arange(num_classes)
+        estimator.n_features_in_ = feature_dim
+        head._estimator, head._feature_dim, head._num_classes = estimator, feature_dim, num_classes
+        return head

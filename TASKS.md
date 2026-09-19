@@ -99,12 +99,12 @@ Legend:
 
 ## M8 Serialization
 
-- [ ] config schema
-- [ ] backbone save/load
-- [ ] head save/load
-- [ ] labels
-- [ ] metadata
-- [ ] round-trip equivalence
+- [x] config schema
+- [x] backbone save/load
+- [x] head save/load
+- [x] labels
+- [x] metadata
+- [x] round-trip equivalence
 
 ## M9 Retrieval
 

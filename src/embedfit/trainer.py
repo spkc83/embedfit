@@ -2,7 +2,8 @@
 
 import logging
 from collections.abc import Hashable
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from pathlib import Path
 
 import numpy as np
 
@@ -114,6 +115,7 @@ class Trainer:
         self.train_dataset = train_dataset
         self.eval_dataset = eval_dataset
         self._device = resolve_device(args.device) if args.device is not None else None
+        self._last_output: TrainOutput | None = None
 
     def train(self) -> TrainOutput:
         """Run both phases and leave the model ready for prediction.
@@ -140,11 +142,12 @@ class Trainer:
             self.train_dataset.labels,
             batch_size=self.args.eval_batch_size,
         )
-        return TrainOutput(
+        self._last_output = TrainOutput(
             training_mode=self.args.training_mode,
             num_train_samples=len(self.train_dataset),
             representation_steps=0,
         )
+        return self._last_output
 
     def predict(self, dataset: ImageDataset | None = None) -> PredictionOutput:
         """Predict labels and probabilities for a dataset.
@@ -214,3 +217,30 @@ class Trainer:
                     results[name] = float("nan")
         logger.info("Evaluated %d samples: %d metrics", len(output.labels), len(results))
         return results
+
+    def save_model(self, path: str | Path | None = None) -> Path:
+        """Save the trained model together with aggregate training metadata.
+
+        The metadata holds the training arguments and the ``TrainOutput`` summary (mode,
+        sample count, steps). It contains no samples, labels, or identifiers.
+
+        Args:
+            path: Target directory. Defaults to ``args.output_dir``.
+
+        Returns:
+            The directory written, loadable with ``EmbedFitModel.from_pretrained``.
+
+        Raises:
+            ConfigurationError: If ``train`` has not run, or the model cannot be saved.
+        """
+        if self._last_output is None:
+            raise ConfigurationError("Nothing to save yet: call train() first.")
+        directory = Path(path if path is not None else self.args.output_dir)
+        self.model.save_pretrained(
+            directory,
+            training_metadata={
+                "training_arguments": asdict(self.args),
+                "train_output": asdict(self._last_output),
+            },
+        )
+        return directory

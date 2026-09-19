@@ -86,6 +86,32 @@ metrics = trainer.evaluate()
 
 `Trainer` validates its configuration when it is created: an unavailable `training_mode`, a model without labels, an empty training set, or training labels unknown to the model all raise before any work starts. `train()` seeds every random number generator from `args.seed`, runs the representation phase (skipped in `frozen` mode), freezes the backbone, and fits the head. A head *instance* given to the model is kept and fitted as configured, and `args.head` must then stay at its default; otherwise `args.head` names the head, replacing the model's only when the names differ. `freeze_backbone_before_head=False` is rejected in `frozen` mode. `evaluate(dataset)` returns the label metrics of `classification_metrics`, plus `roc_auc`, `pr_auc`, and `brier_score` when the model has a `positive_label`; a metric that is undefined for the data is reported as NaN with a logged warning. `predict(dataset)` returns predictions, probabilities, the label of each probability column, and the dataset's true labels.
 
+## Saving and loading
+
+```python
+model.save_pretrained("models/risk-v1")
+trainer.save_model()                                   # to args.output_dir, with training metadata
+loaded = EmbedFitModel.from_pretrained("models/risk-v1", device="auto")
+```
+
+```text
+models/risk-v1/
+├── embedfit_config.json      framework and format version, backbone provider / identifier /
+│                             pooling / embedding dimension / preprocessing fingerprint,
+│                             normalisation policy, head type
+├── labels.json               labels in class-index order, positive label
+├── training_metadata.json    aggregate facts only (Trainer: arguments and TrainOutput)
+├── backbone/                 config.json + weights.pt, written by the backbone adapter
+└── head/                     config.json + parameters.npz, written by the head
+```
+
+- A loaded model reproduces the saved model's embeddings, probabilities, predictions, label order, positive label, pooling, and normalisation policy. Its backbone is rebuilt from the saved weights and preprocessing settings without downloading anything.
+- `from_pretrained` treats its argument as a saved model only when the directory contains `embedfit_config.json`; otherwise it is a `<provider>/<name>` identifier. With a saved model only `device` may be passed: labels, positive label, normalisation, head, and backbone options come from the bundle, and passing them raises.
+- Bundles never contain training samples, identifiers, or metadata, and nothing is pickled: JSON for configuration, `.npz` arrays (loaded with `allow_pickle=False`) for the logistic-regression coefficients, and a tensor-only state dict (loaded with `weights_only=True`) for the backbone. Loading a bundle therefore does not execute code from it.
+- The backbone's `config.json` is fingerprinted (SHA-256) at save time. A bundle whose backbone configuration was edited afterwards, whose embedding dimension disagrees, or whose `format_version` is newer than the library understands is rejected.
+- Labels must be `str`, `int`, `float`, or `bool` to be saved, because other types do not survive JSON; this is checked before anything is written.
+- A custom head is saved when its class sets `registry_name` to its registered name and implements `save` and `load`; a custom backbone provider is loadable when it is registered with a `loader`.
+
 ## Retrieval
 
 ```python
