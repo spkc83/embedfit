@@ -23,3 +23,7 @@ class BackboneProviderError(EmbedFitError, ValueError):
 
 class HeadNotFittedError(EmbedFitError, RuntimeError):
     """A prediction was requested before a classification head was fitted."""
+
+
+class UndefinedMetricError(EmbedFitError, ValueError):
+    """A metric has no defined value for the given data, e.g. recall with no positives."""

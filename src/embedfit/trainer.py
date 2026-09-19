@@ -7,7 +7,9 @@ from dataclasses import dataclass
 import numpy as np
 
 from embedfit.data.dataset import ImageDataset
-from embedfit.exceptions import ConfigurationError
+from embedfit.evaluation.calibration import brier_score
+from embedfit.evaluation.classification import classification_metrics, pr_auc, roc_auc
+from embedfit.exceptions import ConfigurationError, UndefinedMetricError
 from embedfit.heads.registry import create_head
 from embedfit.model import EmbedFitModel
 from embedfit.training_args import TrainingArguments
@@ -167,3 +169,48 @@ class Trainer:
             label_order=self.model.label_mapping.labels,
             labels=target.labels,
         )
+
+    def evaluate(self, dataset: ImageDataset | None = None) -> dict[str, float]:
+        """Compute aggregate metrics on held-out data.
+
+        Args:
+            dataset: Samples to evaluate. Defaults to ``eval_dataset``.
+
+        Returns:
+            The metrics of ``embedfit.evaluation.classification_metrics``. When the model has
+            a ``positive_label``, also ``roc_auc``, ``pr_auc``, and ``brier_score`` computed
+            from the positive class's predicted probability; one that is undefined for the
+            data (for example, no positive samples) is reported as NaN and logged as a
+            warning. Accuracy alone is misleading
+            for rare events, so prefer ``pr_auc`` and the ranking metrics in
+            ``embedfit.evaluation`` there.
+
+        Raises:
+            ConfigurationError: If no dataset is available or it is empty.
+            HeadNotFittedError: If ``train`` has not run.
+        """
+        output = self.predict(dataset)
+        if len(output.labels) == 0:
+            raise ConfigurationError("Cannot evaluate an empty dataset.")
+        positive = self.model.positive_label
+        results = classification_metrics(
+            output.labels,
+            output.predictions,
+            labels=output.label_order,
+            positive_label=positive,
+        )
+        if positive is not None:
+            assert self.model.label_mapping is not None
+            scores = output.probabilities[:, self.model.label_mapping.index_of(positive)]
+            for name, metric in (
+                ("roc_auc", roc_auc),
+                ("pr_auc", pr_auc),
+                ("brier_score", brier_score),
+            ):
+                try:
+                    results[name] = metric(output.labels, scores, positive_label=positive)
+                except UndefinedMetricError as exc:
+                    logger.warning("%s reported as NaN: %s", name, exc)
+                    results[name] = float("nan")
+        logger.info("Evaluated %d samples: %d metrics", len(output.labels), len(results))
+        return results
