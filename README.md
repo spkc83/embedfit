@@ -115,3 +115,7 @@ Branching, commit, and documentation conventions are in [`CONTRIBUTING.md`](CONT
 ## Naming
 
 See [`PROJECT_NAMING.md`](PROJECT_NAMING.md). `EmbedFit` is recommended over `ImageSetFit` because it describes the abstraction rather than the first modality and avoids looking like an official SetFit package.
+
+## License
+
+Apache License 2.0. See [`LICENSE`](LICENSE).
