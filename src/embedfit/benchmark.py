@@ -2,6 +2,7 @@
 
 import logging
 import math
+import weakref
 from collections import defaultdict
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
@@ -75,7 +76,8 @@ class FewShotEvaluator:
                 and never passed to training, so no checkpoint or threshold depends on it.
             methods: Training modes to compare, e.g. ``["frozen", "end_to_end", "supcon"]``.
             model_factory: Returns a new, untrained ``EmbedFitModel`` with labels on every
-                call. Each run gets its own model, so runs never share weights.
+                call. Each run gets its own model, so runs never share weights. It is also
+                called once per method up front, to validate the configuration.
             training_arguments: Optional ``TrainingArguments`` per method. A method without an
                 entry uses ``TrainingArguments(training_mode=method)``. The ``seed`` of each
                 run replaces the one in the arguments.
@@ -88,8 +90,10 @@ class FewShotEvaluator:
         Raises:
             ConfigurationError: If a method is unknown or duplicated, the arguments given for
                 a method name a different ``training_mode``, a dataset has the wrong type, the
-                factory does not return a fresh ``EmbedFitModel``, or a class in the pool has
-                fewer samples than the largest shot count.
+                factory returns something other than a new ``EmbedFitModel`` with a new
+                backbone, a class in the pool has fewer samples than the largest shot count, or
+                a method cannot train at the smallest shot count. All of these are raised
+                before any model is trained.
         """
         if isinstance(methods, str) or not isinstance(methods, Sequence) or not methods:
             raise ConfigurationError("methods must be a non-empty sequence of training modes.")
@@ -111,20 +115,36 @@ class FewShotEvaluator:
                     f"training_arguments['{method}'] has training_mode "
                     f"'{arguments[method].training_mode}'."
                 )
-        sample_few_shot(dataset, shots=max(self.shots), seed=0)  # Fail before any training.
+        used: list[weakref.ref[Any]] = []
+
+        def fresh_model() -> EmbedFitModel:
+            model = model_factory()
+            if not isinstance(model, EmbedFitModel):
+                raise ConfigurationError("model_factory must return an EmbedFitModel.")
+            # A reused model, or a new model around a reused backbone, would carry trained
+            # weights from one run into the next.
+            if any(ref() is model or ref() is model.backbone for ref in used):
+                raise ConfigurationError(
+                    "model_factory must return a new EmbedFitModel with a new backbone on "
+                    "every call; a shared one would leak trained weights between runs."
+                )
+            used.extend((weakref.ref(model), weakref.ref(model.backbone)))
+            return model
+
+        # Fail before any training: the pool must cover the largest shot count, and every
+        # method must accept its arguments at the smallest one (e.g. contrastive modes need
+        # two samples per class).
+        sample_few_shot(dataset, shots=max(self.shots), seed=self.seeds[0])
+        smallest = sample_few_shot(dataset, shots=min(self.shots), seed=self.seeds[0])
+        for method in methods:
+            Trainer(fresh_model(), replace(arguments[method], seed=self.seeds[0]), smallest)
 
         records: list[Record] = []
-        previous: EmbedFitModel | None = None
         for shots in self.shots:
             for seed in self.seeds:
                 few_shot = sample_few_shot(dataset, shots=shots, seed=seed)
                 for method in methods:
-                    model = model_factory()
-                    if not isinstance(model, EmbedFitModel) or model is previous:
-                        raise ConfigurationError(
-                            "model_factory must return a new EmbedFitModel on every call."
-                        )
-                    previous = model
+                    model = fresh_model()
                     trainer = Trainer(model, replace(arguments[method], seed=seed), few_shot)
                     trainer.train()
                     for metric, value in trainer.evaluate(test_dataset).items():

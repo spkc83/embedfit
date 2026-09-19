@@ -196,11 +196,32 @@ def test_invalid_run_arguments(pool, test_set):
     with pytest.raises(ConfigurationError, match="has training_mode 'supcon'"):
         run(training_arguments={"frozen": TrainingArguments(training_mode="supcon")})
     shared = factory()
-    with pytest.raises(ConfigurationError, match="new EmbedFitModel on every call"):
-        FewShotEvaluator(shots=[4], seeds=[1, 2]).run(
-            pool, test_dataset=test_set, methods=["frozen"], model_factory=lambda: shared
-        )
+    with pytest.raises(ConfigurationError, match="new EmbedFitModel with a new backbone"):
+        run(model_factory=lambda: shared)
+    with pytest.raises(ConfigurationError, match="new EmbedFitModel with a new backbone"):
+        # A new wrapper around a shared backbone would leak trained weights between runs.
+        run(model_factory=lambda: EmbedFitModel(shared.backbone, labels=LABELS))
+    with pytest.raises(ConfigurationError, match="must return an EmbedFitModel"):
+        run(model_factory=lambda: "model")
     with pytest.raises(ConfigurationError, match="fewer than 64 samples"):
         FewShotEvaluator(shots=[4, 64], seeds=[1]).run(
             pool, test_dataset=test_set, methods=["frozen"], model_factory=factory
         )
+
+
+def test_a_method_that_cannot_train_fails_before_any_other_method_trains(
+    pool, test_set, monkeypatch
+):
+    import embedfit.benchmark as benchmark
+
+    trained = []
+    original_train = benchmark.Trainer.train
+    monkeypatch.setattr(
+        benchmark.Trainer, "train", lambda self: trained.append(1) or original_train(self)
+    )
+    evaluator = FewShotEvaluator(shots=[1, 4], seeds=[1])  # SupCon needs 2 samples per class.
+    with pytest.raises(ConfigurationError, match="smallest class has 1"):
+        evaluator.run(
+            pool, test_dataset=test_set, methods=["frozen", "supcon"], model_factory=factory
+        )
+    assert trained == []

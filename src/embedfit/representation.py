@@ -192,11 +192,6 @@ def _objective(
             num_workers=args.num_workers,
         )
 
-        # Unit-length embeddings bound the logits to [-|w|, |w|], which starves cross-entropy
-        # of gradient. Dividing by the temperature is the usual cosine-classifier remedy and
-        # keeps this baseline a fair comparison. The factor is folded into the saved head.
-        logit_scale = args.temperature if model.normalize_embeddings else 1.0
-
         def reseed(epoch: int) -> None:
             generator.manual_seed(seed * 100_003 + epoch)
 
@@ -204,7 +199,7 @@ def _objective(
             if classifier is None:
                 raise ConfigurationError("end_to_end training needs a classifier layer.")
             pixels, labels = batch
-            logits = classifier(model(pixels.to(device=device, dtype=dtype))) / logit_scale
+            logits = classifier(model(pixels.to(device=device, dtype=dtype)))
             loss: torch.Tensor = nn.functional.cross_entropy(logits.float(), labels.to(device))
             return loss
 
@@ -314,9 +309,9 @@ def train_representation(
     and applies the cosine pair loss; ``rules`` optionally decide pair targets and weights
     from fields other than the class label. ``"end_to_end"`` is the comparison baseline: a
     linear classifier on the model's embeddings is trained jointly with the backbone under
-    cross-entropy on uniformly shuffled batches, and returned in ``classifier``. When the model
-    normalises its embeddings, logits are divided by ``args.temperature`` during training (a
-    cosine classifier) and the returned layer already includes that factor.
+    cross-entropy on uniformly shuffled batches, and returned in ``classifier``. The classifier
+    sees exactly the embeddings the model produces (normalised or not) and ``temperature`` plays
+    no part, so the baseline shares no hyperparameter with the contrastive losses.
 
     Each epoch draws its batches from ``train_dataset`` only. When ``eval_dataset``
     is given, its loss is measured after every epoch (without gradients) on a
@@ -461,8 +456,4 @@ def train_representation(
     if best_state is not None and best_epoch != args.num_epochs:
         trained.load_state_dict(best_state)
         logger.info("Restored backbone weights from epoch %d", best_epoch)
-    if classifier is not None and model.normalize_embeddings:
-        with torch.no_grad():  # Fold the training-time logit scale into the layer itself.
-            classifier.weight.div_(args.temperature)
-            classifier.bias.div_(args.temperature)
     return RepresentationResult(steps, train_losses, eval_losses, best_epoch, classifier)

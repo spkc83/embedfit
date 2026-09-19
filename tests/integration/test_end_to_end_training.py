@@ -25,7 +25,7 @@ def make_model(**kwargs):
 def e2e_args(**kwargs):
     options = {
         "training_mode": "end_to_end",
-        "num_epochs": 12,
+        "num_epochs": 30,
         "batch_size": 12,
         "learning_rate": 2e-2,
         "num_workers": 0,
@@ -47,7 +47,7 @@ def test_backbone_and_classifier_are_trained_jointly(trained):
     assert all(
         not torch.equal(p, b) for p, b in zip(model.backbone.parameters(), before, strict=True)
     )
-    assert output.training_mode == "end_to_end" and output.representation_steps == 36
+    assert output.training_mode == "end_to_end" and output.representation_steps == 90
     assert output.train_losses[-1] < 0.6 * output.train_losses[0]
     assert output.eval_losses[-1] < 0.8 * output.eval_losses[0]
     assert output.best_epoch == int(np.argmin(output.eval_losses)) + 1
@@ -111,3 +111,28 @@ def test_head_configuration_conflicts_fail_when_the_trainer_is_created():
     with pytest.raises(ConfigurationError, match="trains its own linear classifier"):
         Trainer(make_model(head=LogisticRegressionHead()), e2e_args(), train)
     assert Trainer(make_model(), e2e_args(head="linear"), train) is not None
+
+
+def test_the_head_reproduces_the_training_time_probabilities():
+    """The classifier used in training is exactly the head used at inference."""
+    from embedfit import representation
+
+    train = dataset(6, 0)
+    model = make_model()
+    result = representation.train_representation(model, train, None, e2e_args(num_epochs=2))
+    model.eval()
+    pixels = torch.stack([model.backbone.preprocess(image) for image in train.images[:5]])
+    with torch.no_grad():
+        expected = torch.softmax(result.classifier(model(pixels)), dim=1).numpy()
+    head = LinearHead.from_module(result.classifier)
+    assert np.allclose(head.predict_proba(model.encode(train.images[:5])), expected, atol=1e-6)
+
+
+def test_temperature_does_not_affect_the_baseline():
+    losses = [
+        Trainer(make_model(), e2e_args(num_epochs=2, temperature=t), dataset(6, 0))
+        .train()
+        .train_losses
+        for t in (0.07, 1.0)
+    ]
+    assert losses[0] == losses[1]
