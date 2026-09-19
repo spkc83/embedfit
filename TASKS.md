@@ -108,12 +108,12 @@ Legend:
 
 ## M9 Retrieval
 
-- [ ] brute-force cosine backend
-- [ ] retrieval result type
-- [ ] top-k
-- [ ] exclude self
-- [ ] retrieval metrics
-- [ ] leakage-safe exclusion by group
+- [x] brute-force cosine backend
+- [x] retrieval result type
+- [x] top-k
+- [x] exclude self
+- [x] retrieval metrics
+- [x] leakage-safe exclusion by group
 
 ## M10 Few-shot benchmark
 

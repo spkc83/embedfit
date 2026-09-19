@@ -100,6 +100,9 @@ Importable today:
 | `SupConLoss`, `create_loss`, `register_loss`, `available_losses` | `embedfit.losses` | Supervised contrastive loss over `[B, D]` or multi-view `[B, V, D]` embeddings, and a loss registry |
 | `BalancedClassBatchSampler` | `embedfit.sampling` | Batches of up to `samples_per_class` images from each of `classes_per_batch` classes, never a duplicate image, reproducible per seed and epoch |
 | `ClassificationHead`, `LogisticRegressionHead`, `create_head`, `register_head` | `embedfit.heads` | Classifiers over `[N, D]` embeddings and class indices, constructible by name |
+| `RetrievalIndex` | `embedfit` | Cosine nearest-neighbour search over embeddings, with ids, metadata passthrough, and leakage-safe exclusion by id or group ([design](docs/design/RETRIEVAL.md#implemented-semantics)) |
+| `RetrievalResult`, `RetrievalBackend`, `BruteForceCosineBackend` | `embedfit.retrieval` | One neighbour (`id`, `score`, `rank`, `metadata`); the backend contract future FAISS or pgvector adapters implement; the exhaustive v0.1 backend |
+| `retrieval_precision_at_k`, `retrieval_recall_at_k`, `mean_reciprocal_rank`, `mean_average_precision` | `embedfit.retrieval` | Ranking quality of retrieved results against known-relevant ids, without calling a model |
 | `ImageBackbone` | `embedfit.backbones` | Contract for provider adapters, which own preprocessing, feature extraction, and their own serialization |
 | `TorchvisionBackbone` | `embedfit.backbones` | torchvision classification models with the linear classifier removed (`torchvision/<name>`); models without one, such as SqueezeNet, are rejected |
 | `create_backbone`, `register_backbone_provider` | `embedfit.backbones` | Resolve `<provider>/<name>` identifiers; the provider is never guessed |
@@ -110,7 +113,7 @@ Importable today:
 | `DummyBackbone` | `embedfit.backbones` | Tiny trainable CNN with no checkpoint, for offline tests and examples |
 | `make_bar_images` | `embedfit.testing` | Deterministic synthetic image classes with learnable structure |
 
-The `pair`, `triplet`, and `end_to_end` training modes, augmentation profiles, retrieval, model save/load, and the `timm` and Hugging Face providers from [`SPEC.md`](SPEC.md) are not implemented yet; `Trainer` rejects an unavailable `training_mode` when it is created.
+The `pair`, `triplet`, and `end_to_end` training modes, augmentation profiles, model save/load, and the `timm` and Hugging Face providers from [`SPEC.md`](SPEC.md) are not implemented yet; `Trainer` rejects an unavailable `training_mode` when it is created.
 
 ## Development
 

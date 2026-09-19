@@ -35,3 +35,7 @@ class TrainingDivergedError(EmbedFitError, FloatingPointError):
 
 class DataLeakageError(EmbedFitError, ValueError):
     """Data splits share samples or groups that must be kept apart."""
+
+
+class IndexNotFittedError(EmbedFitError, RuntimeError):
+    """A search was requested before a retrieval index was fitted."""
