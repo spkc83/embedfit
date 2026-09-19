@@ -19,3 +19,7 @@ class ImageInputError(EmbedFitError, ValueError):
 
 class BackboneProviderError(EmbedFitError, ValueError):
     """A backbone identifier is malformed, names an unknown provider, or cannot be built."""
+
+
+class HeadNotFittedError(EmbedFitError, RuntimeError):
+    """A prediction was requested before a classification head was fitted."""
