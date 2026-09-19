@@ -6,6 +6,7 @@ from embedfit._version import __version__
 from embedfit.data.dataset import ImageDataset
 from embedfit.exceptions import EmbedFitError
 from embedfit.model import EmbedFitModel
+from embedfit.retrieval.index import RetrievalIndex
 from embedfit.trainer import Trainer
 from embedfit.training_args import TrainingArguments
 
@@ -16,6 +17,7 @@ __all__ = [
     "EmbedFitError",
     "EmbedFitModel",
     "ImageDataset",
+    "RetrievalIndex",
     "Trainer",
     "TrainingArguments",
     "__version__",

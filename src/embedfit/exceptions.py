@@ -23,3 +23,7 @@ class BackboneProviderError(EmbedFitError, ValueError):
 
 class HeadNotFittedError(EmbedFitError, RuntimeError):
     """A prediction was requested before a classification head was fitted."""
+
+
+class IndexNotFittedError(EmbedFitError, RuntimeError):
+    """A search was requested before a retrieval index was fitted."""
