@@ -40,24 +40,38 @@ Then execute work from [`TASKS.md`](TASKS.md).
 
 EmbedFit is built milestone by milestone against [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md); [`TASKS.md`](TASKS.md) tracks each item. The capabilities under [Core v0.1 capabilities](#core-v01-capabilities) are the target, not the current feature set.
 
+```python
+from embedfit import EmbedFitModel
+
+model = EmbedFitModel.from_pretrained("torchvision/resnet18")   # downloads ImageNet weights
+embeddings = model.encode(["scan_001.png", "scan_002.png"])     # numpy array, shape [2, 512]
+```
+
+`encode` accepts PIL images, numpy arrays, torch tensors, and file paths, and returns one L2-normalised row per image. Resolution, interpolation mode, and normalisation constants come from the selected checkpoint, never from a global default; pass `image_size=` to run a convolutional backbone at higher resolution.
+
 Importable today:
 
 | Component | Location | Purpose |
 | --- | --- | --- |
+| `EmbedFitModel` | `embedfit` | Wraps a backbone: `from_pretrained`, `encode`, `freeze_backbone` / `unfreeze_backbone`, differentiable `forward` |
+| `ImageBackbone` | `embedfit.backbones` | Contract for provider adapters, which own preprocessing, feature extraction, and their own serialization |
+| `TorchvisionBackbone` | `embedfit.backbones` | torchvision classification models with the linear classifier removed (`torchvision/<name>`); models without one, such as SqueezeNet, are rejected |
+| `create_backbone`, `register_backbone_provider` | `embedfit.backbones` | Resolve `<provider>/<name>` identifiers; the provider is never guessed |
+| `to_rgb_tensor` | `embedfit.data` | Converts any supported image form to a float RGB tensor in [0, 1] |
 | `set_seed` | `embedfit.utils` | Seeds Python, NumPy, and torch (CPU + CUDA); optional deterministic mode |
 | `resolve_device` | `embedfit.utils` | `"auto"` resolves CUDA → MPS → CPU; an explicit device never falls back silently |
 | `EmbedFitError`, `ConfigurationError`, `ImageInputError` | `embedfit.exceptions` | Error hierarchy; messages describe structure, never image or metadata content |
 | `DummyBackbone` | `embedfit.backbones` | Tiny trainable CNN with no checkpoint, for offline tests and examples |
 | `make_bar_images` | `embedfit.testing` | Deterministic synthetic image classes with learnable structure |
 
-`EmbedFitModel`, `Trainer`, and the other public objects in [`SPEC.md`](SPEC.md) §5 are not implemented yet.
+Classification heads, `Trainer`, metrics, retrieval, model save/load, and the `timm` and Hugging Face providers from [`SPEC.md`](SPEC.md) are not implemented yet.
 
 ## Development
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev]"
+pip install -e ".[dev,torchvision]"
 
 pytest -q            # offline, CPU-only; excludes tests marked `network` or `slow`
 ruff check .
@@ -66,7 +80,7 @@ mypy
 python -m build
 ```
 
-Provider tests that download checkpoints are opt-in: `pytest -m network`.
+Tests that download pretrained checkpoints are opt-in: `pytest -m network`. Without the `torchvision` extra, the torchvision adapter tests are skipped.
 
 Optional extras install backbone providers and dataset adapters: `torchvision`, `timm`, `hf`, `datasets`, `pandas`, or `all`. The core install depends only on `torch`, `numpy`, `scikit-learn`, and `pillow` ([ADR 0006](docs/adrs/0006-core-dependencies-and-testing-utilities.md)).
 

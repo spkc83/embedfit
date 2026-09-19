@@ -15,7 +15,9 @@ Work happens on short-lived branches cut from `main`, one per milestone or coher
 | `docs/` | Documentation-only change | `docs/leakage-guide` |
 | `chore/` | Tooling, CI, packaging | `chore/ci-workflow` |
 
-Milestone branches are named `feat/m<number>-<slug>`. A branch merges to `main` through a pull request once its milestone meets the definition of done in `AGENTS.md`.
+Milestone branches are named `feat/m<number>-<slug>`.
+
+Once a branch meets the definition of done in `AGENTS.md`, it is merged into `main` with `git merge --no-ff`, and both `main` and the branch are pushed. Pull requests are not used. Merged branches are kept for reference and pruned, oldest first, once the repository holds more than 25.
 
 ## Commits
 
