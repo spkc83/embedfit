@@ -131,7 +131,7 @@ Importable today:
 | `sample_few_shot` | `embedfit.sampling` | N samples per class, without replacement |
 | `LabelMapping` | `embedfit.data` | Ordered label ↔ class-index mapping that distinguishes `0` from `False` |
 | `SupConLoss`, `CosinePairLoss`, `create_loss`, `register_loss`, `available_losses` | `embedfit.losses` | Supervised contrastive loss over `[B, D]` or multi-view `[B, V, D]` embeddings, weighted cosine loss over embedding pairs, and a loss registry |
-| `PairSampler`, `ImagePair`, `RelationshipRule` | `embedfit.sampling` | Bounded, balanced positive/negative pairs per epoch; rules set pair targets and weights from arbitrary fields |
+| `PairSampler`, `ImagePair`, `RelationshipRule` | `embedfit.sampling` | Bounded, balanced positive/negative pairs per epoch; rules set pair targets and weights from arbitrary fields; optional hard-negative mining from training embeddings |
 | `BalancedClassBatchSampler` | `embedfit.sampling` | Batches of up to `samples_per_class` images from each of `classes_per_batch` classes, never a duplicate image, reproducible per seed and epoch |
 | `ClassificationHead`, `LogisticRegressionHead`, `LinearHead`, `create_head`, `load_head`, `register_head` | `embedfit.heads` | Classifiers over `[N, D]` embeddings and class indices, constructible by name |
 | `RetrievalIndex` | `embedfit` | Cosine nearest-neighbour search over embeddings, with ids, metadata passthrough, and leakage-safe exclusion by id or group ([design](docs/design/RETRIEVAL.md#implemented-semantics)) |
@@ -147,7 +147,7 @@ Importable today:
 | `DummyBackbone` | `embedfit.backbones` | Tiny trainable CNN with no checkpoint, for offline tests and examples |
 | `make_bar_images` | `embedfit.testing` | Deterministic synthetic image classes with learnable structure |
 
-The `triplet` training mode, hard-negative mining, augmentation profiles, and the `timm` and Hugging Face providers from [`SPEC.md`](SPEC.md) are not implemented yet; `Trainer` rejects an unavailable `training_mode` when it is created.
+The `triplet` training mode, augmentation profiles, and the `timm` and Hugging Face providers from [`SPEC.md`](SPEC.md) are not implemented yet; `Trainer` rejects an unavailable `training_mode` when it is created.
 
 ## Examples and guides
 
