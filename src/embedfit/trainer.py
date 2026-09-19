@@ -12,13 +12,14 @@ from embedfit.evaluation.classification import classification_metrics, pr_auc, r
 from embedfit.exceptions import ConfigurationError, UndefinedMetricError
 from embedfit.heads.registry import create_head
 from embedfit.model import EmbedFitModel
+from embedfit.representation import train_representation, validate_representation_setup
 from embedfit.training_args import TrainingArguments
 from embedfit.utils.device import resolve_device
 from embedfit.utils.seed import set_seed
 
 logger = logging.getLogger(__name__)
 
-_IMPLEMENTED_MODES = ("frozen",)
+_IMPLEMENTED_MODES = ("frozen", "supcon")
 
 
 @dataclass(frozen=True)
@@ -29,11 +30,18 @@ class TrainOutput:
         training_mode: The mode that ran.
         num_train_samples: Number of training samples used.
         representation_steps: Optimizer steps taken on the backbone (0 in ``frozen`` mode).
+        train_losses: Mean representation loss of each epoch (empty in ``frozen`` mode).
+        eval_losses: Validation representation loss of each epoch (empty without
+            ``eval_dataset`` or in ``frozen`` mode).
+        best_epoch: 1-based epoch whose backbone weights were kept (0 in ``frozen`` mode).
     """
 
     training_mode: str
     num_train_samples: int
     representation_steps: int
+    train_losses: tuple[float, ...] = ()
+    eval_losses: tuple[float, ...] = ()
+    best_epoch: int = 0
 
 
 @dataclass(frozen=True)
@@ -63,13 +71,18 @@ class Trainer:
             model created with a head *instance* keeps it, and ``args.head`` must be left at
             its default.
         train_dataset: Training samples. Evaluation and test data must never be passed here.
-        eval_dataset: Optional held-out samples used by ``predict`` when no dataset is given.
+        eval_dataset: Optional validation samples. ``predict`` and ``evaluate`` default to
+            them, and representation training uses them to choose which epoch's weights to
+            keep. They must not be test data: a checkpoint chosen on the test set leaks it.
 
     Raises:
-        ConfigurationError: If the model has no labels, the training set is empty or contains
-            labels unknown to the model, ``args.training_mode`` is not available,
-            ``freeze_backbone_before_head=False`` is combined with ``frozen`` mode, or
-            ``args.head`` conflicts with the model's head instance.
+        ConfigurationError: If the model has no labels, the training set is empty, contains
+            labels unknown to the model, or lacks samples for one of the model's labels,
+            ``args.training_mode`` is not available,
+            ``freeze_backbone_before_head=False`` is combined with ``frozen`` mode,
+            ``args.head`` conflicts with the model's head instance, or contrastive training
+            cannot run (batch size below 4, a class with fewer than 2 samples, or a
+            mixed-precision mode the device does not support).
     """
 
     def __init__(
@@ -107,16 +120,32 @@ class Trainer:
                 )
         if len(train_dataset) == 0:
             raise ConfigurationError("train_dataset is empty.")
-        model.label_mapping.encode(train_dataset.labels)  # Reject unknown labels up front.
+        # Reject unknown labels, and labels without samples, before any work starts: the head
+        # needs every class, and finding that out after representation training wastes a run.
+        present = set(model.label_mapping.encode(train_dataset.labels).tolist())
+        absent = len(model.label_mapping) - len(present)
+        if absent:
+            raise ConfigurationError(
+                f"{absent} of the model's {len(model.label_mapping)} labels have no samples in "
+                "train_dataset; every class needs at least one."
+            )
 
         self.model = model
         self.args = args
         self.train_dataset = train_dataset
         self.eval_dataset = eval_dataset
         self._device = resolve_device(args.device) if args.device is not None else None
+        if args.training_mode != "frozen":
+            validate_representation_setup(
+                model, train_dataset, eval_dataset, args, self._device or model.device
+            )
 
     def train(self) -> TrainOutput:
         """Run both phases and leave the model ready for prediction.
+
+        Representation training unfreezes the whole backbone first, so any partial freezing
+        applied beforehand is discarded; ``freeze_backbone_before_head`` decides the state
+        afterwards.
 
         Returns:
             A ``TrainOutput`` summary.
@@ -128,8 +157,22 @@ class Trainer:
             "Training mode '%s' on %d samples", self.args.training_mode, len(self.train_dataset)
         )
 
-        logger.info("Phase 1/2 (representation): skipped, backbone stays frozen")
-        self.model.freeze_backbone()
+        result = None
+        if self.args.training_mode == "frozen":
+            logger.info("Phase 1/2 (representation): skipped, backbone stays frozen")
+        else:
+            logger.info(
+                "Phase 1/2 (representation): '%s' for %d epochs",
+                self.args.training_mode,
+                self.args.num_epochs,
+            )
+            self.model.unfreeze_backbone()
+            result = train_representation(
+                self.model, self.train_dataset, self.eval_dataset, self.args
+            )
+        if self.args.freeze_backbone_before_head:
+            self.model.freeze_backbone()
+        self.model.eval()
 
         if self.model.head_name is not None and self.model.head_name != self.args.head:
             self.model.head = create_head(self.args.head)
@@ -143,7 +186,10 @@ class Trainer:
         return TrainOutput(
             training_mode=self.args.training_mode,
             num_train_samples=len(self.train_dataset),
-            representation_steps=0,
+            representation_steps=result.steps if result else 0,
+            train_losses=tuple(result.train_losses) if result else (),
+            eval_losses=tuple(result.eval_losses) if result else (),
+            best_epoch=result.best_epoch if result else 0,
         )
 
     def predict(self, dataset: ImageDataset | None = None) -> PredictionOutput:
@@ -172,6 +218,10 @@ class Trainer:
 
     def evaluate(self, dataset: ImageDataset | None = None) -> dict[str, float]:
         """Compute aggregate metrics on held-out data.
+
+        ``eval_dataset`` is the default, and in ``supcon`` mode it also chose which epoch's
+        weights were kept, so metrics on it are optimistically biased. Pass a separate test
+        set for an unbiased estimate.
 
         Args:
             dataset: Samples to evaluate. Defaults to ``eval_dataset``.

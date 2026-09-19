@@ -27,3 +27,7 @@ class HeadNotFittedError(EmbedFitError, RuntimeError):
 
 class UndefinedMetricError(EmbedFitError, ValueError):
     """A metric has no defined value for the given data, e.g. recall with no positives."""
+
+
+class TrainingDivergedError(EmbedFitError, FloatingPointError):
+    """A training loss became NaN or infinite."""
