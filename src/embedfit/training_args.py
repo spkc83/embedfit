@@ -55,6 +55,11 @@ class TrainingArguments:
         positives_per_example: ``pair`` mode: positive partners drawn per sample each epoch.
         negatives_per_example: ``pair`` mode: negative partners drawn per sample each epoch.
             At least one of the two must be positive.
+        hard_negative_fraction: ``pair`` mode: share of each sample's negative partners, in
+            [0, 1], chosen as its most similar different-class training samples under the
+            current backbone instead of at random. 0 disables mining.
+        hard_negative_refresh_epochs: Re-encode the training set for mining every this many
+            epochs (>= 1). Encoding runs without gradients and never sees validation data.
 
     Raises:
         ConfigurationError: If any value is invalid. Raised at construction, never mid-training.
@@ -81,6 +86,8 @@ class TrainingArguments:
     deterministic: bool = False
     positives_per_example: int = 4
     negatives_per_example: int = 4
+    hard_negative_fraction: float = 0.0
+    hard_negative_refresh_epochs: int = 1
 
     def __post_init__(self) -> None:
         _require(
@@ -100,6 +107,21 @@ class TrainingArguments:
         _require(
             self.positives_per_example + self.negatives_per_example > 0,
             "positives_per_example and negatives_per_example cannot both be 0.",
+        )
+        _require(
+            _is_number(self.hard_negative_fraction) and 0 <= self.hard_negative_fraction <= 1,
+            f"hard_negative_fraction must be in [0, 1], got {self.hard_negative_fraction!r}.",
+        )
+        _require(
+            _is_int(self.hard_negative_refresh_epochs) and self.hard_negative_refresh_epochs >= 1,
+            "hard_negative_refresh_epochs must be an int >= 1, "
+            f"got {self.hard_negative_refresh_epochs!r}.",
+        )
+        _require(
+            self.hard_negative_fraction == 0
+            or (self.training_mode == "pair" and self.negatives_per_example > 0),
+            "hard_negative_fraction > 0 requires training_mode='pair' with "
+            "negatives_per_example > 0.",
         )
         _require(
             _is_int(self.seed) and 0 <= self.seed <= 2**32 - 1,
