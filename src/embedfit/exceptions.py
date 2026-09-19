@@ -15,3 +15,7 @@ class ConfigurationError(EmbedFitError, ValueError):
 
 class ImageInputError(EmbedFitError, ValueError):
     """An input image has an unsupported type, shape, or dtype."""
+
+
+class BackboneProviderError(EmbedFitError, ValueError):
+    """A backbone identifier is malformed, names an unknown provider, or cannot be built."""
