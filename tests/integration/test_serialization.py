@@ -4,6 +4,7 @@ import json
 
 import numpy as np
 import pytest
+import torch
 
 from embedfit import EmbedFitModel, ImageDataset, Trainer, TrainingArguments
 from embedfit.backbones import load_backbone
@@ -82,7 +83,11 @@ def test_bundle_layout_and_config_contents(fitted, tmp_path):
     assert config["backbone"]["embedding_dim"] == 24
     assert len(config["backbone"]["preprocessing_fingerprint"]) == 64
     assert config["normalize_embeddings"] is True
-    assert config["head"] == {"type": "logistic_regression", "fitted": True}
+    assert config["head"] == {
+        "type": "logistic_regression",
+        "fitted": True,
+        "configured_by_name": False,
+    }
     assert json.loads((tmp_path / "labels.json").read_text()) == {
         "labels": LABELS,
         "positive_label": "diagonal",
@@ -128,8 +133,6 @@ def test_bundle_contains_no_pickles_and_no_training_data(data, tmp_path):
             np.load(path, allow_pickle=False).close()  # Raises if any array is pickled.
         if path.suffix == ".json":
             json.loads(content)
-    import torch
-
     # weights_only=True refuses anything but tensors and plain containers.
     torch.load(tmp_path / "backbone" / "weights.pt", weights_only=True)
 
@@ -162,7 +165,16 @@ def test_saved_values_cannot_be_overridden_at_load_time(fitted, tmp_path):
     ):
         with pytest.raises(ConfigurationError, match="cannot be set when loading a saved model"):
             EmbedFitModel.from_pretrained(tmp_path, **kwargs)
-    assert EmbedFitModel.from_pretrained(tmp_path, device="cpu").labels == tuple(LABELS)
+    # Passing a value that happens to equal the default is still an override attempt.
+    for kwargs in (
+        {"normalize_embeddings": True},
+        {"head": "logistic_regression"},
+        {"labels": None},
+    ):
+        with pytest.raises(ConfigurationError, match="cannot be set when loading a saved model"):
+            EmbedFitModel.from_pretrained(tmp_path, **kwargs)
+    loaded = EmbedFitModel.from_pretrained(tmp_path, device="cpu")
+    assert loaded.labels == tuple(LABELS) and loaded.device == torch.device("cpu")
 
 
 def test_a_directory_is_a_saved_model_only_if_it_holds_the_config(tmp_path, monkeypatch):
@@ -170,13 +182,18 @@ def test_a_directory_is_a_saved_model_only_if_it_holds_the_config(tmp_path, monk
     (tmp_path / "dummy" / "tiny").mkdir(parents=True)
     monkeypatch.chdir(tmp_path)
     assert EmbedFitModel.from_pretrained("dummy/tiny").backbone.identifier == "dummy/tiny"
+    for not_a_bundle in (str(tmp_path / "dummy"), tmp_path / "dummy"):
+        with pytest.raises(ConfigurationError, match="not a saved model directory"):
+            EmbedFitModel.from_pretrained(not_a_bundle)
+    with pytest.raises(BackboneProviderError, match="must have the form"):
+        EmbedFitModel.from_pretrained("no-such-path-or-provider")
     with pytest.raises(BackboneProviderError):
-        EmbedFitModel.from_pretrained(str(tmp_path / "dummy"))
+        EmbedFitModel.from_pretrained("a" * 300)  # Too long to be a path; not an OSError.
     with pytest.raises(ConfigurationError, match="not a saved model directory"):
         EmbedFitModel.from_pretrained(tmp_path / "dummy")
 
 
-def test_tampered_or_incomplete_bundles_are_rejected(fitted, tmp_path):
+def test_edited_or_incomplete_bundles_are_rejected(fitted, tmp_path):
     fitted.save_pretrained(tmp_path)
 
     backbone_config = tmp_path / "backbone" / "config.json"
@@ -335,3 +352,200 @@ def test_supcon_trained_model_survives_a_round_trip(tmp_path):
     assert output["training_mode"] == "supcon" and output["representation_steps"] == 6
     assert len(output["train_losses"]) == 3 and output["best_epoch"] == 3
     assert metadata["training_arguments"]["learning_rate"] == 1e-2
+
+
+def test_a_failed_save_leaves_the_existing_bundle_untouched(fitted, data, tmp_path):
+    _, (images, _) = data
+    target = tmp_path / "model"
+    fitted.save_pretrained(target)
+    expected = fitted.predict_proba(images)
+
+    class Unsaveable(LogisticRegressionHead):
+        def save(self, path):
+            raise ConfigurationError("simulated failure while writing the head")
+
+    broken = EmbedFitModel.from_pretrained("dummy/tiny", labels=LABELS, seed=9, head=Unsaveable())
+    with pytest.raises(ConfigurationError, match="simulated failure"):
+        broken.save_pretrained(target)
+    assert np.allclose(EmbedFitModel.from_pretrained(target).predict_proba(images), expected)
+    assert [p.name for p in tmp_path.iterdir()] == ["model"]  # No staging directory left over.
+
+    fresh = tmp_path / "fresh"
+    with pytest.raises(ConfigurationError, match="simulated failure"):
+        broken.save_pretrained(fresh)
+    assert not fresh.exists()
+
+
+def test_save_refuses_files_and_unrelated_directories(fitted, tmp_path):
+    (tmp_path / "notes.txt").write_text("keep me")
+    with pytest.raises(ConfigurationError, match="not empty and is not a saved model"):
+        fitted.save_pretrained(tmp_path)
+    assert (tmp_path / "notes.txt").read_text() == "keep me"
+    with pytest.raises(ConfigurationError, match="exists and is not a directory"):
+        fitted.save_pretrained(tmp_path / "notes.txt")
+
+
+def test_resaving_replaces_the_whole_bundle(fitted, tmp_path):
+    fitted.save_pretrained(tmp_path / "m")
+    assert (tmp_path / "m" / "head" / "parameters.npz").exists()
+    EmbedFitModel.from_pretrained("dummy/tiny", labels=LABELS).save_pretrained(tmp_path / "m")
+    assert not (tmp_path / "m" / "head" / "parameters.npz").exists()  # No stale coefficients.
+    assert not EmbedFitModel.from_pretrained(tmp_path / "m").head.is_fitted
+
+
+@pytest.mark.parametrize("dtype", [torch.bfloat16, torch.float64])
+def test_backbone_dtype_survives_the_round_trip(dtype, data, tmp_path):
+    (train_images, train_labels), (images, _) = data
+    model = EmbedFitModel.from_pretrained("dummy/tiny", labels=list(BAR_CLASSES[:3]))
+    model.backbone.to(dtype)
+    model.fit_head(train_images, train_labels)
+    model.save_pretrained(tmp_path)
+    loaded = EmbedFitModel.from_pretrained(tmp_path)
+    assert next(loaded.backbone.parameters()).dtype == dtype
+    assert np.array_equal(loaded.encode(images), model.encode(images))
+
+
+def test_a_head_instance_stays_an_instance_after_loading(data, tmp_path):
+    (train_images, train_labels), _ = data
+    labels = list(BAR_CLASSES[:3])
+    by_instance = EmbedFitModel.from_pretrained(
+        "dummy/tiny", labels=labels, head=LogisticRegressionHead(class_weight="balanced")
+    )
+    by_instance.save_pretrained(tmp_path / "instance")
+    EmbedFitModel.from_pretrained("dummy/tiny", labels=labels).save_pretrained(tmp_path / "name")
+    assert EmbedFitModel.from_pretrained(tmp_path / "instance").head_name is None
+    assert EmbedFitModel.from_pretrained(tmp_path / "name").head_name == "logistic_regression"
+
+    # So Trainer keeps the configured head of a reloaded model instead of swapping it.
+    reloaded = EmbedFitModel.from_pretrained(tmp_path / "instance")
+    configured = reloaded.head
+    train = ImageDataset.from_lists(train_images, train_labels)
+    Trainer(reloaded, TrainingArguments(training_mode="frozen"), train).train()
+    assert reloaded.head is configured and configured.class_weight == "balanced"
+
+
+def test_label_count_must_agree_with_the_config_and_the_head(fitted, tmp_path):
+    fitted.save_pretrained(tmp_path)
+    labels_path = tmp_path / "labels.json"
+    saved = json.loads(labels_path.read_text())
+    labels_path.write_text(json.dumps(saved | {"labels": [*LABELS, "extra"]}))
+    with pytest.raises(ConfigurationError, match="records 3 labels but labels.json holds 4"):
+        EmbedFitModel.from_pretrained(tmp_path)
+    config_path = tmp_path / "embedfit_config.json"
+    config = json.loads(config_path.read_text())
+    config_path.write_text(json.dumps(config | {"num_labels": 4}))
+    with pytest.raises(ConfigurationError, match="fitted on 3 classes but labels.json holds 4"):
+        EmbedFitModel.from_pretrained(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "section, key, value, match",
+    [
+        ("backbone", "identifier", "torchvision/resnet18", "records backbone identifier"),
+        ("backbone", "embedding_dim", 7, "records backbone embedding_dim 7"),
+        ("backbone", "pooling", "mean", "records backbone pooling 'mean'"),
+        ("head", "type", "svm", "records head type 'svm'"),
+        (None, "normalize_embeddings", None, "must be a bool"),
+        (None, "normalize_embeddings", "no", "must be a bool"),
+        (None, "format_version", 0, "format version 0"),
+        (None, "format_version", "1", "format version '1'"),
+    ],
+)
+def test_recorded_values_are_verified_against_what_is_loaded(
+    fitted, tmp_path, section, key, value, match
+):
+    fitted.save_pretrained(tmp_path)
+    config_path = tmp_path / "embedfit_config.json"
+    config = json.loads(config_path.read_text())
+    if section is None:
+        config[key] = value
+    else:
+        config[section][key] = value
+    config_path.write_text(json.dumps(config))
+    with pytest.raises(ConfigurationError, match=match):
+        EmbedFitModel.from_pretrained(tmp_path)
+
+
+def test_reformatting_the_backbone_config_does_not_break_loading(fitted, tmp_path):
+    fitted.save_pretrained(tmp_path)
+    path = tmp_path / "backbone" / "config.json"
+    content = json.loads(path.read_text())
+    path.write_text(json.dumps(dict(reversed(content.items()))))  # New order, no indentation.
+    assert EmbedFitModel.from_pretrained(tmp_path).labels == tuple(LABELS)
+
+
+def test_pickled_payloads_are_refused_with_an_embedfit_error(fitted, tmp_path):
+    import pickle
+
+    fitted.save_pretrained(tmp_path)
+    weights = tmp_path / "backbone" / "weights.pt"
+    original = weights.read_bytes()
+    for payload in (pickle.dumps({"weights": object}, protocol=2), b"garbage"):
+        weights.write_bytes(payload)
+        with pytest.raises(ConfigurationError, match="not a tensor-only state dict") as excinfo:
+            EmbedFitModel.from_pretrained(tmp_path)
+        assert "weights_only=False" not in str(excinfo.value)
+    weights.write_bytes(original)
+
+    np.savez(
+        tmp_path / "head" / "parameters.npz",
+        coef=np.array([object()], dtype=object),
+        intercept=np.zeros(3),
+        n_iter=np.zeros(1),
+    )
+    with pytest.raises(ConfigurationError, match="valid saved LogisticRegressionHead"):
+        EmbedFitModel.from_pretrained(tmp_path)
+
+
+def test_weights_that_do_not_fit_the_architecture_are_a_configuration_error(tmp_path):
+    big = EmbedFitModel.from_pretrained("dummy/tiny", embedding_dim=24)
+    small = EmbedFitModel.from_pretrained("dummy/tiny", embedding_dim=8)
+    big.save_pretrained(tmp_path / "big")
+    small.save_pretrained(tmp_path / "small")
+    (tmp_path / "big" / "backbone" / "weights.pt").write_bytes(
+        (tmp_path / "small" / "backbone" / "weights.pt").read_bytes()
+    )
+    with pytest.raises(ConfigurationError, match="matching this backbone's configuration"):
+        EmbedFitModel.from_pretrained(tmp_path / "big")
+
+
+def test_subclasses_load_as_themselves_and_custom_pooling_is_recorded(tmp_path):
+    from embedfit.backbones import DummyBackbone
+
+    class MeanPooled(DummyBackbone):
+        pooling = "mean"
+
+    class CustomModel(EmbedFitModel):
+        pass
+
+    CustomModel(MeanPooled()).save_pretrained(tmp_path)
+    config = json.loads((tmp_path / "embedfit_config.json").read_text())
+    assert config["backbone"]["pooling"] == "mean"
+    # The dummy loader rebuilds a plain DummyBackbone, whose pooling differs: refused.
+    with pytest.raises(ConfigurationError, match="records backbone pooling 'mean'"):
+        CustomModel.from_pretrained(tmp_path)
+
+    CustomModel(DummyBackbone()).save_pretrained(tmp_path / "plain")
+    assert type(CustomModel.from_pretrained(tmp_path / "plain")) is CustomModel
+
+
+def test_a_backbone_that_writes_no_config_cannot_be_saved(tmp_path):
+    from embedfit.backbones import DummyBackbone
+
+    class NoConfig(DummyBackbone):
+        def save_pretrained(self, path):
+            path.mkdir(parents=True)
+
+    with pytest.raises(ConfigurationError, match="must write its settings to config.json"):
+        EmbedFitModel(NoConfig()).save_pretrained(tmp_path / "m")
+    assert not (tmp_path / "m").exists()
+
+
+def test_saved_training_metadata_omits_the_output_directory(data, tmp_path):
+    (train_images, train_labels), _ = data
+    model = EmbedFitModel.from_pretrained("dummy/tiny", labels=list(BAR_CLASSES[:3]))
+    args = TrainingArguments(training_mode="frozen", output_dir=str(tmp_path / "user-jane" / "run"))
+    trainer = Trainer(model, args, ImageDataset.from_lists(train_images, train_labels))
+    trainer.train()
+    saved_to = trainer.save_model()
+    assert "jane" not in (saved_to / "training_metadata.json").read_text()

@@ -58,6 +58,11 @@ class LogisticRegressionHead(ClassificationHead):
         """Whether ``fit`` has completed."""
         return self._estimator is not None
 
+    @property
+    def num_classes(self) -> int | None:
+        """Number of classes the head was fitted on, or ``None`` before fitting."""
+        return self._num_classes if self.is_fitted else None
+
     def fit(self, features: np.ndarray, targets: np.ndarray, *, num_classes: int) -> None:
         """Fit on ``[N, D]`` features and ``[N]`` class indices. See ``ClassificationHead.fit``."""
         matrix = validate_features(features)
@@ -104,6 +109,7 @@ class LogisticRegressionHead(ClassificationHead):
             "feature_dim": self._feature_dim,
         }
         (directory / "config.json").write_text(json.dumps(config, indent=2) + "\n")
+        (directory / "parameters.npz").unlink(missing_ok=True)  # Never keep stale parameters.
         if self._estimator is not None:
             np.savez(
                 directory / "parameters.npz",

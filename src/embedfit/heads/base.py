@@ -72,6 +72,14 @@ class ClassificationHead(ABC):
             HeadNotFittedError: If called before ``fit``.
         """
 
+    @property
+    def num_classes(self) -> int | None:
+        """Number of classes the head was fitted on, or ``None`` if unknown or unfitted.
+
+        A saved model checks this against its labels when it is loaded.
+        """
+        return None
+
     def save(self, path: str | Path) -> None:
         """Write the head's options and fitted state to a directory.
 

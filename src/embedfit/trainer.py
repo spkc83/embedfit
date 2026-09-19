@@ -272,7 +272,8 @@ class Trainer:
         """Save the trained model together with aggregate training metadata.
 
         The metadata holds the training arguments and the ``TrainOutput`` summary (mode,
-        sample count, steps). It contains no samples, labels, or identifiers.
+        sample count, steps, losses). It contains no samples, labels, or identifiers, and
+        ``output_dir`` is left out because a local path can reveal a user name.
 
         Args:
             path: Target directory. Defaults to ``args.output_dir``.
@@ -289,7 +290,9 @@ class Trainer:
         self.model.save_pretrained(
             directory,
             training_metadata={
-                "training_arguments": asdict(self.args),
+                "training_arguments": {
+                    name: value for name, value in asdict(self.args).items() if name != "output_dir"
+                },
                 "train_output": asdict(self._last_output),
             },
         )

@@ -73,7 +73,10 @@ class ImageBackbone(nn.Module, ABC):
     def save_pretrained(self, path: str | Path) -> None:
         """Write weights and the configuration needed to rebuild this backbone to ``path``.
 
-        Only weights, hyperparameters, and preprocessing settings may be written.
+        Only weights, hyperparameters, and preprocessing settings may be written. The settings
+        go in ``<path>/config.json`` as a JSON object with a ``"provider"`` key naming the
+        registered provider whose loader reads the directory back; saved models fingerprint
+        that file.
         """
 
     @staticmethod

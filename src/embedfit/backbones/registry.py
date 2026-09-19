@@ -38,7 +38,8 @@ def register_backbone_provider(
         loader: Callable that rebuilds a backbone from a directory written by its
             ``save_pretrained``. The directory's ``config.json`` must contain
             ``"provider": "<prefix>"``. Without a loader, models using this provider can be
-            saved but not loaded.
+            saved but not loaded. Re-registering a prefix with ``overwrite=True`` also
+            replaces its loader, removing it when none is given.
         overwrite: Replace an existing registration instead of raising.
 
     Raises:

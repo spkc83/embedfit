@@ -51,7 +51,8 @@ model = EmbedFitModel.from_pretrained(          # downloads ImageNet weights
 embeddings = model.encode(["scan_001.png", "scan_002.png"])     # numpy array, shape [2, 512]
 
 train = ImageDataset.from_lists(train_images, train_labels)
-Trainer(model, TrainingArguments(training_mode="frozen"), train).train()
+trainer = Trainer(model, TrainingArguments(training_mode="frozen"), train)
+trainer.train()
 
 model.predict(test_images)         # labels
 model.predict_proba(test_images)   # [N, 2]; columns follow model.labels
