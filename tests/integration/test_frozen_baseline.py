@@ -128,8 +128,10 @@ def test_fit_head_input_validation(datasets):
 
 def test_trainer_rejects_bad_configuration_before_training(datasets):
     train, _ = datasets
-    with pytest.raises(ConfigurationError, match="'supcon' is not available"):
-        Trainer(make_model(), TrainingArguments(), train)
+    with pytest.raises(
+        ConfigurationError, match=r"'pair' is not available.*\['frozen', 'supcon'\]"
+    ):
+        Trainer(make_model(), TrainingArguments(training_mode="pair"), train)
     frozen = TrainingArguments(training_mode="frozen")
     with pytest.raises(ConfigurationError, match="class labels"):
         Trainer(EmbedFitModel.from_pretrained("dummy/tiny"), frozen, train)

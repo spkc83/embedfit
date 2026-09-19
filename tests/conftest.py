@@ -10,6 +10,10 @@ from PIL import Image
 from embedfit.backbones import DummyBackbone
 from embedfit.testing import make_bar_images
 
+# Tiny tensors run far faster on one thread, especially on a busy machine, and single-threaded
+# arithmetic keeps tiny training runs bit-for-bit reproducible.
+torch.set_num_threads(1)
+
 
 @pytest.fixture(autouse=True)
 def _restore_global_rng_state():
