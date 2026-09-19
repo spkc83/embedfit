@@ -226,9 +226,9 @@ def test_backbone_must_be_an_image_backbone():
         EmbedFitModel(nn.Linear(2, 2))
 
 
-def test_logs_contain_no_pixel_or_label_content(dummy_backbone, caplog):
+def test_logs_contain_no_pixel_or_label_content(dummy_backbone, caplog, logged_messages):
     caplog.set_level(logging.DEBUG, logger="embedfit")
     model = EmbedFitModel.from_pretrained("dummy/tiny", labels=["secret-a", "secret-b"])
     model.encode([np.full((32, 32, 3), 173, dtype=np.uint8)])
     assert caplog.records
-    assert "173" not in caplog.text and "secret" not in caplog.text
+    assert "173" not in logged_messages() and "secret" not in logged_messages()

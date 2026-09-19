@@ -38,3 +38,13 @@ def bar_dataset() -> tuple[list[Image.Image], list[str]]:
 @pytest.fixture
 def dummy_backbone() -> DummyBackbone:
     return DummyBackbone(embedding_dim=16, image_size=32, seed=0)
+
+
+@pytest.fixture
+def logged_messages(caplog):
+    """Return the formatted log messages captured so far, without file names or line numbers.
+
+    ``caplog.text`` includes source locations such as ``trainer.py:173``, which would make a
+    search for a forbidden value like ``173`` fail for reasons unrelated to privacy.
+    """
+    return lambda: "\n".join(record.getMessage() for record in caplog.records)

@@ -89,6 +89,15 @@ output = trainer.train()            # output.train_losses, output.eval_losses, o
 trainer.evaluate(test)
 ```
 
+`training_mode="pair"` adapts the backbone on sampled positive and negative image pairs with a cosine pair loss instead. `relationship_rules` can declare pairs similar or dissimilar from any sample field, without the library knowing what the field means:
+
+```python
+from embedfit.sampling import RelationshipRule
+
+rule = RelationshipRule(field="group_id", relation="same", pair_type="positive", weight=2.0)
+Trainer(model, TrainingArguments(training_mode="pair"), train, relationship_rules=[rule]).train()
+```
+
 `encode` accepts PIL images, numpy arrays, torch tensors, and file paths, and returns one L2-normalised row per image. Resolution, interpolation mode, and normalisation constants come from the selected checkpoint, never from a global default; pass `image_size=` to run a convolutional backbone at higher resolution.
 
 Importable today:
@@ -96,7 +105,7 @@ Importable today:
 | Component | Location | Purpose |
 | --- | --- | --- |
 | `EmbedFitModel` | `embedfit` | Backbone plus head: `from_pretrained` (identifier or saved directory), `save_pretrained`, `encode`, `fit_head`, `predict`, `predict_proba`, `risk_score`, `freeze_backbone` / `unfreeze_backbone`, differentiable `forward` |
-| `Trainer`, `TrainingArguments` | `embedfit` | Two-phase training (representation, then head) with `train`, `predict`, `evaluate`, and `save_model`. Modes `frozen` and `supcon`; arguments are validated on creation |
+| `Trainer`, `TrainingArguments` | `embedfit` | Two-phase training (representation, then head) with `train`, `predict`, `evaluate`, and `save_model`. Modes `frozen`, `supcon`, and `pair`; arguments are validated on creation |
 | `ImageDataset`; `ImageSample` | `embedfit`; `embedfit.data` | Sample records (`image`, `label`, optional `sample_id`, `group_id`, `timestamp`, `amount`, `metadata`); file paths stay undecoded until encoding |
 | `classification_metrics`, `confusion_matrix`, `roc_auc`, `pr_auc` | `embedfit.evaluation` | Standard metrics; macro averages cover every declared class |
 | `recall_at_fpr`, `precision_at_k`, `recall_at_k`, `precision_at_review_rate`, `recall_at_review_rate`, `dollar_recall`, `dollar_recall_at_review_rate` | `embedfit.evaluation` | Rare-event ranking metrics with an explicit positive label and order-independent tie handling |
@@ -105,7 +114,8 @@ Importable today:
 | `stratified_split`, `grouped_split`, `temporal_split`, `find_split_overlap` | `embedfit.data` | Reproducible splits by class, group, or time, and a check that no `sample_id` or `group_id` spans splits ([leakage guide](docs/guides/leakage.md)) |
 | `sample_few_shot` | `embedfit.sampling` | N samples per class, without replacement |
 | `LabelMapping` | `embedfit.data` | Ordered label ↔ class-index mapping that distinguishes `0` from `False` |
-| `SupConLoss`, `create_loss`, `register_loss`, `available_losses` | `embedfit.losses` | Supervised contrastive loss over `[B, D]` or multi-view `[B, V, D]` embeddings, and a loss registry |
+| `SupConLoss`, `CosinePairLoss`, `create_loss`, `register_loss`, `available_losses` | `embedfit.losses` | Supervised contrastive loss over `[B, D]` or multi-view `[B, V, D]` embeddings, weighted cosine loss over embedding pairs, and a loss registry |
+| `PairSampler`, `ImagePair`, `RelationshipRule` | `embedfit.sampling` | Bounded, balanced positive/negative pairs per epoch; rules set pair targets and weights from arbitrary fields |
 | `BalancedClassBatchSampler` | `embedfit.sampling` | Batches of up to `samples_per_class` images from each of `classes_per_batch` classes, never a duplicate image, reproducible per seed and epoch |
 | `ClassificationHead`, `LogisticRegressionHead`, `create_head`, `load_head`, `register_head` | `embedfit.heads` | Classifiers over `[N, D]` embeddings and class indices, constructible by name |
 | `RetrievalIndex` | `embedfit` | Cosine nearest-neighbour search over embeddings, with ids, metadata passthrough, and leakage-safe exclusion by id or group ([design](docs/design/RETRIEVAL.md#implemented-semantics)) |
@@ -121,7 +131,7 @@ Importable today:
 | `DummyBackbone` | `embedfit.backbones` | Tiny trainable CNN with no checkpoint, for offline tests and examples |
 | `make_bar_images` | `embedfit.testing` | Deterministic synthetic image classes with learnable structure |
 
-The `pair`, `triplet`, and `end_to_end` training modes, augmentation profiles, and the `timm` and Hugging Face providers from [`SPEC.md`](SPEC.md) are not implemented yet; `Trainer` rejects an unavailable `training_mode` when it is created.
+The `triplet` and `end_to_end` training modes, hard-negative mining, augmentation profiles, and the `timm` and Hugging Face providers from [`SPEC.md`](SPEC.md) are not implemented yet; `Trainer` rejects an unavailable `training_mode` when it is created.
 
 ## Development
 

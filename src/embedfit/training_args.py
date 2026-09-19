@@ -52,6 +52,9 @@ class TrainingArguments:
             head instance keeps that instance; see ``Trainer``.
         output_dir: Directory that saved models are written to.
         deterministic: Request deterministic torch algorithms (slower).
+        positives_per_example: ``pair`` mode: positive partners drawn per sample each epoch.
+        negatives_per_example: ``pair`` mode: negative partners drawn per sample each epoch.
+            At least one of the two must be positive.
 
     Raises:
         ConfigurationError: If any value is invalid. Raised at construction, never mid-training.
@@ -76,6 +79,8 @@ class TrainingArguments:
     head: str = "logistic_regression"
     output_dir: str = "./embedfit-output"
     deterministic: bool = False
+    positives_per_example: int = 4
+    negatives_per_example: int = 4
 
     def __post_init__(self) -> None:
         _require(
@@ -88,6 +93,13 @@ class TrainingArguments:
         _require(
             _is_int(self.num_workers) and self.num_workers >= 0,
             f"num_workers must be an int >= 0, got {self.num_workers!r}.",
+        )
+        for name in ("positives_per_example", "negatives_per_example"):
+            value = getattr(self, name)
+            _require(_is_int(value) and value >= 0, f"{name} must be an int >= 0, got {value!r}.")
+        _require(
+            self.positives_per_example + self.negatives_per_example > 0,
+            "positives_per_example and negatives_per_example cannot both be 0.",
         )
         _require(
             _is_int(self.seed) and 0 <= self.seed <= 2**32 - 1,
