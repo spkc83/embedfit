@@ -12,16 +12,16 @@ Legend:
 ## M0 Foundation
 
 - [x] Create bootstrap `pyproject.toml` (agent must expand dependencies/config)
-- [ ] Add package metadata and optional dependency groups
-- [ ] Add ruff configuration
-- [ ] Add pytest configuration
-- [ ] Implement `set_seed`
-- [ ] Implement device resolver
-- [ ] Add `EmbedFitError`
-- [ ] Add `DummyBackbone`
-- [ ] Add synthetic-image fixture helpers
-- [ ] Add import smoke test
-- [ ] Ensure wheel/sdist build
+- [x] Add package metadata and optional dependency groups
+- [x] Add ruff configuration
+- [x] Add pytest configuration
+- [x] Implement `set_seed`
+- [x] Implement device resolver
+- [x] Add `EmbedFitError`
+- [x] Add `DummyBackbone`
+- [x] Add synthetic-image fixture helpers
+- [x] Add import smoke test
+- [x] Ensure wheel/sdist build
 
 ## M1 Backbone + model
 
