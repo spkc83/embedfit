@@ -31,3 +31,7 @@ class UndefinedMetricError(EmbedFitError, ValueError):
 
 class TrainingDivergedError(EmbedFitError, FloatingPointError):
     """A training loss became NaN or infinite."""
+
+
+class DataLeakageError(EmbedFitError, ValueError):
+    """Data splits share samples or groups that must be kept apart."""

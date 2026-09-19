@@ -62,11 +62,11 @@ Legend:
 
 ## M4 Data safety
 
-- [ ] N-per-class sampling
-- [ ] Grouped split
-- [ ] Temporal split
-- [ ] Split overlap checker
-- [ ] Documentation for leakage
+- [x] N-per-class sampling
+- [x] Grouped split
+- [x] Temporal split
+- [x] Split overlap checker
+- [x] Documentation for leakage
 
 ## M5 SupCon
 
