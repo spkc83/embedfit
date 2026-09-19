@@ -1,6 +1,8 @@
 """The contract for lightweight classifiers that operate on embeddings."""
 
 from abc import ABC, abstractmethod
+from pathlib import Path
+from typing import ClassVar, Self
 
 import numpy as np
 
@@ -35,7 +37,12 @@ class ClassificationHead(ABC):
 
     Heads know nothing about images, backbones, or external label names; the model translates
     labels to indices ``0..num_classes-1`` before calling a head.
+
+    A head that should survive ``EmbedFitModel.save_pretrained`` sets ``registry_name`` to the
+    name it is registered under and implements ``save`` and ``load``.
     """
+
+    registry_name: ClassVar[str | None] = None
 
     @property
     @abstractmethod
@@ -64,6 +71,33 @@ class ClassificationHead(ABC):
         Raises:
             HeadNotFittedError: If called before ``fit``.
         """
+
+    @property
+    def num_classes(self) -> int | None:
+        """Number of classes the head was fitted on, or ``None`` if unknown or unfitted.
+
+        A saved model checks this against its labels when it is loaded.
+        """
+        return None
+
+    def save(self, path: str | Path) -> None:
+        """Write the head's options and fitted state to a directory.
+
+        Only hyperparameters and learned parameters may be written: never training samples.
+
+        Raises:
+            ConfigurationError: If this head type does not implement persistence.
+        """
+        raise ConfigurationError(f"{type(self).__name__} does not support saving.")
+
+    @classmethod
+    def load(cls, path: str | Path) -> Self:
+        """Rebuild a head from a directory written by ``save``.
+
+        Raises:
+            ConfigurationError: If this head type does not implement persistence.
+        """
+        raise ConfigurationError(f"{cls.__name__} does not support loading.")
 
     def predict(self, features: np.ndarray) -> np.ndarray:
         """Return the most probable class index for each row, shaped ``[N]``."""

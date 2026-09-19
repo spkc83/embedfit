@@ -1,6 +1,8 @@
 """Name-based construction of classification heads."""
 
+import json
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 from embedfit.exceptions import ConfigurationError
@@ -30,6 +32,32 @@ def register_head(name: str, factory: HeadFactory, *, overwrite: bool = False) -
             f"Head '{name}' is already registered; pass overwrite=True to replace."
         )
     _HEADS[name] = factory
+
+
+def load_head(path: str | Path) -> ClassificationHead:
+    """Rebuild a head from a directory written by ``ClassificationHead.save``.
+
+    The head type is read from the ``"type"`` key of the directory's ``config.json`` and must
+    be a registered name whose factory is a ``ClassificationHead`` subclass.
+
+    Raises:
+        ConfigurationError: If ``config.json`` is missing or malformed, or the type is not a
+            registered head class.
+    """
+    config_path = Path(path) / "config.json"
+    try:
+        name = json.loads(config_path.read_text()).get("type")
+    except (OSError, json.JSONDecodeError, AttributeError) as exc:
+        raise ConfigurationError(
+            f"'{config_path}' is missing or is not a JSON object with a 'type' key."
+        ) from exc
+    factory = _HEADS.get(name) if isinstance(name, str) else None
+    if not (isinstance(factory, type) and issubclass(factory, ClassificationHead)):
+        raise ConfigurationError(
+            f"'{config_path}' names head type {name!r}, which is not a registered head class. "
+            f"Available heads: {available_heads()}."
+        )
+    return factory.load(path)
 
 
 def available_heads() -> list[str]:

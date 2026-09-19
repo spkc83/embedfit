@@ -98,6 +98,36 @@ metrics = trainer.evaluate()
 - Setups that cannot train fail when the `Trainer` is created: a model label without training samples, `batch_size` below 4, an empty validation set, fewer than two classes or a class with fewer than two samples in the training or validation data, or a mixed-precision mode the device does not support. A non-finite loss during training raises `TrainingDivergedError`.
 - A run is reproducible from `args.seed`: it seeds every random number generator, the batch sampler derives each epoch's batches from the seed and the epoch number, and `deterministic=True` additionally requests deterministic torch kernels.
 
+## Saving and loading
+
+```python
+model.save_pretrained("models/risk-v1")
+trainer.save_model()                                   # to args.output_dir, with training metadata
+loaded = EmbedFitModel.from_pretrained("models/risk-v1", device="auto")
+```
+
+```text
+models/risk-v1/
+├── embedfit_config.json      framework and format version, backbone provider / identifier /
+│                             pooling / embedding dimension / preprocessing fingerprint,
+│                             normalisation policy, head type
+├── labels.json               labels in class-index order, positive label
+├── training_metadata.json    aggregate facts only (Trainer: arguments and TrainOutput)
+├── backbone/                 config.json + weights.pt, written by the backbone adapter
+└── head/                     config.json, plus parameters.npz once fitted; written by the head
+```
+
+- A loaded model reproduces the saved model's embeddings, probabilities, predictions, label order, positive label, pooling, normalisation policy, and backbone dtype. Its backbone is rebuilt from the saved weights and preprocessing settings without downloading anything. It comes back in eval mode and unfrozen, whatever its state when saved.
+- Saving is atomic: the bundle is assembled in a temporary sibling directory and moved into place when complete, so a failed save leaves the target as it was. The target may be missing, empty, or an existing bundle (replaced as a whole); a file or a non-empty directory that is not a bundle is refused.
+- `from_pretrained` treats its argument as a saved model when the directory contains `embedfit_config.json`, and that takes precedence even if the path also reads as a `<provider>/<name>` identifier; any other directory is never mistaken for a model, and an existing path that is not a bundle gets a "not a saved model directory" error. With a saved model only `device` may be passed: labels, positive label, normalisation, head, and backbone options come from the bundle, and passing any of them raises, even with a value equal to the default.
+- Bundles never contain training samples, identifiers, or metadata, and nothing is pickled: JSON for configuration, `.npz` arrays (loaded with `allow_pickle=False`) for the logistic-regression coefficients, and a tensor-only state dict (loaded with `weights_only=True`) for the backbone. Loading a bundle therefore does not execute code from it.
+- The content of the backbone's `config.json` is fingerprinted (SHA-256 of its canonical JSON, so formatting does not matter) at save time. Loading rejects a bundle whose backbone configuration was edited afterwards; whose recorded backbone identifier, pooling, or embedding dimension, or head type, disagrees with what was loaded; whose label count disagrees with the recorded count or with the fitted head's classes; or whose `format_version` is not one the library reads. The fingerprint guards against accidental edits to preprocessing settings; it is not a signature, and weight files are not hashed.
+- Corrupt files raise `ConfigurationError`: a weights file that is not a tensor-only state dict matching the architecture, or head parameters that are pickled or mis-shaped.
+- A head given to the model as an instance is still treated as an instance after loading, so `Trainer` keeps it rather than replacing it by name.
+- `Trainer.save_model` records the training arguments except `output_dir`, since a local path can reveal a user name.
+- Labels must be `str`, `int`, `float`, or `bool` to be saved, because other types do not survive JSON; this is checked before anything is written.
+- A custom head is saved when its class sets `registry_name` to its registered name and implements `save` and `load`; a custom backbone provider is loadable when it is registered with a `loader`.
+
 ## Retrieval
 
 ```python

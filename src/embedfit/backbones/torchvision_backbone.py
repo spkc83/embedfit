@@ -274,6 +274,7 @@ class TorchvisionBackbone(ImageBackbone):
             "mean": self.mean,
             "std": self.std,
             "embedding_dim": self._embedding_dim,
+            "dtype": str(next(self.parameters()).dtype).removeprefix("torch."),
         }
         (directory / _CONFIG_FILE).write_text(json.dumps(config, indent=2) + "\n")
         torch.save(self.state_dict(), directory / _WEIGHTS_FILE)
@@ -337,6 +338,17 @@ class TorchvisionBackbone(ImageBackbone):
                 f"'{config_path}' records embedding_dim={config['embedding_dim']} but "
                 f"'{config['name']}' produces {backbone.embedding_dim}."
             )
-        backbone.load_state_dict(torch.load(weights_path, map_location="cpu", weights_only=True))
+        dtype = getattr(torch, str(config.get("dtype", "float32")), None)
+        if not isinstance(dtype, torch.dtype) or not dtype.is_floating_point:
+            raise ConfigurationError(f"'{config_path}' names an unsupported dtype.")
+        try:
+            state = torch.load(weights_path, map_location="cpu", weights_only=True)
+            backbone.load_state_dict(state)
+        except Exception as exc:  # Unpickling, key, and shape errors all mean the same thing.
+            raise ConfigurationError(
+                f"'{weights_path}' is not a tensor-only state dict matching this backbone's "
+                "configuration, as written by save_pretrained."
+            ) from exc
+        backbone.to(dtype)
         backbone.eval()
         return backbone
