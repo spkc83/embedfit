@@ -69,6 +69,14 @@ class ImagePair:
 
 Use bounded pair generation.
 
+### Implemented behaviour (`embedfit.sampling.PairSampler`, `embedfit.losses.CosinePairLoss`)
+
+`ImagePair` holds two dataset positions rather than images, so a pair list stays small; `weight` and `relationship` record what a rule decided.
+
+For each anchor the sampler builds a positive pool (same class) and a negative pool (other classes), lets the relationship rules move samples between the pools, and draws up to `positives_per_example` and `negatives_per_example` partners. Pools are computed one anchor at a time, so memory stays `O(N)`; the full `N²` pair set is never built. A class with few samples simply yields fewer positive pairs: partners are never repeated to fill a quota. Partners already paired with the anchor earlier in the epoch are skipped first, so the quota goes to new pairs.
+
+`CosinePairLoss` is the weighted mean of `(cos(a, b) − goal)²` with `goal = 1` for positive pairs and `negative_target` (default 0) for negative pairs. Half-precision inputs are computed in float32.
+
 ## Pair sampling defaults
 
 A reasonable initial default:

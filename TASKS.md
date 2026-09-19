@@ -82,13 +82,13 @@ Legend:
 
 ## M6 Pairs
 
-- [ ] `ImagePair`
-- [ ] Pair sampler
-- [ ] Bounded generation
-- [ ] Pair loss
-- [ ] Pair trainer
-- [ ] Relationship rule abstraction
-- [ ] Tests
+- [x] `ImagePair`
+- [x] Pair sampler
+- [x] Bounded generation
+- [x] Pair loss
+- [x] Pair trainer
+- [x] Relationship rule abstraction
+- [x] Tests
 
 ## M7 Providers
 

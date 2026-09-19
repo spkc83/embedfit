@@ -159,6 +159,8 @@ freeze_backbone_before_head: bool = True
 head: str = "logistic_regression"
 output_dir: str = "./embedfit-output"
 deterministic: bool = False   # request deterministic torch algorithms (§23)
+positives_per_example: int = 4   # pair mode (§11)
+negatives_per_example: int = 4   # pair mode (§11)
 ```
 
 ## 6. Input data
