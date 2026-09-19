@@ -16,6 +16,20 @@ Requirements:
 
 The balanced batch sampler should make missing positives uncommon.
 
+### Implemented behaviour (`embedfit.losses.SupConLoss`)
+
+For anchor `i` with positives `P(i)` (other samples of the same class) and all other samples `A(i)`:
+
+```text
+L_i = -1/|P(i)| · Σ_{p ∈ P(i)} log( exp(z_i·z_p / τ) / Σ_{a ∈ A(i)} exp(z_i·z_a / τ) )
+```
+
+The loss is the mean of `L_i` over anchors that have at least one positive. An anchor without a positive still serves as a negative for the others but contributes no term. A batch in which no sample has a positive raises `ConfigurationError`, because returning zero would hide a sampler misconfiguration.
+
+Embeddings are L2-normalised inside the loss by default, so the result does not depend on embedding scale. The anchor's self-similarity is masked to −∞, which removes it from the comparison. The loss goes through `log_softmax`, which keeps it and its gradients finite for near-duplicate vectors and very small temperatures. Half-precision inputs are raised to float32 first; float32 and float64 inputs keep their precision.
+
+`[B, V, D]` input is flattened to `[B·V, D]` with labels repeated per view, so views of one sample are positives of each other.
+
 ## Balanced class batches
 
 Config concept:
@@ -29,6 +43,15 @@ BalancedClassBatchSampler(
 ```
 
 Batch size derives from product when this sampler is active.
+
+### Implemented behaviour (`embedfit.sampling.BalancedClassBatchSampler`)
+
+- Classes are drawn without replacement from a shuffled queue that refills when empty, so classes are visited equally often even when only some fit in a batch.
+- Within a class, samples are drawn the same way: every sample of a class is used before any is repeated.
+- A class with fewer than `samples_per_class` samples contributes all of its samples and no duplicates, because a duplicated image is a trivial positive pair. Every class needs at least two samples.
+- `samples_per_class` must be at least 2.
+- An epoch has `ceil(N / (classes_per_batch × samples_per_class))` batches unless `batches_per_epoch` is given: about `N` draws, which on imbalanced data is not one pass, since samples of rare classes recur and samples of frequent classes are skipped.
+- Batches are a function of `seed` and the epoch set with `set_epoch`; the global random state is not used.
 
 ## Pairwise loss
 

@@ -70,15 +70,15 @@ Legend:
 
 ## M5 SupCon
 
-- [ ] Balanced class batch sampler
-- [ ] SupCon loss
-- [ ] Unit tests for loss
-- [ ] Representation optimizer
-- [ ] Training loop
-- [ ] Validation loss
-- [ ] Best checkpoint restore
-- [ ] Freeze + head fit transition
-- [ ] Integration test demonstrating encoder weights change
+- [x] Balanced class batch sampler
+- [x] SupCon loss
+- [x] Unit tests for loss
+- [x] Representation optimizer
+- [x] Training loop
+- [x] Validation loss
+- [x] Best checkpoint restore
+- [x] Freeze + head fit transition
+- [x] Integration test demonstrating encoder weights change
 
 ## M6 Pairs
 
