@@ -78,10 +78,14 @@ def test_step_count_and_schedule_follow_the_sampled_pairs(monkeypatch):
     from embedfit import representation
     from embedfit.sampling import PairSampler
 
-    train = dataset(6, 0)
-    args = pair_args(num_epochs=3, batch_size=16, positives_per_example=2, negatives_per_example=2)
+    # Five per class with batches of three pairs gives epochs of different lengths (the pair
+    # count varies with de-duplication), so an estimate from the first epoch alone is wrong.
+    train = dataset(5, 0)
+    args = pair_args(num_epochs=3, batch_size=3, positives_per_example=2, negatives_per_example=2)
     sampler = PairSampler(train, positives_per_example=2, negatives_per_example=2, seed=args.seed)
-    expected_steps = sum(-(-len(sampler.sample(epoch)) // 16) for epoch in range(3))
+    per_epoch = [-(-len(sampler.sample(epoch)) // 3) for epoch in range(3)]
+    assert len(set(per_epoch)) > 1, "this configuration must produce unequal epochs"
+    expected_steps = sum(per_epoch)
 
     learning_rates = []
     original = torch.optim.AdamW.step
@@ -139,3 +143,38 @@ def test_unpairable_data_fails_when_the_trainer_is_created():
 def test_pair_arguments_are_validated_at_construction(kwargs):
     with pytest.raises(ConfigurationError, match="per_example"):
         TrainingArguments(**kwargs)
+
+
+def test_pairs_are_sampled_once_per_epoch_during_training(monkeypatch):
+    from embedfit.sampling import PairSampler
+
+    calls = []
+    original = PairSampler.sample
+
+    def counting_sample(self, epoch=0):
+        calls.append(epoch)
+        return original(self, epoch)
+
+    monkeypatch.setattr(PairSampler, "sample", counting_sample)
+    trainer = Trainer(make_model(), pair_args(num_epochs=4), dataset(6, 0))
+    calls.clear()  # Construction-time validation is not what is measured here.
+    trainer.train()
+    assert sorted(calls) == [0, 1, 2, 3]
+
+
+def test_generator_rules_reach_training():
+    from embedfit.representation import train_representation
+
+    images, labels = make_bar_images(6, num_classes=3, seed=0)
+    train = ImageDataset(
+        [
+            ImageSample(image, label, group_id=f"ring{i % 4}")
+            for i, (image, label) in enumerate(zip(images, labels, strict=True))
+        ]
+    )
+    rule = RelationshipRule("group_id", pair_type="positive", weight=2.0)
+    as_list = train_representation(make_model(), train, None, pair_args(num_epochs=1), [rule])
+    as_generator = train_representation(
+        make_model(), train, None, pair_args(num_epochs=1), (r for r in [rule])
+    )
+    assert as_generator.train_losses == as_list.train_losses

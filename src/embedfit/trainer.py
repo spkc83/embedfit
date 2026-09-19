@@ -188,6 +188,7 @@ class Trainer:
                 self.eval_dataset,
                 self.args,
                 self.relationship_rules,
+                validate=False,  # Done when this Trainer was created.
             )
         if self.args.freeze_backbone_before_head:
             self.model.freeze_backbone()

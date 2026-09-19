@@ -109,12 +109,14 @@ class _PairDataset(Dataset[tuple[torch.Tensor, torch.Tensor, int, float]]):
         self._backbone = model.backbone
         self._images = dataset.images
         self._sampler = sampler
+        # Every epoch is sampled once: the step count needs all epochs' sizes up front, and
+        # training then reuses the same lists. At most E * N * (positives + negatives) pairs.
         self._cache: dict[int, list[ImagePair]] = {}
         self.pairs: list[ImagePair] = self.pairs_for(0)
 
     def pairs_for(self, epoch: int) -> list[ImagePair]:
         if epoch not in self._cache:
-            self._cache = {epoch: self._sampler.sample(epoch)}  # Keep one epoch in memory.
+            self._cache[epoch] = self._sampler.sample(epoch)
         return self._cache[epoch]
 
     def set_epoch(self, epoch: int) -> None:
@@ -216,6 +218,7 @@ def validate_representation_setup(
             has no trainable parameters, or the mixed-precision mode is not supported on the
             device.
     """
+    rules = tuple(rules)
     if rules and args.training_mode != "pair":
         raise ConfigurationError(
             f"relationship_rules only apply to training_mode='pair', not '{args.training_mode}'."
@@ -262,6 +265,8 @@ def train_representation(
     eval_dataset: ImageDataset | None,
     args: TrainingArguments,
     rules: Sequence[RelationshipRule] = (),
+    *,
+    validate: bool = True,
 ) -> RepresentationResult:
     """Adapt the backbone with the objective named by ``args.training_mode``.
 
@@ -294,6 +299,8 @@ def train_representation(
             ``num_workers``, ``seed``, and for pairs ``positives_per_example`` and
             ``negatives_per_example``.
         rules: Relationship rules for ``"pair"`` mode.
+        validate: Run ``validate_representation_setup`` first. ``Trainer`` has already done so
+            when it was created and passes ``False``.
 
     Returns:
         A ``RepresentationResult``.
@@ -303,7 +310,9 @@ def train_representation(
         TrainingDivergedError: If the loss becomes NaN or infinite.
     """
     device = model.device
-    validate_representation_setup(model, train_dataset, eval_dataset, args, device, rules)
+    rules = tuple(rules)
+    if validate:
+        validate_representation_setup(model, train_dataset, eval_dataset, args, device, rules)
     objective = _objective(model, train_dataset, args, rules, seed=args.seed)
     loader = objective.loader
     validation = None

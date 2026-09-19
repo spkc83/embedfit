@@ -175,3 +175,82 @@ def test_impossible_datasets():
 def test_invalid_rules(kwargs, match):
     with pytest.raises(ConfigurationError, match=match):
         RelationshipRule(**kwargs)
+
+
+def test_a_missing_value_matches_neither_relation():
+    # Sample 0 has a group; samples 1 and 2 (other class) do not. A "different → negative"
+    # rule must not claim the pairs (0, 1) and (0, 2): a missing value is not a different value.
+    dataset = ImageDataset(
+        [
+            ImageSample("0", "a", group_id="g1"),
+            ImageSample("1", "b"),
+            ImageSample("2", "b"),
+            ImageSample("3", "a", group_id="g2"),
+        ]
+    )
+    rule = RelationshipRule("group_id", relation="different", pair_type="negative", weight=5.0)
+    pairs = PairSampler(dataset, seed=0, rules=[rule]).sample()
+    by_members = {frozenset((p.left, p.right)): p for p in pairs}
+    assert by_members[frozenset((0, 3))].relationship == "different:group_id"
+    assert by_members[frozenset((0, 3))].target == 0  # Same class, but the rule says negative.
+    for other in (1, 2):
+        pair = by_members[frozenset((0, other))]
+        assert (pair.relationship, pair.weight, pair.target) == (None, 1.0, 0)
+
+
+def test_rules_given_as_a_generator_are_not_lost():
+    rule = RelationshipRule("group_id", pair_type="positive", weight=7.0)
+    sampler = PairSampler(
+        make_dataset(),
+        positives_per_example=5,
+        negatives_per_example=5,
+        seed=0,
+        rules=(r for r in [rule]),
+    )
+    assert sampler.rules == (rule,)
+    assert any(pair.relationship for pair in sampler.sample())
+
+
+def test_a_rule_on_a_field_no_sample_has_is_rejected():
+    with pytest.raises(ConfigurationError, match="field 'group_idd' has no value on any sample"):
+        PairSampler(make_dataset(), seed=0, rules=[RelationshipRule("group_idd")])
+
+
+def test_sample_fields_take_precedence_over_metadata_keys():
+    dataset = ImageDataset(
+        [
+            ImageSample(
+                str(i),
+                "a" if i < 2 else "b",
+                group_id=f"attr{i % 2}",
+                metadata={"group_id": "shared"},
+            )
+            for i in range(4)
+        ]
+    )
+    rule = RelationshipRule("group_id", pair_type="positive")
+    ruled = {
+        frozenset((p.left, p.right))
+        for p in PairSampler(dataset, seed=0, rules=[rule]).sample()
+        if p.relationship
+    }
+    assert ruled == {frozenset((0, 2)), frozenset((1, 3))}  # By attribute, not by metadata.
+
+
+def test_impossible_pools_are_reported_as_observed_not_guessed():
+    dataset = ImageDataset(
+        [ImageSample(str(i), "a" if i < 3 else "b", metadata={"k": 1}) for i in range(6)]
+    )
+    with pytest.raises(ConfigurationError, match="no sample has a negative partner"):
+        PairSampler(dataset, seed=0, rules=[RelationshipRule("k")])  # Two classes exist.
+
+
+def test_sampling_scales_to_thousands_of_samples():
+    import time
+
+    dataset = ImageDataset.from_lists(["x"] * 3000, [f"c{i % 5}" for i in range(3000)])
+    sampler = PairSampler(dataset, seed=0)
+    start = time.perf_counter()
+    pairs = sampler.sample()
+    assert len(pairs) > 20_000
+    assert time.perf_counter() - start < 20  # Filtering whole pools took minutes here.

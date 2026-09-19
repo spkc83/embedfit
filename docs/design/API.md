@@ -105,8 +105,9 @@ metrics = trainer.evaluate()
 - Each epoch, `PairSampler` draws for every training sample up to `positives_per_example` partners from its positive pool and up to `negatives_per_example` from its negative pool, without replacement. At most `N × (positives + negatives)` pairs exist per epoch, no sample is paired with itself, and an unordered pair occurs at most once per epoch. Pairs are a function of `args.seed` and the epoch.
 - Without rules, a positive pair always shares a class and a negative pair never does.
 - `Trainer(..., relationship_rules=[RelationshipRule(field, relation, pair_type, weight)])` overrides that where a rule matches. `field` names a sample field or a `metadata` key, `relation` is `"same"` or `"different"`, and matching pairs get the rule's `pair_type` and `weight`. The first matching rule decides; samples without a value for the field never match. Rules are rejected in every other mode.
-- A batch holds `batch_size` pairs. Both images of every pair go through the backbone in one forward pass, and `CosinePairLoss` regresses their cosine similarity onto 1 for positives and 0 for negatives (SetFit's objective), weighted by the pair weights.
-- The learning-rate schedule spans the exact number of optimizer steps, which is computed from the pairs each epoch will draw.
+- A batch holds `batch_size` pairs. Both images of every pair go through the backbone in one forward pass, so the backbone sees `2 × batch_size` images and `pair` mode needs about twice the memory of `supcon` at the same `batch_size`; and `CosinePairLoss` regresses their cosine similarity onto 1 for positives and 0 for negatives (SetFit's objective), weighted by the pair weights.
+- The learning-rate schedule spans the exact number of optimizer steps. Epochs differ slightly in length because of pair de-duplication, so every epoch's pairs are drawn once up front and reused during training.
+- The loss's `negative_target` is fixed at 0 in `Trainer`; other values are available by using `CosinePairLoss` directly.
 - A training or validation set from which no positive pair or no negative pair can be formed is rejected when the `Trainer` is created.
 
 ## Retrieval

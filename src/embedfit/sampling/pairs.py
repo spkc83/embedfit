@@ -44,7 +44,9 @@ class RelationshipRule:
 
     Attributes:
         field: A sample field (``"group_id"``, ``"sample_id"``, ``"timestamp"``, ``"amount"``,
-            ``"label"``) or a key of ``metadata``. Samples without a value never match.
+            ``"label"``) or a key of ``metadata``; a sample field takes precedence over a
+            metadata key of the same name. Samples without a value never match, whatever the
+            relation, and a field with no value on any sample is an error.
         relation: ``"same"`` or ``"different"``.
         pair_type: ``"positive"`` or ``"negative"``: the target given to matching pairs,
             overriding the class labels.
@@ -104,7 +106,15 @@ class PairSampler:
     the negative pool is every sample of another class. The number of pairs is therefore at
     most ``N * (positives_per_example + negatives_per_example)``; all ``N²`` pairs are never
     materialised. A pair is never formed between a sample and itself, and an unordered pair is
-    produced at most once per epoch.
+    produced at most once per epoch: a partner already paired with the anchor is excluded, so
+    an anchor can end an epoch below its quota and the pair count varies slightly by epoch.
+
+    Memory is ``O(N)``; time is ``O(N^2)`` per epoch in vectorised array operations, because
+    each anchor's pools are computed over all samples (a few seconds at 10 000 samples).
+
+    Quotas are per anchor, so the split between positive and negative pairs is only roughly
+    even: a small class runs out of positive partners, and its samples are drawn often as
+    negatives for the larger classes.
 
     ``rules`` change pool membership, in the order given: the first rule that matches a pair
     decides its target and weight, and only pairs matched by no rule fall back to the class
@@ -120,7 +130,8 @@ class PairSampler:
 
     Raises:
         ConfigurationError: If an argument is invalid, the dataset has fewer than 2 samples, or
-            no positive or no negative pair can be formed at all.
+            no positive or no negative pair can be formed at all, or a rule's field has no value
+            on any sample.
     """
 
     def __init__(
@@ -147,6 +158,7 @@ class PairSampler:
             raise ConfigurationError(
                 "positives_per_example and negatives_per_example cannot both be 0."
             )
+        rules = tuple(rules)  # Materialise first: a generator must not be consumed by validation.
         if any(not isinstance(rule, RelationshipRule) for rule in rules):
             raise ConfigurationError("rules must contain RelationshipRule objects.")
         if len(dataset) < 2:
@@ -155,22 +167,28 @@ class PairSampler:
         self.positives_per_example = int(positives_per_example)
         self.negatives_per_example = int(negatives_per_example)
         self.seed = int(seed)
-        self.rules = tuple(rules)
+        self.rules = rules
         self._classes = _codes(dataset.labels, "label")
         self._rule_codes = [
             _codes([_field_value(sample, rule.field) for sample in dataset], rule.field)
             for rule in self.rules
         ]
+        for rule, codes in zip(self.rules, self._rule_codes, strict=True):
+            if (codes < 0).all():
+                raise ConfigurationError(
+                    f"Relationship rule field '{rule.field}' has no value on any sample, so the "
+                    "rule can never match; check the field name."
+                )
         pools = [self._pools(anchor) for anchor in range(len(dataset))]
         if self.positives_per_example and not any(len(positive) for positive, _, _ in pools):
             raise ConfigurationError(
-                "No positive pair can be formed: no two samples share a class or match a "
-                "positive relationship rule."
+                "No positive pair can be formed: after applying the class labels and the "
+                "relationship rules, no sample has a positive partner."
             )
         if self.negatives_per_example and not any(len(negative) for _, negative, _ in pools):
             raise ConfigurationError(
-                "No negative pair can be formed: every sample has the same class and no "
-                "negative relationship rule matches."
+                "No negative pair can be formed: after applying the class labels and the "
+                "relationship rules, no sample has a negative partner."
             )
 
     def __len__(self) -> int:
@@ -212,14 +230,17 @@ class PairSampler:
                 (positive_pool, self.positives_per_example, 1),
                 (negative_pool, self.negatives_per_example, 0),
             ):
-                # Partners already paired with this anchor (as its anchor) are skipped first,
-                # so the quota is spent on new pairs where possible.
-                fresh = [
-                    p
-                    for p in rng.permutation(pool).tolist()
-                    if (min(anchor, p), max(anchor, p)) not in seen
-                ]
-                for partner in fresh[:quota]:
+                # Partners already paired with this anchor earlier in the epoch are excluded, so
+                # an anchor can end up under its quota. Stop as soon as the quota is met: only
+                # a few partners are needed, however large the pool is.
+                fresh: list[int] = []
+                for candidate in rng.permutation(pool).tolist():
+                    if len(fresh) == quota:
+                        break
+                    key = (anchor, candidate) if anchor < candidate else (candidate, anchor)
+                    if key not in seen:
+                        fresh.append(candidate)
+                for partner in fresh:
                     seen.add((min(anchor, partner), max(anchor, partner)))
                     rule_index = int(decided_by[partner])
                     rule = self.rules[rule_index] if rule_index >= 0 else None
