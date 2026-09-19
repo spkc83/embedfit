@@ -1,9 +1,14 @@
-"""Phase 1 of training: adapting the backbone under a contrastive objective."""
+"""Phase 1 of training: adapting the backbone under a contrastive objective.
+
+The optimisation loop is shared by every objective. An objective supplies the batches (and how
+they change from epoch to epoch) and turns one batch into a loss.
+"""
 
 import logging
 import math
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from typing import Any
 
 import numpy as np
 import torch
@@ -14,6 +19,7 @@ from embedfit.exceptions import ConfigurationError, TrainingDivergedError
 from embedfit.losses.registry import create_loss
 from embedfit.model import EmbedFitModel
 from embedfit.sampling.balanced import BalancedClassBatchSampler
+from embedfit.sampling.pairs import ImagePair, PairSampler, RelationshipRule
 from embedfit.training_args import TrainingArguments
 
 logger = logging.getLogger(__name__)
@@ -96,26 +102,129 @@ def _loader(
     return loader, sampler
 
 
+class _PairDataset(Dataset[tuple[torch.Tensor, torch.Tensor, int, float]]):
+    """The current epoch's pairs as preprocessed pixel tensors, targets, and weights."""
+
+    def __init__(self, model: EmbedFitModel, dataset: ImageDataset, sampler: PairSampler) -> None:
+        self._backbone = model.backbone
+        self._images = dataset.images
+        self._sampler = sampler
+        self._cache: dict[int, list[ImagePair]] = {}
+        self.pairs: list[ImagePair] = self.pairs_for(0)
+
+    def pairs_for(self, epoch: int) -> list[ImagePair]:
+        if epoch not in self._cache:
+            self._cache = {epoch: self._sampler.sample(epoch)}  # Keep one epoch in memory.
+        return self._cache[epoch]
+
+    def set_epoch(self, epoch: int) -> None:
+        self.pairs = self.pairs_for(epoch)
+
+    def __len__(self) -> int:
+        return len(self.pairs)
+
+    def __getitem__(self, position: int) -> tuple[torch.Tensor, torch.Tensor, int, float]:
+        pair = self.pairs[position]
+        preprocess = self._backbone.preprocess
+        return (
+            preprocess(self._images[pair.left]),
+            preprocess(self._images[pair.right]),
+            pair.target,
+            pair.weight,
+        )
+
+
+@dataclass
+class _Objective:
+    """Batches and loss of one representation-learning objective."""
+
+    loader: DataLoader[Any]
+    set_epoch: Callable[[int], None]
+    batches_in_epoch: Callable[[int], int]
+    loss: Callable[[Any], torch.Tensor]
+
+
+def _objective(
+    model: EmbedFitModel,
+    dataset: ImageDataset,
+    args: TrainingArguments,
+    rules: Sequence[RelationshipRule],
+    seed: int,
+) -> _Objective:
+    """Build the objective selected by ``args.training_mode`` for one dataset."""
+    parameter = next(model.backbone.parameters(), None)
+    device = model.device
+    dtype = parameter.dtype if parameter is not None else torch.float32
+
+    if args.training_mode == "supcon":
+        loader, sampler = _loader(model, dataset, args, seed=seed)
+        supcon = create_loss("supcon", temperature=args.temperature)
+
+        def supcon_loss(batch: Any) -> torch.Tensor:
+            pixels, targets = batch
+            loss: torch.Tensor = supcon(
+                model(pixels.to(device=device, dtype=dtype)), targets.to(device)
+            )
+            return loss
+
+        return _Objective(loader, sampler.set_epoch, lambda epoch: len(sampler), supcon_loss)
+
+    assert model.label_mapping is not None
+    model.label_mapping.encode(dataset.labels)  # Unknown labels are an error in every mode.
+    pair_sampler = PairSampler(
+        dataset,
+        positives_per_example=args.positives_per_example,
+        negatives_per_example=args.negatives_per_example,
+        seed=seed,
+        rules=rules,
+    )
+    pairs = _PairDataset(model, dataset, pair_sampler)
+    pair_loader: DataLoader[Any] = DataLoader(
+        pairs, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers
+    )
+    cosine = create_loss("cosine_pair")
+
+    def pair_loss(batch: Any) -> torch.Tensor:
+        left, right, targets, weights = batch
+        # One forward pass over both sides keeps batch statistics common to the pair.
+        embeddings = model(torch.cat([left, right]).to(device=device, dtype=dtype))
+        first, second = embeddings[: len(left)], embeddings[len(left) :]
+        loss: torch.Tensor = cosine(first, second, targets.to(device), weights.to(device))
+        return loss
+
+    def batches(epoch: int) -> int:
+        return math.ceil(len(pairs.pairs_for(epoch)) / args.batch_size)
+
+    return _Objective(pair_loader, pairs.set_epoch, batches, pair_loss)
+
+
 def validate_representation_setup(
     model: EmbedFitModel,
     train_dataset: ImageDataset,
     eval_dataset: ImageDataset | None,
     args: TrainingArguments,
     device: torch.device,
+    rules: Sequence[RelationshipRule] = (),
 ) -> None:
     """Fail before training starts if contrastive training cannot run with this setup.
 
     Raises:
-        ConfigurationError: If the batch size is too small, the training (or validation) data
-            is empty, has fewer than 2 classes, or has a class with fewer than 2 samples, the
-            backbone has no trainable parameters, or the mixed-precision mode is not supported
-            on the device.
+        ConfigurationError: If the training (or validation) data is empty or cannot supply
+            the objective (``supcon``: batch size below 4, fewer than 2 classes, or a class
+            with fewer than 2 samples; ``pair``: no positive or no negative pair can be
+            formed), relationship rules are given for a mode other than ``pair``, the backbone
+            has no trainable parameters, or the mixed-precision mode is not supported on the
+            device.
     """
+    if rules and args.training_mode != "pair":
+        raise ConfigurationError(
+            f"relationship_rules only apply to training_mode='pair', not '{args.training_mode}'."
+        )
     for name, dataset in (("train_dataset", train_dataset), ("eval_dataset", eval_dataset)):
         if dataset is not None:
             if len(dataset) == 0:
                 raise ConfigurationError(f"{name} is empty.")
-            _loader(model, dataset, args, seed=args.seed)
+            _objective(model, dataset, args, rules, seed=args.seed)
     if not any(True for _ in model.backbone.parameters()):
         raise ConfigurationError("The backbone has no parameters to train.")
     if args.mixed_precision == "fp16" and device.type != "cuda":
@@ -152,12 +261,18 @@ def train_representation(
     train_dataset: ImageDataset,
     eval_dataset: ImageDataset | None,
     args: TrainingArguments,
+    rules: Sequence[RelationshipRule] = (),
 ) -> RepresentationResult:
-    """Adapt the backbone with the supervised contrastive loss.
+    """Adapt the backbone with the objective named by ``args.training_mode``.
 
-    Each epoch draws class-balanced batches from ``train_dataset`` only. When ``eval_dataset``
-    is given, its contrastive loss is measured after every epoch (without gradients) on a
-    fixed set of class-balanced batches, so it is a balanced estimate rather than the mean over
+    ``"supcon"`` draws class-balanced batches and applies the supervised contrastive loss.
+    ``"pair"`` draws a bounded set of positive and negative pairs each epoch (``PairSampler``)
+    and applies the cosine pair loss; ``rules`` optionally decide pair targets and weights
+    from fields other than the class label.
+
+    Each epoch draws its batches from ``train_dataset`` only. When ``eval_dataset``
+    is given, its loss is measured after every epoch (without gradients) on a
+    fixed set of batches, so it is a sampled estimate rather than the mean over
     every validation sample, and the weights of the best epoch are restored at the end;
     otherwise the last epoch is kept. ``eval_dataset`` must be validation data: selecting a
     checkpoint on test data leaks it.
@@ -176,7 +291,9 @@ def train_representation(
         args: Hyperparameters: ``num_epochs``, ``batch_size``, ``learning_rate``,
             ``weight_decay``, ``warmup_ratio``, ``temperature``,
             ``gradient_accumulation_steps``, ``max_grad_norm``, ``mixed_precision``,
-            ``num_workers``, and ``seed``.
+            ``num_workers``, ``seed``, and for pairs ``positives_per_example`` and
+            ``negatives_per_example``.
+        rules: Relationship rules for ``"pair"`` mode.
 
     Returns:
         A ``RepresentationResult``.
@@ -186,22 +303,25 @@ def train_representation(
         TrainingDivergedError: If the loss becomes NaN or infinite.
     """
     device = model.device
-    validate_representation_setup(model, train_dataset, eval_dataset, args, device)
-    loss_fn = create_loss("supcon", temperature=args.temperature)
-    loader, sampler = _loader(model, train_dataset, args, seed=args.seed)
-    eval_loader = None
+    validate_representation_setup(model, train_dataset, eval_dataset, args, device, rules)
+    objective = _objective(model, train_dataset, args, rules, seed=args.seed)
+    loader = objective.loader
+    validation = None
     if eval_dataset is not None:
-        eval_loader, _ = _loader(model, eval_dataset, args, seed=args.seed + _EVAL_SEED_OFFSET)
+        validation = _objective(
+            model, eval_dataset, args, rules, seed=args.seed + _EVAL_SEED_OFFSET
+        )
 
     accumulation = args.gradient_accumulation_steps
-    steps_per_epoch = math.ceil(len(loader) / accumulation)
-    total_steps = steps_per_epoch * args.num_epochs
+    total_steps = sum(
+        math.ceil(objective.batches_in_epoch(epoch) / accumulation)
+        for epoch in range(args.num_epochs)
+    )
     parameters = [p for p in model.backbone.parameters() if p.requires_grad]
     if not parameters:
         raise ConfigurationError(
             "Every backbone parameter is frozen; call unfreeze_backbone() before training."
         )
-    dtype = parameters[0].dtype
     optimizer = torch.optim.AdamW(parameters, lr=args.learning_rate, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.LambdaLR(
         optimizer, _schedule(total_steps, args.warmup_ratio)
@@ -214,12 +334,12 @@ def train_representation(
     best_epoch, steps = 0, 0
     for epoch in range(args.num_epochs):
         model.train()
-        sampler.set_epoch(epoch)
+        objective.set_epoch(epoch)
         batch_losses: list[float] = []
         optimizer.zero_grad(set_to_none=True)
-        for index, (pixels, targets) in enumerate(loader):
+        for index, batch in enumerate(loader):
             with _autocast(args, device):
-                loss = loss_fn(model(pixels.to(device=device, dtype=dtype)), targets.to(device))
+                loss = objective.loss(batch)
             if not torch.isfinite(loss):
                 raise TrainingDivergedError(
                     f"Contrastive loss became non-finite at epoch {epoch + 1}; "
@@ -246,13 +366,10 @@ def train_representation(
                     steps += 1
         train_losses.append(float(np.mean(batch_losses)))
 
-        if eval_loader is not None:
+        if validation is not None:
             model.eval()
             with torch.no_grad(), _autocast(args, device):
-                losses = [
-                    loss_fn(model(pixels.to(device=device, dtype=dtype)), targets.to(device)).item()
-                    for pixels, targets in eval_loader
-                ]
+                losses = [validation.loss(batch).item() for batch in validation.loader]
             eval_losses.append(float(np.mean(losses)))
             if len(eval_losses) == 1 or eval_losses[-1] < min(eval_losses[:-1]):  # Ties: earliest.
                 best_epoch = epoch + 1

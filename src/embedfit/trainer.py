@@ -1,7 +1,7 @@
 """Two-phase training: representation adaptation, then head fitting (ADR 0002)."""
 
 import logging
-from collections.abc import Hashable
+from collections.abc import Hashable, Sequence
 from dataclasses import dataclass
 
 import numpy as np
@@ -13,13 +13,14 @@ from embedfit.exceptions import ConfigurationError, UndefinedMetricError
 from embedfit.heads.registry import create_head
 from embedfit.model import EmbedFitModel
 from embedfit.representation import train_representation, validate_representation_setup
+from embedfit.sampling.pairs import RelationshipRule
 from embedfit.training_args import TrainingArguments
 from embedfit.utils.device import resolve_device
 from embedfit.utils.seed import set_seed
 
 logger = logging.getLogger(__name__)
 
-_IMPLEMENTED_MODES = ("frozen", "supcon")
+_IMPLEMENTED_MODES = ("frozen", "supcon", "pair")
 
 
 @dataclass(frozen=True)
@@ -74,6 +75,8 @@ class Trainer:
         eval_dataset: Optional validation samples. ``predict`` and ``evaluate`` default to
             them, and representation training uses them to choose which epoch's weights to
             keep. They must not be test data: a checkpoint chosen on the test set leaks it.
+        relationship_rules: ``pair`` mode only: rules that declare pairs similar or dissimilar
+            from a field other than the class label. Rejected in every other mode.
 
     Raises:
         ConfigurationError: If the model has no labels, the training set is empty, contains
@@ -91,6 +94,8 @@ class Trainer:
         args: TrainingArguments,
         train_dataset: ImageDataset,
         eval_dataset: ImageDataset | None = None,
+        *,
+        relationship_rules: Sequence[RelationshipRule] = (),
     ) -> None:
         if args.training_mode not in _IMPLEMENTED_MODES:
             raise ConfigurationError(
@@ -135,9 +140,19 @@ class Trainer:
         self.train_dataset = train_dataset
         self.eval_dataset = eval_dataset
         self._device = resolve_device(args.device) if args.device is not None else None
+        self.relationship_rules = tuple(relationship_rules)
         if args.training_mode != "frozen":
             validate_representation_setup(
-                model, train_dataset, eval_dataset, args, self._device or model.device
+                model,
+                train_dataset,
+                eval_dataset,
+                args,
+                self._device or model.device,
+                self.relationship_rules,
+            )
+        elif self.relationship_rules:
+            raise ConfigurationError(
+                "relationship_rules only apply to training_mode='pair', not 'frozen'."
             )
 
     def train(self) -> TrainOutput:
@@ -168,7 +183,11 @@ class Trainer:
             )
             self.model.unfreeze_backbone()
             result = train_representation(
-                self.model, self.train_dataset, self.eval_dataset, self.args
+                self.model,
+                self.train_dataset,
+                self.eval_dataset,
+                self.args,
+                self.relationship_rules,
             )
         if self.args.freeze_backbone_before_head:
             self.model.freeze_backbone()
