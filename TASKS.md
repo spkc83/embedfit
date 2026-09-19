@@ -136,6 +136,6 @@ Legend:
 - [x] README quickstart
 - [x] examples
 - [x] domain-risk guide
-- [ ] privacy/logging review
+- [x] privacy/logging review
 - [x] changelog
 - [ ] v0.1 release checklist
