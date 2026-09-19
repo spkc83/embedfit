@@ -1,10 +1,12 @@
 """Record-level dataset: normalises sample records, never pixels."""
 
-from collections.abc import Hashable, Iterator, Mapping, Sequence
+from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from types import MappingProxyType
 from typing import Any, overload
+
+import numpy as np
 
 from embedfit.data.image import ImageLike
 from embedfit.exceptions import ConfigurationError
@@ -129,6 +131,22 @@ class ImageDataset:
         if isinstance(position, slice):
             return ImageDataset(self._samples[position])
         return self._samples[position]
+
+    def subset(self, positions: Iterable[int]) -> "ImageDataset":
+        """Return a new dataset holding the samples at ``positions``, in the order given.
+
+        Raises:
+            ConfigurationError: If a position is not an int (Python or numpy) or is out of range.
+        """
+        chosen = list(positions)
+        for position in chosen:
+            is_int = isinstance(position, int | np.integer) and not isinstance(position, bool)
+            if not is_int or not -len(self) <= position < len(self):
+                raise ConfigurationError(
+                    f"subset positions must be ints in [-{len(self)}, {len(self)}), "
+                    f"got {position!r}."
+                )
+        return ImageDataset([self._samples[int(position)] for position in chosen])
 
     def __iter__(self) -> Iterator[ImageSample]:
         return iter(self._samples)

@@ -23,3 +23,7 @@ class BackboneProviderError(EmbedFitError, ValueError):
 
 class HeadNotFittedError(EmbedFitError, RuntimeError):
     """A prediction was requested before a classification head was fitted."""
+
+
+class DataLeakageError(EmbedFitError, ValueError):
+    """Data splits share samples or groups that must be kept apart."""
