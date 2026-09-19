@@ -204,6 +204,9 @@ Required interface:
 
 ```python
 @property
+def identifier(self) -> str: ...      # "<provider>/<name>"
+
+@property
 def embedding_dim(self) -> int: ...
 
 def preprocess(self, image): ...
@@ -212,6 +215,10 @@ def freeze(self): ...
 def unfreeze(self): ...
 def save_pretrained(self, path): ...
 ```
+
+`preprocess` takes one image in any accepted input form and returns a float tensor `[3, H, W]` with a fixed `H` and `W` per backbone instance, so outputs can be stacked. Input-format handling is shared (`embedfit.data.to_rgb_tensor`); resizing and normalisation are the adapter's.
+
+A frozen backbone stays in eval mode even when a parent module enters training mode, so batch-norm statistics and dropout cannot change while frozen.
 
 Provider adapters must own provider-specific preprocessing.
 

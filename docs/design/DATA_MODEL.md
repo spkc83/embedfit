@@ -30,7 +30,7 @@ Never derive positive-class semantics from sort order.
 
 ## Image handling
 
-Convert only at data/preprocessing boundary.
+Convert only at data/preprocessing boundary: `embedfit.data.to_rgb_tensor` maps every accepted input form to a float32 RGB tensor `[3, H, W]` in [0, 1] at native resolution, and backbone adapters take it from there ([ADR 0007](../adrs/0007-canonical-image-tensor.md)).
 
 Avoid loading every file into memory when dataset stores paths.
 

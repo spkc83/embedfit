@@ -7,93 +7,23 @@ than mocks, but it carries no pretrained knowledge and is not meant for real tas
 
 import json
 from pathlib import Path
-from typing import Any
 
-import numpy as np
 import torch
 import torch.nn.functional as F
-from PIL import Image
 from torch import nn
 
-from embedfit.exceptions import ConfigurationError, ImageInputError
+from embedfit.backbones.base import ImageBackbone
+from embedfit.data.image import ImageLike, to_rgb_tensor
+from embedfit.exceptions import ConfigurationError
 
 _CONFIG_FILE = "config.json"
 _WEIGHTS_FILE = "weights.pt"
 
 
-def _to_chw_float(image: Any) -> torch.Tensor:
-    """Convert a PIL image, numpy array, or tensor to a float ``[C, H, W]`` tensor in [0, 1]."""
-    if isinstance(image, Image.Image):
-        n_frames = getattr(image, "n_frames", 1)
-        if n_frames > 1:
-            raise ImageInputError(
-                f"Multi-frame image with {n_frames} frames is ambiguous; "
-                "select a single frame before passing it in."
-            )
-        # Grayscale, palette, and alpha modes are converted to 3-channel RGB.
-        array = np.asarray(image.convert("RGB"))
-        return torch.from_numpy(array.copy()).permute(2, 0, 1).float() / 255.0
-
-    if isinstance(image, np.ndarray):
-        # numpy images are channel-last: [H, W] or [H, W, C].
-        if image.ndim == 2:
-            tensor = torch.from_numpy(np.array(image)).unsqueeze(0)
-        elif image.ndim == 3:
-            tensor = torch.from_numpy(np.array(image)).permute(2, 0, 1)
-        else:
-            raise ImageInputError(
-                f"numpy image must have shape [H, W] or [H, W, C]; got {image.ndim} dimensions."
-            )
-    elif isinstance(image, torch.Tensor):
-        # Tensor images are channel-first: [H, W] or [C, H, W].
-        if image.ndim == 2:
-            tensor = image.unsqueeze(0)
-        elif image.ndim == 3:
-            tensor = image
-        else:
-            raise ImageInputError(
-                f"tensor image must have shape [H, W] or [C, H, W]; got {image.ndim} dimensions."
-            )
-    else:
-        raise ImageInputError(
-            f"Unsupported image type {type(image).__name__}; "
-            "expected PIL.Image.Image, numpy.ndarray, or torch.Tensor."
-        )
-
-    channels, height, width = tensor.shape
-    if height == 0 or width == 0:
-        raise ImageInputError(f"Image has an empty spatial dimension: {height}x{width}.")
-    if tensor.dtype == torch.uint8:
-        tensor = tensor.to(device="cpu", dtype=torch.float32) / 255.0
-    elif tensor.is_floating_point():
-        if not torch.isfinite(tensor).all() or tensor.min() < 0 or tensor.max() > 1:
-            raise ImageInputError(
-                "Floating-point image values must be finite and lie in [0, 1]; "
-                "pass uint8 for [0, 255] data or rescale first."
-            )
-        # Always copy so the result never shares memory with the caller's array or tensor.
-        tensor = tensor.detach().to(device="cpu", dtype=torch.float32, copy=True)
-    else:
-        raise ImageInputError(
-            f"Unsupported image dtype {tensor.dtype}; expected uint8 in [0, 255] "
-            "or floating point in [0, 1]."
-        )
-
-    if channels == 1:
-        tensor = tensor.expand(3, -1, -1)  # Grayscale → RGB by channel replication.
-    elif channels != 3:
-        raise ImageInputError(
-            f"Image must have 1 or 3 channels; got {channels}. "
-            "numpy arrays are [H, W, C]; tensors are [C, H, W]."
-        )
-    return tensor
-
-
-class DummyBackbone(nn.Module):
+class DummyBackbone(ImageBackbone):
     """Small trainable CNN producing one embedding vector per image.
 
-    Follows the backbone contract from ``SPEC.md`` §7: ``embedding_dim``, ``preprocess``,
-    ``forward_features``, ``freeze``, ``unfreeze``, and ``save_pretrained``.
+    Registered with the provider registry as ``"dummy/tiny"``.
 
     Args:
         embedding_dim: Size of the output embedding.
@@ -129,18 +59,20 @@ class DummyBackbone(nn.Module):
             self.projection = nn.Linear(16, embedding_dim)
 
     @property
+    def identifier(self) -> str:
+        """Always ``"dummy/tiny"``."""
+        return "dummy/tiny"
+
+    @property
     def embedding_dim(self) -> int:
         """Dimensionality of the vectors returned by ``forward_features``."""
         return self._embedding_dim
 
-    def preprocess(self, image: Any) -> torch.Tensor:
+    def preprocess(self, image: ImageLike) -> torch.Tensor:
         """Convert one image to the model's input tensor.
 
         Args:
-            image: A ``PIL.Image.Image``; a numpy array shaped ``[H, W]`` or ``[H, W, C]``; or a
-                torch tensor shaped ``[H, W]`` or ``[C, H, W]``. Arrays and tensors must be
-                ``uint8`` in [0, 255] or finite floating point in [0, 1]. Grayscale input is
-                replicated to three channels.
+            image: Any form accepted by ``embedfit.data.to_rgb_tensor``.
 
         Returns:
             A new float32 CPU tensor shaped ``[3, image_size, image_size]`` with values in
@@ -152,7 +84,7 @@ class DummyBackbone(nn.Module):
             ImageInputError: If the type, shape, channel count, dtype, or floating-point value
                 range is unsupported. The message describes structure only, never pixel values.
         """
-        tensor = _to_chw_float(image)
+        tensor = to_rgb_tensor(image)
         if tensor.shape[-2:] != (self.image_size, self.image_size):
             tensor = F.interpolate(
                 tensor.unsqueeze(0),
@@ -175,27 +107,9 @@ class DummyBackbone(nn.Module):
         Raises:
             ImageInputError: If ``pixel_values`` is not a 4-D tensor with 3 channels.
         """
-        if pixel_values.ndim != 4 or pixel_values.shape[1] != 3:
-            raise ImageInputError(
-                f"pixel_values must have shape [batch, 3, H, W]; got {tuple(pixel_values.shape)}."
-            )
+        self._check_pixel_values(pixel_values)
         embeddings: torch.Tensor = self.projection(self.features(pixel_values))
         return embeddings
-
-    def forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
-        """Alias for ``forward_features``."""
-        return self.forward_features(pixel_values)
-
-    def freeze(self) -> None:
-        """Disable gradients for every parameter and switch to eval mode."""
-        for parameter in self.parameters():
-            parameter.requires_grad_(False)
-        self.eval()
-
-    def unfreeze(self) -> None:
-        """Re-enable gradients for every parameter. The train/eval mode is left unchanged."""
-        for parameter in self.parameters():
-            parameter.requires_grad_(True)
 
     def save_pretrained(self, path: str | Path) -> None:
         """Write the configuration and weights to a directory.

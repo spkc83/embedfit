@@ -25,16 +25,16 @@ Legend:
 
 ## M1 Backbone + model
 
-- [ ] Define `ImageBackbone`
-- [ ] Implement backbone registry
-- [ ] Implement `TorchvisionBackbone`
-- [ ] Implement provider resolution
-- [ ] Implement `EmbedFitModel`
-- [ ] Implement `encode`
-- [ ] Implement embedding normalization
-- [ ] Implement freeze/unfreeze
-- [ ] Tests for malformed inputs
-- [ ] Tests for grayscale/RGB handling
+- [x] Define `ImageBackbone`
+- [x] Implement backbone registry
+- [x] Implement `TorchvisionBackbone`
+- [x] Implement provider resolution
+- [x] Implement `EmbedFitModel`
+- [x] Implement `encode`
+- [x] Implement embedding normalization
+- [x] Implement freeze/unfreeze
+- [x] Tests for malformed inputs
+- [x] Tests for grayscale/RGB handling
 
 ## M2 Frozen baseline
 
