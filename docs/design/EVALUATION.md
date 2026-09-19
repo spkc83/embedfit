@@ -39,6 +39,31 @@ Only fraudulent examples contribute to numerator/denominator.
 
 Reject negative amounts unless explicitly supported.
 
+## Conventions implemented in `embedfit.evaluation`
+
+Metric functions take arrays of labels and scores and never call a model.
+
+**Positive class.** Every binary metric requires `positive_label`. A sample is positive only when its label equals `positive_label` in both value and type, so `1`, `1.0`, and `True` are distinct. Labels may be a list, a 1-D numpy array, or a 1-D torch tensor of scalar labels; a string, a 2-D array, or array-valued elements raise `ConfigurationError`, because they would otherwise match nothing and be scored as all-negative. A type mismatch between `positive_label` and well-formed labels leaves no positives, which the recall-type metrics report as undefined.
+
+**Score direction.** Higher scores mean "more likely positive". The ranking metrics (`roc_auc`, `pr_auc`, `recall_at_fpr`, and the top-K and review-rate metrics) accept distance-like scores with `greater_is_riskier=False`. `select_threshold` requires higher-is-riskier scores, so that the returned threshold has one meaning (`score >= threshold` flags); negate distance-like scores before calling it. Calibration functions take probabilities of the positive class and have no direction.
+
+**Thresholds and ties.** A threshold flags every item with `score >= threshold`, so tied items are always flagged together. Candidate thresholds are the observed score values; nothing is interpolated.
+
+- `recall_at_fpr` uses the lowest threshold whose FPR is within the target. When even the top tied group exceeds the target, nothing is flagged and recall is 0.
+- Top-K metrics (`precision_at_k`, `recall_at_k`, the review-rate metrics, `dollar_recall_at_review_rate`) treat tied items as interchangeable and report the expected value under random tie-breaking: a tied group of `g` items of which `m` fit under the cut-off contributes `m / g` of its positives (or positive amount). Results never depend on input order.
+
+**Review-rate rounding.** `review_rate` lies in (0, 1] and reviews `max(1, ceil(N × review_rate))` items. The product is rounded to 9 decimals before the ceiling so that `100 × 0.07` reviews 7 items, not 8; a genuine fractional part below 5e-10 is ignored as a result, which only matters beyond roughly a billion samples. The count never exceeds `N`.
+
+**Undefined values.** A metric with no defined value raises `UndefinedMetricError`: recall-type metrics and PR-AUC without positives, ROC-AUC and recall-at-FPR without positives or without negatives, dollar recall when positives have zero total amount, and any metric on an empty sample. Precision at K and the review-rate precision stay defined (0) without positives, and the calibration functions do not need positives at all. `Trainer.evaluate` converts these errors to NaN and logs a warning, so that one degenerate split does not abort a benchmark.
+
+**Amounts.** Amounts must be finite and non-negative; amounts of negative samples are ignored.
+
+**PR-AUC** is average precision, the uninterpolated step sum `Σ (Rₙ − Rₙ₋₁) Pₙ`, which equals the positive rate for a random ranking.
+
+**Macro averages** run over every declared class, scoring an absent class as 0, so results are comparable across samples; `balanced_accuracy` averages recall over the classes present in `y_true`.
+
+**Threshold selection.** `select_threshold` supports `max_f1` (ties go to the higher threshold), `target_precision` (highest recall subject to the precision floor, ties going to the higher threshold; raises if unreachable), `target_recall` (highest qualifying threshold), `target_fpr`, and `review_rate` (both: lowest qualifying threshold). When a target can only be met by flagging nothing, the threshold is `inf`. It must only ever see validation data.
+
 ## Splits
 
 Recommended order of realism:

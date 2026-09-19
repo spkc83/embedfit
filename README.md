@@ -58,6 +58,18 @@ model.predict_proba(test_images)   # [N, 2]; columns follow model.labels
 model.risk_score(test_images)      # probability of positive_label
 ```
 
+Metrics work on plain arrays, so they apply to any model's scores:
+
+```python
+from embedfit.evaluation import pr_auc, recall_at_fpr, recall_at_review_rate, select_threshold
+
+scores = model.risk_score(val_images)
+pr_auc(val_labels, scores, positive_label="risk")
+recall_at_fpr(val_labels, scores, positive_label="risk", target_fpr=0.01)
+recall_at_review_rate(val_labels, scores, positive_label="risk", review_rate=0.02)
+select_threshold(val_labels, scores, positive_label="risk", objective="target_fpr", target=0.01)
+```
+
 `training_mode="frozen"` leaves the backbone untouched and fits a logistic-regression head on its embeddings. It is the baseline that the representation-tuning modes are measured against.
 
 `encode` accepts PIL images, numpy arrays, torch tensors, and file paths, and returns one L2-normalised row per image. Resolution, interpolation mode, and normalisation constants come from the selected checkpoint, never from a global default; pass `image_size=` to run a convolutional backbone at higher resolution.
@@ -67,8 +79,12 @@ Importable today:
 | Component | Location | Purpose |
 | --- | --- | --- |
 | `EmbedFitModel` | `embedfit` | Backbone plus head: `from_pretrained`, `encode`, `fit_head`, `predict`, `predict_proba`, `risk_score`, `freeze_backbone` / `unfreeze_backbone`, differentiable `forward` |
-| `Trainer`, `TrainingArguments` | `embedfit` | Two-phase training (representation, then head). `frozen` mode is available; arguments are validated on creation |
+| `Trainer`, `TrainingArguments` | `embedfit` | Two-phase training (representation, then head) with `train`, `predict`, and `evaluate`. `frozen` mode is available; arguments are validated on creation |
 | `ImageDataset`; `ImageSample` | `embedfit`; `embedfit.data` | Sample records (`image`, `label`, optional `sample_id`, `group_id`, `timestamp`, `amount`, `metadata`); file paths stay undecoded until encoding |
+| `classification_metrics`, `confusion_matrix`, `roc_auc`, `pr_auc` | `embedfit.evaluation` | Standard metrics; macro averages cover every declared class |
+| `recall_at_fpr`, `precision_at_k`, `recall_at_k`, `precision_at_review_rate`, `recall_at_review_rate`, `dollar_recall`, `dollar_recall_at_review_rate` | `embedfit.evaluation` | Rare-event ranking metrics with an explicit positive label and order-independent tie handling |
+| `brier_score`, `calibration_bins` (returns `CalibrationBins`), `expected_calibration_error` | `embedfit.evaluation` | Calibration of positive-class probabilities |
+| `select_threshold` (returns `ThresholdResult`) | `embedfit.evaluation` | Threshold for max F1 or a target precision, recall, FPR, or review rate; for validation data only |
 | `LabelMapping` | `embedfit.data` | Ordered label ↔ class-index mapping that distinguishes `0` from `False` |
 | `ClassificationHead`, `LogisticRegressionHead`, `create_head`, `register_head` | `embedfit.heads` | Classifiers over `[N, D]` embeddings and class indices, constructible by name |
 | `ImageBackbone` | `embedfit.backbones` | Contract for provider adapters, which own preprocessing, feature extraction, and their own serialization |
@@ -81,7 +97,7 @@ Importable today:
 | `DummyBackbone` | `embedfit.backbones` | Tiny trainable CNN with no checkpoint, for offline tests and examples |
 | `make_bar_images` | `embedfit.testing` | Deterministic synthetic image classes with learnable structure |
 
-Representation training (`supcon`, `pair`, `end_to_end`), metrics, `Trainer.evaluate`, retrieval, model save/load, and the `timm` and Hugging Face providers from [`SPEC.md`](SPEC.md) are not implemented yet; `Trainer` rejects an unavailable `training_mode` when it is created.
+Representation training (`supcon`, `pair`, `end_to_end`), data-splitting helpers, retrieval, model save/load, and the `timm` and Hugging Face providers from [`SPEC.md`](SPEC.md) are not implemented yet; `Trainer` rejects an unavailable `training_mode` when it is created.
 
 ## Development
 

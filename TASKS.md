@@ -50,15 +50,15 @@ Legend:
 
 ## M3 Metrics
 
-- [ ] Standard classification metrics
-- [ ] PR-AUC
-- [ ] Recall at fixed FPR
-- [ ] Precision at review rate
-- [ ] Recall at review rate
-- [ ] Precision@K / Recall@K
-- [ ] Dollar recall
-- [ ] Threshold selection
-- [ ] Positive-class semantics validation
+- [x] Standard classification metrics
+- [x] PR-AUC
+- [x] Recall at fixed FPR
+- [x] Precision at review rate
+- [x] Recall at review rate
+- [x] Precision@K / Recall@K
+- [x] Dollar recall
+- [x] Threshold selection
+- [x] Positive-class semantics validation
 
 ## M4 Data safety
 
