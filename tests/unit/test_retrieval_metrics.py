@@ -1,6 +1,6 @@
 import pytest
 
-from embedfit.exceptions import ConfigurationError
+from embedfit.exceptions import ConfigurationError, UndefinedMetricError
 from embedfit.retrieval import (
     RetrievalResult,
     mean_average_precision,
@@ -95,7 +95,7 @@ def test_metrics_read_positions_not_the_rank_field():
     ],
 )
 def test_a_query_without_relevant_items_is_rejected(call):
-    with pytest.raises(ConfigurationError, match="has no defined retrieval quality"):
+    with pytest.raises(UndefinedMetricError, match="has no defined retrieval quality"):
         call()
 
 
@@ -152,3 +152,17 @@ def test_batch_arguments_must_line_up(metric):
         metric([], [])
     with pytest.raises(ConfigurationError, match="batch_results must be a sequence"):
         metric("ab", [{"a"}, {"b"}])
+
+
+def test_reciprocal_rank_stops_at_the_first_relevant_hit():
+    # Both results are relevant: only the first counts (1/1), not 1/1 + 1/2.
+    assert mean_reciprocal_rank([ranked("a", "b")], [{"a", "b"}]) == 1.0
+    assert mean_reciprocal_rank([ranked("x", "a", "b")], [{"a", "b"}]) == 0.5
+
+
+@pytest.mark.parametrize("metric", [retrieval_precision_at_k, retrieval_recall_at_k])
+def test_a_ranking_with_a_repeated_id_is_rejected(metric):
+    with pytest.raises(ConfigurationError, match="lists 1 id.s. more than once"):
+        metric(ranked("a", "b", "a"), {"a"})
+    with pytest.raises(ConfigurationError, match="more than once"):
+        mean_average_precision([ranked("a", "a")], [{"a"}], 2)  # Would otherwise score 2.0.

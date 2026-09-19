@@ -10,7 +10,7 @@ Status: Accepted
 4. Results are totally ordered: descending score, and equal scores by ascending position in the fitted matrix.
 5. A zero-norm vector is rejected at `fit` and at `search`, with a message naming the row positions.
 6. The rank of `query` alone decides the call: `[D]` returns `list[RetrievalResult]`, `[Q, D]` returns `list[list[RetrievalResult]]`. Fewer than `k` results are returned when fewer candidates remain; the list is never padded.
-7. `RetrievalBackend` is internal. `metric` selects the backend, and the public surface stays `RetrievalIndex` plus `RetrievalResult`.
+7. `metric` selects the backend. Callers use `RetrievalIndex` and `RetrievalResult`; `RetrievalBackend` and `BruteForceCosineBackend` are exported as the extension contract for exact backends.
 8. Retrieval metrics are named `retrieval_precision_at_k`, `retrieval_recall_at_k`, `mean_reciprocal_rank`, and `mean_average_precision`. They read a result list positionally, reject one that is not ordered best first, and reject a query whose relevant-identifier set is empty.
 
 ## Rationale
@@ -25,7 +25,7 @@ Ties are common with normalised embeddings of duplicated inputs, and `numpy.argp
 
 The cosine of the zero vector is undefined; computing it yields NaN, which propagates into rankings and metrics as an arbitrary ordering rather than an error.
 
-Rejecting an empty relevant set matches the treatment of degenerate label sets elsewhere in the library: such a query has precision 0 by construction and no recall denominator, so averaging it in quietly depresses every reported number.
+Rejecting an empty relevant set with `UndefinedMetricError` matches `embedfit.evaluation`, where recall-type metrics without positives raise the same error: such a query has precision 0 by construction and no recall denominator, so averaging it in quietly depresses every reported number.
 
 ## Consequences
 
@@ -35,4 +35,8 @@ Over-fetching costs `E` extra slots per query, where `E` is the largest per-quer
 
 Metadata is stored as a read-only shallow copy, so later mutation of the caller's dictionary does not alter indexed results, but nested mutable values are still shared. Metadata is never inspected, logged, or used for ranking, and `RetrievalResult.__repr__` reports only whether it is present, because results reach logs and tracebacks (`SECURITY_PRIVACY.md`).
 
-Identifiers are compared by value, so values that compare equal — `0` and `False`, or `1` and `1.0` — are one identifier, and `fit` rejects such a pair as a duplicate.
+Identifiers and group ids match on type and value, as labels do throughout the library (`embedfit.data.labels.label_key`), so `0`, `False`, and `"0"` are three different identifiers.
+
+The backend contract requires a total order whose top `m` is a prefix of its top `m + 1`; exact over-fetching depends on it. Exact backends (brute force, FAISS flat indexes, exact SQL scans) satisfy it. An approximate backend (HNSW, IVF) does not, and would need its own over-fetch margin and a filter hook in `RetrievalBackend.search`, which the v0.1 protocol does not have. Backends are selected through a private table keyed by metric; there is no public registration hook yet.
+
+Ranked lists passed to the metrics must not repeat an id, because a repeated relevant id would be counted twice.

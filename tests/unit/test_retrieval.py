@@ -368,3 +368,69 @@ def test_retrieval_result_repr_hides_metadata_but_shows_presence():
     without = RetrievalResult(id="s-2", score=0.25, rank=2)
     assert repr(with_metadata) == "RetrievalResult(id='s-1', score=0.5, rank=1, metadata=<present>)"
     assert repr(without) == "RetrievalResult(id='s-2', score=0.25, rank=2, metadata=None)"
+
+
+def test_float64_values_that_overflow_float32_are_rejected():
+    embeddings = np.array([[1e300, 0.0], [1.0, 0.0]], dtype=np.float64)
+    with pytest.raises(ConfigurationError, match="too large for float32"):
+        RetrievalIndex().fit(embeddings)
+    index = RetrievalIndex()
+    index.fit(np.eye(2, dtype=np.float32))
+    with pytest.raises(ConfigurationError, match="too large for float32"):
+        index.search(np.array([1e300, 0.0]))
+
+
+@pytest.mark.parametrize("scale", [1e-25, 1e20])
+def test_extreme_but_representable_scales_keep_cosine_exact(scale):
+    # Squaring these in float32 would underflow to 0 or overflow to inf.
+    embeddings = (np.array([[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]]) * scale).astype(np.float32)
+    index = RetrievalIndex()
+    index.fit(embeddings, ids=["x", "y", "xy"])
+    hits = index.search(embeddings[0], k=3)
+    assert [hit.id for hit in hits] == ["x", "xy", "y"]
+    assert [hit.score for hit in hits] == pytest.approx([1.0, 2**-0.5, 0.0], abs=1e-6)
+
+
+def test_ids_and_groups_match_on_type_as_well_as_value():
+    index = RetrievalIndex()
+    index.fit(np.eye(3, dtype=np.float32), ids=[0, False, "0"], groups=[1, True, 1])
+    assert [hit.id for hit in index.search(np.array([1.0, 0.0, 0.0]), k=3, exclude_ids=[0])] == [
+        False,
+        "0",
+    ]
+    hits = index.search(np.ones(3), k=3, query_groups=True, exclude_same_group=True)
+    assert [hit.id for hit in hits] == [0, "0"]  # Only the item in group True is removed.
+    with pytest.raises(ConfigurationError, match="ids must be unique"):
+        index.fit(np.eye(2, dtype=np.float32), ids=["a", "a"])
+
+
+def test_an_earlier_exact_duplicate_outranks_the_query_item_itself():
+    # Ties go to the earlier insertion, so "self is rank 1" holds only up to exact duplicates;
+    # exclude_self still removes exactly the query's own item.
+    embeddings = np.array([[1.0, 0.0], [1.0, 0.0], [0.0, 1.0]], dtype=np.float32)
+    index = RetrievalIndex()
+    index.fit(embeddings, ids=["twin", "me", "other"])
+    assert [hit.id for hit in index.search(embeddings[1], k=2)] == ["twin", "me"]
+    hits = index.search(embeddings[1], k=2, query_ids="me", exclude_self=True)
+    assert [hit.id for hit in hits] == ["twin", "other"]
+
+
+def test_excluding_the_none_group_excludes_nothing():
+    index = RetrievalIndex()
+    index.fit(np.eye(3, dtype=np.float32), ids=["a", "b", "c"], groups=[None, "g", None])
+    hits = index.search(np.ones(3), k=3, exclude_groups=[None])
+    assert [hit.id for hit in hits] == ["a", "b", "c"]
+
+
+def test_batches_without_per_query_exclusions_share_one_mask():
+    rng = np.random.default_rng(0)
+    embeddings = rng.normal(size=(50, 6)).astype(np.float32)
+    index = RetrievalIndex()
+    index.fit(embeddings, ids=list(range(50)))
+    queries = embeddings[:7]
+    shared = index.search(queries, k=5, exclude_ids=[3, 4])
+    single = [index.search(query, k=5, exclude_ids=[3, 4]) for query in queries]
+    assert [[hit.id for hit in hits] for hits in shared] == [
+        [hit.id for hit in hits] for hits in single
+    ]
+    assert not {3, 4} & {hit.id for hits in shared for hit in hits}

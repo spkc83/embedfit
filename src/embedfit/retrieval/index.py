@@ -7,6 +7,7 @@ from typing import Any
 
 import numpy as np
 
+from embedfit.data.labels import label_key
 from embedfit.exceptions import ConfigurationError, IndexNotFittedError
 from embedfit.retrieval.base import RetrievalBackend, RetrievalResult, validate_embeddings
 from embedfit.retrieval.brute_force import BruteForceCosineBackend
@@ -64,13 +65,14 @@ def _validate_ids(ids: Any, count: int) -> tuple[tuple[Hashable, ...], dict[Hash
             f"ids must have one entry per embedding: got {len(values)} ids for {count} embeddings."
         )
     try:
-        positions: dict[Hashable, int] = {value: position for position, value in enumerate(values)}
+        # Keyed by type and value, like labels elsewhere in the library: 0 and False differ.
+        positions: dict[Hashable, int] = {
+            label_key(value): position for position, value in enumerate(values)
+        }
     except TypeError as exc:
         raise ConfigurationError("ids must be hashable values such as str or int.") from exc
     if len(positions) != count:
-        raise ConfigurationError(
-            "ids must be unique; values that compare equal, such as 0 and False, are one id."
-        )
+        raise ConfigurationError("ids must be unique.")
     return values, positions
 
 
@@ -116,7 +118,7 @@ def _validate_groups(groups: Any, count: int) -> dict[Hashable, np.ndarray] | No
         if group is None:
             continue
         try:
-            members.setdefault(group, []).append(position)
+            members.setdefault(label_key(group), []).append(position)
         except TypeError as exc:
             raise ConfigurationError(
                 "group ids must be hashable values such as str or int, or None."
@@ -195,8 +197,8 @@ class RetrievalIndex:
                 keep their input order, which is what equal scores are broken by. For cosine,
                 no row may be the zero vector.
             ids: One unique hashable identifier per row, as a sequence or 1-D numpy array;
-                numpy scalars are unwrapped to Python values. Defaults to ``0..N-1``. Values
-                that compare equal, such as ``0`` and ``False``, count as one identifier.
+                numpy scalars are unwrapped to Python values. Defaults to ``0..N-1``. Ids
+                match on type and value, so ``0`` and ``False`` are different identifiers.
             metadata: One mapping, or ``None``, per row. Each mapping is copied into a read-only
                 view and is returned unchanged with its item; nothing is inspected, logged, or
                 used for ranking.
@@ -320,9 +322,12 @@ class RetrievalIndex:
         if count == 0:
             return []
 
-        masks = np.repeat(blocked[None, :], count, axis=0)
+        # A per-query [Q, N] mask is only materialised when a per-query exclusion was requested;
+        # otherwise every query shares the one [N] mask.
+        per_query = per_query_ids is not None or per_query_groups is not None
+        masks = np.repeat(blocked[None, :], count, axis=0) if per_query else blocked[None, :]
         group_members = self._group_members or {}
-        for row in range(count):
+        for row in range(count if per_query else 0):
             if per_query_ids is not None:
                 position = self._lookup(per_query_ids[row], name="query_ids")
                 if position is not None:
@@ -340,7 +345,7 @@ class RetrievalIndex:
         fetch = min(self.size, k + int(masks.sum(axis=1).max()))
         positions, scores = backend.search(queries, fetch)
         results = [
-            self._collect(positions[row], scores[row], allowed=~masks[row], k=k)
+            self._collect(positions[row], scores[row], allowed=~masks[row if per_query else 0], k=k)
             for row in range(count)
         ]
         return results if is_batch else results[0]
@@ -414,14 +419,13 @@ class RetrievalIndex:
 
     @staticmethod
     def _hashable(value: Any, *, name: str) -> Hashable:
+        """Return the type-and-value key under which ids and groups are stored."""
         try:
-            hash(value)
+            return label_key(value)
         except TypeError as exc:
             raise ConfigurationError(
                 f"{name} must contain hashable values such as str or int."
             ) from exc
-        hashable: Hashable = value
-        return hashable
 
     def _lookup(self, value: Any, *, name: str) -> int | None:
         """Return the index position of one identifier, or ``None`` if it is not indexed."""

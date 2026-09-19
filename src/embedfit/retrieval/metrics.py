@@ -21,7 +21,7 @@ silently meaningless.
 
 from collections.abc import Collection, Hashable, Sequence
 
-from embedfit.exceptions import ConfigurationError
+from embedfit.exceptions import ConfigurationError, UndefinedMetricError
 from embedfit.retrieval.base import RetrievalResult
 
 
@@ -53,7 +53,17 @@ def _scored(results: Sequence[RetrievalResult], k: int | None) -> tuple[int, lis
         raise ConfigurationError(f"k must be a positive int, got {k!r}.")
     else:
         cutoff = k
-    return cutoff, [result.id for result in results[:cutoff]]
+    ids = [result.id for result in results]
+    try:
+        distinct = len(set(ids))
+    except TypeError as exc:
+        raise ConfigurationError("result ids must be hashable.") from exc
+    if distinct != len(ids):
+        raise ConfigurationError(
+            f"results lists {len(ids) - distinct} id(s) more than once; a ranking holds each "
+            "item at most once."
+        )
+    return cutoff, ids[:cutoff]
 
 
 def _relevant(relevant_ids: Collection[Hashable], *, name: str) -> set[Hashable]:
@@ -65,7 +75,7 @@ def _relevant(relevant_ids: Collection[Hashable], *, name: str) -> set[Hashable]
     except TypeError as exc:
         raise ConfigurationError(f"{name} must contain hashable ids.") from exc
     if not known:
-        raise ConfigurationError(
+        raise UndefinedMetricError(
             f"{name} is empty; a query with no relevant items has no defined retrieval quality. "
             "Drop such queries explicitly instead."
         )

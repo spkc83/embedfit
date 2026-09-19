@@ -50,35 +50,35 @@ Legend:
 
 ## M3 Metrics
 
-- [ ] Standard classification metrics
-- [ ] PR-AUC
-- [ ] Recall at fixed FPR
-- [ ] Precision at review rate
-- [ ] Recall at review rate
-- [ ] Precision@K / Recall@K
-- [ ] Dollar recall
-- [ ] Threshold selection
-- [ ] Positive-class semantics validation
+- [x] Standard classification metrics
+- [x] PR-AUC
+- [x] Recall at fixed FPR
+- [x] Precision at review rate
+- [x] Recall at review rate
+- [x] Precision@K / Recall@K
+- [x] Dollar recall
+- [x] Threshold selection
+- [x] Positive-class semantics validation
 
 ## M4 Data safety
 
-- [ ] N-per-class sampling
-- [ ] Grouped split
-- [ ] Temporal split
-- [ ] Split overlap checker
-- [ ] Documentation for leakage
+- [x] N-per-class sampling
+- [x] Grouped split
+- [x] Temporal split
+- [x] Split overlap checker
+- [x] Documentation for leakage
 
 ## M5 SupCon
 
-- [ ] Balanced class batch sampler
-- [ ] SupCon loss
-- [ ] Unit tests for loss
-- [ ] Representation optimizer
-- [ ] Training loop
-- [ ] Validation loss
-- [ ] Best checkpoint restore
-- [ ] Freeze + head fit transition
-- [ ] Integration test demonstrating encoder weights change
+- [x] Balanced class batch sampler
+- [x] SupCon loss
+- [x] Unit tests for loss
+- [x] Representation optimizer
+- [x] Training loop
+- [x] Validation loss
+- [x] Best checkpoint restore
+- [x] Freeze + head fit transition
+- [x] Integration test demonstrating encoder weights change
 
 ## M6 Pairs
 

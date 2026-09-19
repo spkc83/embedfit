@@ -58,7 +58,28 @@ model.predict_proba(test_images)   # [N, 2]; columns follow model.labels
 model.risk_score(test_images)      # probability of positive_label
 ```
 
+Metrics work on plain arrays, so they apply to any model's scores:
+
+```python
+from embedfit.evaluation import pr_auc, recall_at_fpr, recall_at_review_rate, select_threshold
+
+scores = model.risk_score(val_images)
+pr_auc(val_labels, scores, positive_label="risk")
+recall_at_fpr(val_labels, scores, positive_label="risk", target_fpr=0.01)
+recall_at_review_rate(val_labels, scores, positive_label="risk", review_rate=0.02)
+select_threshold(val_labels, scores, positive_label="risk", objective="target_fpr", target=0.01)
+```
+
 `training_mode="frozen"` leaves the backbone untouched and fits a logistic-regression head on its embeddings. It is the baseline that the representation-tuning modes are measured against.
+
+`training_mode="supcon"` first adapts the backbone with a supervised contrastive loss on class-balanced batches, then freezes it and fits the same head:
+
+```python
+args = TrainingArguments(training_mode="supcon", num_epochs=5, batch_size=32, learning_rate=2e-5)
+trainer = Trainer(model, args, train, eval_dataset=validation)   # validation picks the best epoch
+output = trainer.train()            # output.train_losses, output.eval_losses, output.best_epoch
+trainer.evaluate(test)
+```
 
 `encode` accepts PIL images, numpy arrays, torch tensors, and file paths, and returns one L2-normalised row per image. Resolution, interpolation mode, and normalisation constants come from the selected checkpoint, never from a global default; pass `image_size=` to run a convolutional backbone at higher resolution.
 
@@ -67,9 +88,17 @@ Importable today:
 | Component | Location | Purpose |
 | --- | --- | --- |
 | `EmbedFitModel` | `embedfit` | Backbone plus head: `from_pretrained`, `encode`, `fit_head`, `predict`, `predict_proba`, `risk_score`, `freeze_backbone` / `unfreeze_backbone`, differentiable `forward` |
-| `Trainer`, `TrainingArguments` | `embedfit` | Two-phase training (representation, then head). `frozen` mode is available; arguments are validated on creation |
+| `Trainer`, `TrainingArguments` | `embedfit` | Two-phase training (representation, then head) with `train`, `predict`, and `evaluate`. Modes `frozen` and `supcon`; arguments are validated on creation |
 | `ImageDataset`; `ImageSample` | `embedfit`; `embedfit.data` | Sample records (`image`, `label`, optional `sample_id`, `group_id`, `timestamp`, `amount`, `metadata`); file paths stay undecoded until encoding |
+| `classification_metrics`, `confusion_matrix`, `roc_auc`, `pr_auc` | `embedfit.evaluation` | Standard metrics; macro averages cover every declared class |
+| `recall_at_fpr`, `precision_at_k`, `recall_at_k`, `precision_at_review_rate`, `recall_at_review_rate`, `dollar_recall`, `dollar_recall_at_review_rate` | `embedfit.evaluation` | Rare-event ranking metrics with an explicit positive label and order-independent tie handling |
+| `brier_score`, `calibration_bins` (returns `CalibrationBins`), `expected_calibration_error` | `embedfit.evaluation` | Calibration of positive-class probabilities |
+| `select_threshold` (returns `ThresholdResult`) | `embedfit.evaluation` | Threshold for max F1 or a target precision, recall, FPR, or review rate; for validation data only |
+| `stratified_split`, `grouped_split`, `temporal_split`, `find_split_overlap` | `embedfit.data` | Reproducible splits by class, group, or time, and a check that no `sample_id` or `group_id` spans splits ([leakage guide](docs/guides/leakage.md)) |
+| `sample_few_shot` | `embedfit.sampling` | N samples per class, without replacement |
 | `LabelMapping` | `embedfit.data` | Ordered label ↔ class-index mapping that distinguishes `0` from `False` |
+| `SupConLoss`, `create_loss`, `register_loss`, `available_losses` | `embedfit.losses` | Supervised contrastive loss over `[B, D]` or multi-view `[B, V, D]` embeddings, and a loss registry |
+| `BalancedClassBatchSampler` | `embedfit.sampling` | Batches of up to `samples_per_class` images from each of `classes_per_batch` classes, never a duplicate image, reproducible per seed and epoch |
 | `ClassificationHead`, `LogisticRegressionHead`, `create_head`, `register_head` | `embedfit.heads` | Classifiers over `[N, D]` embeddings and class indices, constructible by name |
 | `RetrievalIndex` | `embedfit` | Cosine nearest-neighbour search over embeddings, with ids, metadata passthrough, and leakage-safe exclusion by id or group ([design](docs/design/RETRIEVAL.md#implemented-semantics)) |
 | `RetrievalResult`, `RetrievalBackend`, `BruteForceCosineBackend` | `embedfit.retrieval` | One neighbour (`id`, `score`, `rank`, `metadata`); the backend contract future FAISS or pgvector adapters implement; the exhaustive v0.1 backend |
@@ -84,7 +113,7 @@ Importable today:
 | `DummyBackbone` | `embedfit.backbones` | Tiny trainable CNN with no checkpoint, for offline tests and examples |
 | `make_bar_images` | `embedfit.testing` | Deterministic synthetic image classes with learnable structure |
 
-Representation training (`supcon`, `pair`, `end_to_end`), metrics, `Trainer.evaluate`, model save/load, and the `timm` and Hugging Face providers from [`SPEC.md`](SPEC.md) are not implemented yet; `Trainer` rejects an unavailable `training_mode` when it is created.
+The `pair`, `triplet`, and `end_to_end` training modes, augmentation profiles, model save/load, and the `timm` and Hugging Face providers from [`SPEC.md`](SPEC.md) are not implemented yet; `Trainer` rejects an unavailable `training_mode` when it is created.
 
 ## Development
 

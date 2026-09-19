@@ -9,14 +9,29 @@ from embedfit.exceptions import ConfigurationError
 
 
 def _plain(label: Any) -> Any:
-    """Unwrap numpy scalars so ``np.str_("a")`` and ``"a"`` are the same label."""
-    return label.item() if isinstance(label, np.generic) else label
+    """Unwrap numpy scalars and 0-d arrays/tensors so ``np.str_("a")`` and ``"a"`` match."""
+    if isinstance(label, np.generic) or (getattr(label, "ndim", None) == 0):
+        return label.item()
+    return label
 
 
 def _key(label: Any) -> tuple[type, Any]:
     # The type is part of the key: ``False == 0`` must not make False an alias of label 0.
     label = _plain(label)
     return (type(label), label)
+
+
+def same_label(first: Any, second: Any) -> bool:
+    """Whether two labels are the same label: equal in value *and* type."""
+    try:
+        return _key(first) == _key(second)
+    except TypeError:
+        return False
+
+
+def label_key(label: Any) -> tuple[type, Any]:
+    """Return a hashable key that identifies a label by both type and value."""
+    return _key(label)
 
 
 class LabelMapping:

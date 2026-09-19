@@ -40,9 +40,14 @@ def validate_embeddings(
         raise ConfigurationError(
             f"{name} has embedding dimension {matrix.shape[1]}, expected {expected_dim}."
         )
-    if not np.isfinite(matrix).all():
-        raise ConfigurationError(f"{name} contains NaN or infinite values.")
-    return matrix.astype(np.float32, copy=False)
+    # Check after the cast: a float64 value can be finite and still overflow float32.
+    with np.errstate(over="ignore"):  # Overflow is reported below as an error instead.
+        converted: np.ndarray = matrix.astype(np.float32, copy=False)
+    if not np.isfinite(converted).all():
+        raise ConfigurationError(
+            f"{name} contains NaN or infinite values, or values too large for float32."
+        )
+    return converted
 
 
 @dataclass(frozen=True, repr=False)

@@ -16,16 +16,19 @@ def _l2_normalise(matrix: np.ndarray, *, name: str) -> np.ndarray:
             therefore its cosine similarity, is undefined. The message reports row positions and
             counts only, never values.
     """
-    norms = np.linalg.norm(matrix, axis=1)
+    # float64 norms: squaring float32 components overflows above ~1e19 and underflows below
+    # ~1e-23, which would turn valid rows into zeros or report them as zero vectors.
+    norms = np.linalg.norm(matrix.astype(np.float64), axis=1)
     degenerate = np.flatnonzero(norms == 0.0)
     if degenerate.size:
         shown = degenerate[:_MAX_REPORTED_POSITIONS].tolist()
-        suffix = "" if degenerate.size <= _MAX_REPORTED_POSITIONS else ", first 10 shown"
+        more = degenerate.size > _MAX_REPORTED_POSITIONS
+        suffix = f", first {_MAX_REPORTED_POSITIONS} shown" if more else ""
         raise ConfigurationError(
             f"{name} contains {degenerate.size} zero-norm row(s) at positions {shown}{suffix}; "
             "cosine similarity is undefined for the zero vector."
         )
-    normalised: np.ndarray = matrix / norms[:, None]
+    normalised: np.ndarray = (matrix / norms[:, None]).astype(np.float32)
     return normalised
 
 
