@@ -69,6 +69,8 @@ Importable today:
 | `EmbedFitModel` | `embedfit` | Backbone plus head: `from_pretrained`, `encode`, `fit_head`, `predict`, `predict_proba`, `risk_score`, `freeze_backbone` / `unfreeze_backbone`, differentiable `forward` |
 | `Trainer`, `TrainingArguments` | `embedfit` | Two-phase training (representation, then head). `frozen` mode is available; arguments are validated on creation |
 | `ImageDataset`; `ImageSample` | `embedfit`; `embedfit.data` | Sample records (`image`, `label`, optional `sample_id`, `group_id`, `timestamp`, `amount`, `metadata`); file paths stay undecoded until encoding |
+| `stratified_split`, `grouped_split`, `temporal_split`, `find_split_overlap` | `embedfit.data` | Reproducible splits by class, group, or time, and a check that no `sample_id` or `group_id` spans splits ([leakage guide](docs/guides/leakage.md)) |
+| `sample_few_shot` | `embedfit.sampling` | N samples per class, without replacement |
 | `LabelMapping` | `embedfit.data` | Ordered label ↔ class-index mapping that distinguishes `0` from `False` |
 | `ClassificationHead`, `LogisticRegressionHead`, `create_head`, `register_head` | `embedfit.heads` | Classifiers over `[N, D]` embeddings and class indices, constructible by name |
 | `ImageBackbone` | `embedfit.backbones` | Contract for provider adapters, which own preprocessing, feature extraction, and their own serialization |

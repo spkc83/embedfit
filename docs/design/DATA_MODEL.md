@@ -18,6 +18,10 @@ class ImageSample:
 
 Records are read once when the dataset is created. A source that decodes images inside `__getitem__` is therefore held in memory; storing file paths as `image` keeps decoding lazy, because paths are opened only when a batch is encoded.
 
+## Splitting
+
+`stratified_split`, `grouped_split`, and `temporal_split` return `(train, test)` datasets that partition the input and keep its sample order. `ImageDataset.subset(positions)` builds a dataset from explicit positions. `find_split_overlap` reports `sample_id` and `group_id` values shared between named splits. See the [leakage guide](../guides/leakage.md) for when to use which.
+
 ## Label handling
 
 Internally maintain a stable mapping:

@@ -47,6 +47,8 @@ Recommended order of realism:
 2. grouped — prevents direct entity/item leakage
 3. temporal out-of-time — best proxy for future deployment when available
 
+The corresponding helpers and the overlap check are described in the [leakage guide](../guides/leakage.md).
+
 ## Model selection
 
 Validation set:
