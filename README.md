@@ -41,11 +41,24 @@ Then execute work from [`TASKS.md`](TASKS.md).
 EmbedFit is built milestone by milestone against [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md); [`TASKS.md`](TASKS.md) tracks each item. The capabilities under [Core v0.1 capabilities](#core-v01-capabilities) are the target, not the current feature set.
 
 ```python
-from embedfit import EmbedFitModel
+from embedfit import EmbedFitModel, ImageDataset, Trainer, TrainingArguments
 
-model = EmbedFitModel.from_pretrained("torchvision/resnet18")   # downloads ImageNet weights
+model = EmbedFitModel.from_pretrained(          # downloads ImageNet weights
+    "torchvision/resnet18",
+    labels=["legitimate", "risk"],              # class order is as written, never sorted
+    positive_label="risk",
+)
 embeddings = model.encode(["scan_001.png", "scan_002.png"])     # numpy array, shape [2, 512]
+
+train = ImageDataset.from_lists(train_images, train_labels)
+Trainer(model, TrainingArguments(training_mode="frozen"), train).train()
+
+model.predict(test_images)         # labels
+model.predict_proba(test_images)   # [N, 2]; columns follow model.labels
+model.risk_score(test_images)      # probability of positive_label
 ```
+
+`training_mode="frozen"` leaves the backbone untouched and fits a logistic-regression head on its embeddings. It is the baseline that the representation-tuning modes are measured against.
 
 `encode` accepts PIL images, numpy arrays, torch tensors, and file paths, and returns one L2-normalised row per image. Resolution, interpolation mode, and normalisation constants come from the selected checkpoint, never from a global default; pass `image_size=` to run a convolutional backbone at higher resolution.
 
@@ -53,7 +66,11 @@ Importable today:
 
 | Component | Location | Purpose |
 | --- | --- | --- |
-| `EmbedFitModel` | `embedfit` | Wraps a backbone: `from_pretrained`, `encode`, `freeze_backbone` / `unfreeze_backbone`, differentiable `forward` |
+| `EmbedFitModel` | `embedfit` | Backbone plus head: `from_pretrained`, `encode`, `fit_head`, `predict`, `predict_proba`, `risk_score`, `freeze_backbone` / `unfreeze_backbone`, differentiable `forward` |
+| `Trainer`, `TrainingArguments` | `embedfit` | Two-phase training (representation, then head). `frozen` mode is available; arguments are validated on creation |
+| `ImageDataset`; `ImageSample` | `embedfit`; `embedfit.data` | Sample records (`image`, `label`, optional `sample_id`, `group_id`, `timestamp`, `amount`, `metadata`); file paths stay undecoded until encoding |
+| `LabelMapping` | `embedfit.data` | Ordered label ↔ class-index mapping that distinguishes `0` from `False` |
+| `ClassificationHead`, `LogisticRegressionHead`, `create_head`, `register_head` | `embedfit.heads` | Classifiers over `[N, D]` embeddings and class indices, constructible by name |
 | `ImageBackbone` | `embedfit.backbones` | Contract for provider adapters, which own preprocessing, feature extraction, and their own serialization |
 | `TorchvisionBackbone` | `embedfit.backbones` | torchvision classification models with the linear classifier removed (`torchvision/<name>`); models without one, such as SqueezeNet, are rejected |
 | `create_backbone`, `register_backbone_provider` | `embedfit.backbones` | Resolve `<provider>/<name>` identifiers; the provider is never guessed |
@@ -64,7 +81,7 @@ Importable today:
 | `DummyBackbone` | `embedfit.backbones` | Tiny trainable CNN with no checkpoint, for offline tests and examples |
 | `make_bar_images` | `embedfit.testing` | Deterministic synthetic image classes with learnable structure |
 
-Classification heads, `Trainer`, metrics, retrieval, model save/load, and the `timm` and Hugging Face providers from [`SPEC.md`](SPEC.md) are not implemented yet.
+Representation training (`supcon`, `pair`, `end_to_end`), metrics, `Trainer.evaluate`, retrieval, model save/load, and the `timm` and Hugging Face providers from [`SPEC.md`](SPEC.md) are not implemented yet; `Trainer` rejects an unavailable `training_mode` when it is created.
 
 ## Development
 
