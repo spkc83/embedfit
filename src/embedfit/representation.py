@@ -12,7 +12,8 @@ from typing import Any
 
 import numpy as np
 import torch
-from torch.utils.data import DataLoader, Dataset
+from torch import nn
+from torch.utils.data import DataLoader, Dataset, RandomSampler
 
 from embedfit.data.dataset import ImageDataset
 from embedfit.exceptions import ConfigurationError, TrainingDivergedError
@@ -35,6 +36,8 @@ class RepresentationResult:
         steps: Optimizer steps taken.
         train_losses: Mean training loss of each epoch.
         eval_losses: Validation loss after each epoch; empty without a validation set.
+        classifier: ``end_to_end`` mode only: the linear layer trained jointly with the
+            backbone, holding the kept epoch's weights.
         best_epoch: 1-based epoch whose weights were kept: the one with the lowest validation
             loss (the earliest on ties), or the last epoch without a validation set.
     """
@@ -43,6 +46,7 @@ class RepresentationResult:
     train_losses: list[float] = field(default_factory=list)
     eval_losses: list[float] = field(default_factory=list)
     best_epoch: int = 0
+    classifier: nn.Linear | None = None
 
 
 class _PixelDataset(Dataset[tuple[torch.Tensor, int]]):
@@ -152,8 +156,13 @@ def _objective(
     args: TrainingArguments,
     rules: Sequence[RelationshipRule],
     seed: int,
+    classifier: nn.Linear | None = None,
 ) -> _Objective:
-    """Build the objective selected by ``args.training_mode`` for one dataset."""
+    """Build the objective selected by ``args.training_mode`` for one dataset.
+
+    ``classifier`` is the jointly trained linear layer of ``end_to_end`` mode. Validation
+    builds the objective without one, which checks the data but cannot compute a loss.
+    """
     parameter = next(model.backbone.parameters(), None)
     device = model.device
     dtype = parameter.dtype if parameter is not None else torch.float32
@@ -172,6 +181,31 @@ def _objective(
         return _Objective(loader, sampler.set_epoch, lambda epoch: len(sampler), supcon_loss)
 
     assert model.label_mapping is not None
+    if args.training_mode == "end_to_end":
+        targets = model.label_mapping.encode(dataset.labels)
+        generator = torch.Generator()
+        pixels_dataset = _PixelDataset(model, dataset, targets)
+        uniform: DataLoader[Any] = DataLoader(
+            pixels_dataset,
+            batch_size=args.batch_size,
+            sampler=RandomSampler(pixels_dataset, generator=generator),
+            num_workers=args.num_workers,
+        )
+
+        def reseed(epoch: int) -> None:
+            generator.manual_seed(seed * 100_003 + epoch)
+
+        def cross_entropy(batch: Any) -> torch.Tensor:
+            if classifier is None:
+                raise ConfigurationError("end_to_end training needs a classifier layer.")
+            pixels, labels = batch
+            logits = classifier(model(pixels.to(device=device, dtype=dtype)))
+            loss: torch.Tensor = nn.functional.cross_entropy(logits.float(), labels.to(device))
+            return loss
+
+        reseed(0)
+        return _Objective(uniform, reseed, lambda epoch: len(uniform), cross_entropy)
+
     model.label_mapping.encode(dataset.labels)  # Unknown labels are an error in every mode.
     pair_sampler = PairSampler(
         dataset,
@@ -273,7 +307,11 @@ def train_representation(
     ``"supcon"`` draws class-balanced batches and applies the supervised contrastive loss.
     ``"pair"`` draws a bounded set of positive and negative pairs each epoch (``PairSampler``)
     and applies the cosine pair loss; ``rules`` optionally decide pair targets and weights
-    from fields other than the class label.
+    from fields other than the class label. ``"end_to_end"`` is the comparison baseline: a
+    linear classifier on the model's embeddings is trained jointly with the backbone under
+    cross-entropy on uniformly shuffled batches, and returned in ``classifier``. The classifier
+    sees exactly the embeddings the model produces (normalised or not) and ``temperature`` plays
+    no part, so the baseline shares no hyperparameter with the contrastive losses.
 
     Each epoch draws its batches from ``train_dataset`` only. When ``eval_dataset``
     is given, its loss is measured after every epoch (without gradients) on a
@@ -313,20 +351,35 @@ def train_representation(
     rules = tuple(rules)
     if validate:
         validate_representation_setup(model, train_dataset, eval_dataset, args, device, rules)
-    objective = _objective(model, train_dataset, args, rules, seed=args.seed)
+    classifier = None
+    if args.training_mode == "end_to_end":
+        assert model.label_mapping is not None
+        with torch.random.fork_rng(devices=[]):
+            torch.manual_seed(args.seed)
+            classifier = nn.Linear(model.embedding_dim, len(model.label_mapping))
+        first = next(model.backbone.parameters(), None)
+        classifier.to(device=device, dtype=first.dtype if first is not None else torch.float32)
+    objective = _objective(model, train_dataset, args, rules, seed=args.seed, classifier=classifier)
     loader = objective.loader
     validation = None
     if eval_dataset is not None:
         validation = _objective(
-            model, eval_dataset, args, rules, seed=args.seed + _EVAL_SEED_OFFSET
+            model,
+            eval_dataset,
+            args,
+            rules,
+            seed=args.seed + _EVAL_SEED_OFFSET,
+            classifier=classifier,
         )
+    # Everything that training updates, so that the best epoch can be restored as a whole.
+    trained = nn.ModuleList([model.backbone] + ([classifier] if classifier is not None else []))
 
     accumulation = args.gradient_accumulation_steps
     total_steps = sum(
         math.ceil(objective.batches_in_epoch(epoch) / accumulation)
         for epoch in range(args.num_epochs)
     )
-    parameters = [p for p in model.backbone.parameters() if p.requires_grad]
+    parameters = [p for p in trained.parameters() if p.requires_grad]
     if not parameters:
         raise ConfigurationError(
             "Every backbone parameter is frozen; call unfreeze_backbone() before training."
@@ -385,7 +438,7 @@ def train_representation(
                 # Kept on the CPU so that a GPU backbone is not held in memory twice.
                 best_state = {
                     name: value.detach().to("cpu", copy=True)
-                    for name, value in model.backbone.state_dict().items()
+                    for name, value in trained.state_dict().items()
                 }
             logger.info(
                 "Epoch %d/%d: train loss %.4f, validation loss %.4f",
@@ -401,6 +454,6 @@ def train_representation(
             )
 
     if best_state is not None and best_epoch != args.num_epochs:
-        model.backbone.load_state_dict(best_state)
+        trained.load_state_dict(best_state)
         logger.info("Restored backbone weights from epoch %d", best_epoch)
-    return RepresentationResult(steps, train_losses, eval_losses, best_epoch)
+    return RepresentationResult(steps, train_losses, eval_losses, best_epoch, classifier)

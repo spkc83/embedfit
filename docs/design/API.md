@@ -110,6 +110,28 @@ metrics = trainer.evaluate()
 - The loss's `negative_target` is fixed at 0 in `Trainer`; other values are available by using `CosinePairLoss` directly.
 - A training or validation set from which no positive pair or no negative pair can be formed is rejected when the `Trainer` is created.
 
+### End-to-end baseline (`end_to_end`)
+
+The comparison baseline of ADR 0002: a linear classifier on the model's embeddings is trained jointly with the backbone under cross-entropy, using the same loop as the other modes (optimiser, schedule, accumulation, mixed precision, best-epoch restore, which here covers backbone and classifier together).
+
+- Batches are uniformly shuffled from `train_dataset`, reshuffled every epoch from `args.seed`. There is no class balancing, which is part of what the baseline measures.
+- The classifier is a plain linear layer on the embeddings the model produces, normalised or not, initialised from `args.seed` and trained with the same optimiser settings as the backbone (including weight decay and gradient clipping). `temperature` is not used: a temperature-scaled (cosine) classifier was measured on the synthetic benchmark and lowered few-shot test accuracy (0.53 against 0.66 at 4 shots, 0.66 against 0.77 at 8 shots, five seeds), while coupling the baseline to a contrastive-loss hyperparameter.
+- Like every mode, it trains for `num_epochs` over the data it is given. At 4 shots that is very few optimizer steps, so give the baseline a fair budget (more epochs or a higher learning rate) before concluding that it is weaker; normalised and unnormalised embeddings perform alike.
+- There is no separate head-fitting phase: the trained classifier becomes the model's head as a `LinearHead` (`head_name == "linear"`), and the logs say so. The model must have been created with a head name, and `args.head` must be the default or `"linear"`.
+- `LinearHead` is also a standalone head (`head="linear"`): softmax regression fitted with full-batch L-BFGS from a seeded initialisation, saved without pickle like the logistic-regression head.
+
+## Few-shot benchmark
+
+`FewShotEvaluator(shots, seeds).run(dataset, test_dataset=..., methods=[...], model_factory=...)` measures each method at each training-set size over repeated seeds.
+
+- For every `(shots, seed)`, `sample_few_shot(dataset, shots, seed)` draws the training sample once, and every method trains on that same sample, so methods differ only in how they learn.
+- Every run gets a new model from `model_factory` and `TrainingArguments` for its method (from `training_arguments`, or `TrainingArguments(training_mode=method)`) with `seed` set to the run's seed.
+- `test_dataset` is only ever passed to `Trainer.evaluate`. No validation set is used inside the benchmark, so representation training keeps its last epoch and nothing is selected on test data.
+- The result is a list of tidy records with the keys `method`, `backbone`, `shots`, `seed`, `metric`, and `value`, one per metric reported by `Trainer.evaluate`. `aggregate(records)` returns the mean and sample standard deviation over seeds per method, backbone, shots, and metric, leaving NaN values out and counting them in `num_undefined`.
+- Invalid configurations fail before any training: unknown or repeated methods, arguments whose `training_mode` differs from their method, a pool too small for the largest shot count, or a factory that returns the same model twice.
+
+Interpret results with `docs/research/BASELINES.md` in mind: a representation-tuning method is only shown to be sample-efficient if it beats `frozen` and `end_to_end` on identical few-shot samples across seeds.
+
 ## Saving and loading
 
 ```python

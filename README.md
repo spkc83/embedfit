@@ -59,6 +59,21 @@ model.predict_proba(test_images)   # [N, 2]; columns follow model.labels
 model.risk_score(test_images)      # probability of positive_label
 ```
 
+`FewShotEvaluator` compares methods at several training-set sizes over repeated seeds, with every method trained on the same few-shot sample and scored on the same held-out test set:
+
+```python
+from embedfit import FewShotEvaluator
+
+evaluator = FewShotEvaluator(shots=[4, 8, 16, 32], seeds=[13, 42, 101])
+records = evaluator.run(
+    train_pool,
+    test_dataset=test,
+    methods=["frozen", "end_to_end", "supcon"],
+    model_factory=lambda: EmbedFitModel.from_pretrained("torchvision/resnet18", labels=labels),
+)                                      # tidy records: method, backbone, shots, seed, metric, value
+summary = evaluator.aggregate(records)   # mean and standard deviation over seeds
+```
+
 A trained model is saved to a directory and loaded back without its training data:
 
 ```python
@@ -105,7 +120,8 @@ Importable today:
 | Component | Location | Purpose |
 | --- | --- | --- |
 | `EmbedFitModel` | `embedfit` | Backbone plus head: `from_pretrained` (identifier or saved directory), `save_pretrained`, `encode`, `fit_head`, `predict`, `predict_proba`, `risk_score`, `freeze_backbone` / `unfreeze_backbone`, differentiable `forward` |
-| `Trainer`, `TrainingArguments` | `embedfit` | Two-phase training (representation, then head) with `train`, `predict`, `evaluate`, and `save_model`. Modes `frozen`, `supcon`, and `pair`; arguments are validated on creation |
+| `Trainer`, `TrainingArguments` | `embedfit` | Two-phase training (representation, then head) with `train`, `predict`, `evaluate`, and `save_model`. Modes `frozen`, `supcon`, `pair`, and the `end_to_end` cross-entropy baseline; arguments are validated on creation |
+| `FewShotEvaluator` | `embedfit` | Benchmark of methods × shots × seeds as tidy records, with `aggregate` for mean and standard deviation |
 | `ImageDataset`; `ImageSample` | `embedfit`; `embedfit.data` | Sample records (`image`, `label`, optional `sample_id`, `group_id`, `timestamp`, `amount`, `metadata`); file paths stay undecoded until encoding |
 | `classification_metrics`, `confusion_matrix`, `roc_auc`, `pr_auc` | `embedfit.evaluation` | Standard metrics; macro averages cover every declared class |
 | `recall_at_fpr`, `precision_at_k`, `recall_at_k`, `precision_at_review_rate`, `recall_at_review_rate`, `dollar_recall`, `dollar_recall_at_review_rate` | `embedfit.evaluation` | Rare-event ranking metrics with an explicit positive label and order-independent tie handling |
@@ -117,7 +133,7 @@ Importable today:
 | `SupConLoss`, `CosinePairLoss`, `create_loss`, `register_loss`, `available_losses` | `embedfit.losses` | Supervised contrastive loss over `[B, D]` or multi-view `[B, V, D]` embeddings, weighted cosine loss over embedding pairs, and a loss registry |
 | `PairSampler`, `ImagePair`, `RelationshipRule` | `embedfit.sampling` | Bounded, balanced positive/negative pairs per epoch; rules set pair targets and weights from arbitrary fields |
 | `BalancedClassBatchSampler` | `embedfit.sampling` | Batches of up to `samples_per_class` images from each of `classes_per_batch` classes, never a duplicate image, reproducible per seed and epoch |
-| `ClassificationHead`, `LogisticRegressionHead`, `create_head`, `load_head`, `register_head` | `embedfit.heads` | Classifiers over `[N, D]` embeddings and class indices, constructible by name |
+| `ClassificationHead`, `LogisticRegressionHead`, `LinearHead`, `create_head`, `load_head`, `register_head` | `embedfit.heads` | Classifiers over `[N, D]` embeddings and class indices, constructible by name |
 | `RetrievalIndex` | `embedfit` | Cosine nearest-neighbour search over embeddings, with ids, metadata passthrough, and leakage-safe exclusion by id or group ([design](docs/design/RETRIEVAL.md#implemented-semantics)) |
 | `RetrievalResult`, `RetrievalBackend`, `BruteForceCosineBackend` | `embedfit.retrieval` | One neighbour (`id`, `score`, `rank`, `metadata`); the backend contract future FAISS or pgvector adapters implement; the exhaustive v0.1 backend |
 | `retrieval_precision_at_k`, `retrieval_recall_at_k`, `mean_reciprocal_rank`, `mean_average_precision` | `embedfit.retrieval` | Ranking quality of retrieved results against known-relevant ids, without calling a model |
@@ -131,7 +147,7 @@ Importable today:
 | `DummyBackbone` | `embedfit.backbones` | Tiny trainable CNN with no checkpoint, for offline tests and examples |
 | `make_bar_images` | `embedfit.testing` | Deterministic synthetic image classes with learnable structure |
 
-The `triplet` and `end_to_end` training modes, hard-negative mining, augmentation profiles, and the `timm` and Hugging Face providers from [`SPEC.md`](SPEC.md) are not implemented yet; `Trainer` rejects an unavailable `training_mode` when it is created.
+The `triplet` training mode, hard-negative mining, augmentation profiles, and the `timm` and Hugging Face providers from [`SPEC.md`](SPEC.md) are not implemented yet; `Trainer` rejects an unavailable `training_mode` when it is created.
 
 ## Development
 

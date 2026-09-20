@@ -117,12 +117,12 @@ Legend:
 
 ## M10 Few-shot benchmark
 
-- [ ] evaluator
-- [ ] multiple shots
-- [ ] repeated seeds
-- [ ] tidy records
-- [ ] aggregation
-- [ ] benchmark frozen + CE + SupCon
+- [x] evaluator
+- [x] multiple shots
+- [x] repeated seeds
+- [x] tidy records
+- [x] aggregation
+- [x] benchmark frozen + CE + SupCon
 
 ## M11 Hard negatives
 

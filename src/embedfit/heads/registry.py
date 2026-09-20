@@ -7,11 +7,15 @@ from typing import Any
 
 from embedfit.exceptions import ConfigurationError
 from embedfit.heads.base import ClassificationHead
+from embedfit.heads.linear import LinearHead
 from embedfit.heads.logistic_regression import LogisticRegressionHead
 
 HeadFactory = Callable[..., ClassificationHead]
 
-_HEADS: dict[str, HeadFactory] = {"logistic_regression": LogisticRegressionHead}
+_HEADS: dict[str, HeadFactory] = {
+    "logistic_regression": LogisticRegressionHead,
+    "linear": LinearHead,
+}
 
 
 def register_head(name: str, factory: HeadFactory, *, overwrite: bool = False) -> None:
