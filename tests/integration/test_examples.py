@@ -1,6 +1,8 @@
 """Every example must run as documented, offline, and produce sensible results."""
 
+import ast
 import importlib.util
+import re
 import sys
 from pathlib import Path
 
@@ -47,14 +49,21 @@ def test_retrieval():
     assert results["precision_at_5"] > 0.9 and 0.9 < results["map_at_5"] <= 1.0
 
 
-def test_synthetic_document_risk(capsys):
-    results = load("05_synthetic_document_risk.py").main(["--quiet"])
-    assert results["pr_auc"] > 0.9 and results["dollar_recall_at_10pct_review"] > 0.9
-    assert results["test_review_rate_at_threshold"] < 0.25  # The threshold stays selective.
-    assert results["top_item_neighbours_risk_share"] >= 0.8
+@pytest.mark.parametrize("seed", [0, 1, 2])
+def test_synthetic_document_risk(capsys, seed):
+    results = load("05_synthetic_document_risk.py").main(["--quiet", "--seed", str(seed)])
     output = capsys.readouterr().out
+    # Properties of the workflow, not of one random draw.
+    assert results["pr_auc"] > 0.9
+    assert results["top_item_neighbours_risk_share"] >= 0.8
+    assert 0 < results["test_review_rate_at_threshold"] < 0.5  # Selective, yet flags something.
+    assert results["validation_fpr_at_threshold"] <= 0.05  # The target holds where it was set...
+    assert 0 <= results["test_fpr_at_threshold"] <= 0.3  # ...and is reported where it was not.
+    assert 0.5 < results["dollar_recall_at_10pct_review"] <= 1.0
+    assert 0.8 < results["never_flag_accuracy"] < 0.95  # Rare positives: accuracy flatters.
+    assert f"accuracy of never flagging anything: {results['never_flag_accuracy']:.2f}" in output
+    assert f"test {results['test_fpr_at_threshold']:.3f}" in output
     assert "shared group_id value(s) between 'train' and 'test'" in output
-    assert "accuracy of never flagging anything: 0.9" in output
 
 
 def test_few_shot_benchmark():
@@ -67,8 +76,30 @@ def test_few_shot_benchmark():
     assert by_key["supcon", 8] > by_key["frozen", 8]
 
 
+GENERATORS = {"make_bar_images", "synthetic_item"}
+DATA_LOADERS = re.compile(
+    r"^(open|.*\.open|.*\.load|.*\.loadtxt|.*\.read_\w+|.*\.read_bytes|.*\.read_text|"
+    r".*load_dataset|.*urlopen|.*urlretrieve|.*\.get|.*\.fromfile|.*ImageFolder)$"
+)
+
+
+@pytest.mark.parametrize("name", [*SCRIPTS, "_common.py"])
+def test_examples_never_read_data_from_files_or_the_network(name):
+    tree = ast.parse((EXAMPLES / name).read_text())
+    called = [ast.unparse(node.func) for node in ast.walk(tree) if isinstance(node, ast.Call)]
+    loaders = [call for call in called if DATA_LOADERS.match(call) and call != "defaults.get"]
+    assert not loaders, f"{name} calls {loaders}"
+    imported = {
+        alias.name.split(".")[0]
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Import | ast.ImportFrom)
+        for alias in ([ast.alias(node.module)] if isinstance(node, ast.ImportFrom) else node.names)
+    }
+    assert not imported & {"requests", "urllib", "datasets", "pandas", "torchvision", "csv"}
+
+
 @pytest.mark.parametrize("name", SCRIPTS)
-def test_examples_use_only_generated_data(name):
-    source = (EXAMPLES / name).read_text()
-    assert "make_bar_images" in source or "synthetic_item" in source
-    assert "open(" not in source and "http" not in source
+def test_every_example_generates_its_images(name):
+    tree = ast.parse((EXAMPLES / name).read_text())
+    called = {ast.unparse(node.func) for node in ast.walk(tree) if isinstance(node, ast.Call)}
+    assert called & GENERATORS  # An actual call, not a mention in a comment.

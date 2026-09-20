@@ -75,7 +75,11 @@ def main(argv: list[str] | None = None) -> dict[str, float]:
     # 1. Splits: the most recent quarter is the test set; groups never straddle train/validation.
     development, test = temporal_split(dataset, test_size=0.25)
     train, validation = grouped_split(development, test_size=0.25, seed=args.seed)
+    # Must hold: nothing is shared between the two splits that drive training decisions.
     find_split_overlap({"train": train, "validation": validation}).raise_if_any()
+    # To be judged: the same sources keep sending items, so the out-of-time test set shares
+    # groups with training. That answers "how well are new items from known sources scored?".
+    # To measure generalisation to unseen sources instead, drop those groups from one side.
     print(find_split_overlap({"train": train, "validation": validation, "test": test}).summary())
     print(
         {
@@ -102,7 +106,8 @@ def main(argv: list[str] | None = None) -> dict[str, float]:
     Trainer(model, training, train, eval_dataset=validation).train()
 
     # 4. Ranking metrics on the test set, because accuracy rewards a model that flags nothing.
-    print(f"accuracy of never flagging anything: {test.labels.count('routine') / len(test):.2f}")
+    never_flag_accuracy = test.labels.count("routine") / len(test)
+    print(f"accuracy of never flagging anything: {never_flag_accuracy:.2f}")
     scores = model.risk_score(test.images)
     amounts = [sample.amount for sample in test]
     positive = {"positive_label": "risk"}
@@ -129,13 +134,19 @@ def main(argv: list[str] | None = None) -> dict[str, float]:
         **positive,
     )
     flagged = scores >= chosen.threshold
+    routine = np.array(test.labels) == "routine"
+    results["never_flag_accuracy"] = never_flag_accuracy
     results["dollar_recall_at_threshold"] = dollar_recall(test.labels, flagged, amounts, **positive)
     results["test_review_rate_at_threshold"] = float(flagged.mean())
+    # The operating point moves between validation and test: the threshold met its 5% target
+    # on validation, but what it does on new data has to be measured, not assumed.
+    results["validation_fpr_at_threshold"] = chosen.fpr
+    results["test_fpr_at_threshold"] = float(flagged[routine].mean())
     for name, value in results.items():
         print(f"{name:32s} {value:.3f}")
     print(
-        f"threshold {chosen.threshold:.3f} (validation: recall {chosen.recall:.2f}, "
-        f"FPR {chosen.fpr:.3f})"
+        f"threshold {chosen.threshold:.3f}: target FPR 0.050, validation {chosen.fpr:.3f}, "
+        f"test {results['test_fpr_at_threshold']:.3f}"
     )
 
     # 6. For the highest-scoring test item, retrieve the most similar training items.

@@ -42,15 +42,15 @@ def _pil_to_array(image: Image.Image) -> np.ndarray:
 
 
 def _read_image_file(path: Path) -> np.ndarray:
-    # Messages omit the path: file names can carry sensitive identifiers. The chained
-    # exception keeps it available to a developer reading the traceback.
+    # File names can carry sensitive identifiers, so the path appears neither in the message
+    # nor in a chained cause (``from None``): a traceback or ``logger.exception`` prints causes.
     try:
         with Image.open(path) as image:
             return _pil_to_array(image)
-    except FileNotFoundError as exc:
-        raise ImageInputError("Image file does not exist.") from exc
-    except (UnidentifiedImageError, OSError) as exc:
-        raise ImageInputError("Image file could not be decoded; it may be corrupt.") from exc
+    except FileNotFoundError:
+        raise ImageInputError("Image file does not exist.") from None
+    except (UnidentifiedImageError, OSError):
+        raise ImageInputError("Image file could not be decoded; it may be corrupt.") from None
 
 
 def to_rgb_tensor(image: ImageLike) -> torch.Tensor:

@@ -306,3 +306,30 @@ def test_evaluate_needs_data(datasets):
         trainer.evaluate()
     with pytest.raises(ConfigurationError, match="empty dataset"):
         trainer.evaluate(ImageDataset([]))
+
+
+def test_training_on_image_files_logs_neither_paths_nor_bytes(tmp_path, caplog, logged_messages):
+    caplog.set_level(logging.DEBUG, logger="embedfit")
+    images, labels = make_bar_images(4, num_classes=2, seed=0)
+    paths = []
+    for position, image in enumerate(images):
+        path = tmp_path / f"acct-5550{position}-scan.png"
+        image.save(path)
+        paths.append(path)
+    model = EmbedFitModel.from_pretrained("dummy/tiny", labels=list(BAR_CLASSES[:2]))
+    trainer = Trainer(
+        model, TrainingArguments(training_mode="frozen"), ImageDataset.from_lists(paths, labels)
+    )
+    trainer.train()
+    trainer.evaluate(ImageDataset.from_lists(paths, labels))
+    messages = logged_messages()
+    assert "8 samples" in messages
+    for forbidden in ("acct-", "5550", ".png", str(tmp_path), "PNG"):
+        assert forbidden not in messages
+
+
+def test_the_default_suite_cannot_reach_the_network():
+    import socket
+
+    with pytest.raises(RuntimeError, match="tried to open a network connection"):
+        socket.create_connection(("192.0.2.1", 80), timeout=0.1)  # TEST-NET-1: never routed.

@@ -21,7 +21,7 @@ Shape-based batch detection is ambiguous (`[3, H, W]` versus a batch of three gr
 
 ## Consequences
 
-Error messages from image loading omit file paths, because file names may embed sensitive identifiers; the chained exception retains the path for debugging. Paths of model directories (`save_pretrained` / `from_pretrained`) do appear in messages: they locate artifacts the caller created, not input data.
+Errors from image loading omit file paths, because file names may embed sensitive identifiers. They are raised without a chained cause, since the underlying `FileNotFoundError` or decoder error names the path and would otherwise reach any traceback or `logger.exception` output. `encode` reports the failing image's position in the input, which is enough to find the file. Paths of model directories (`save_pretrained` / `from_pretrained`) do appear in messages: they locate artifacts the caller created, not input data.
 
 High-bit-depth PIL modes are decoded explicitly (`I;16` scaled by 65535, `F` validated against [0, 1], `I` rejected) because Pillow's RGB conversion clips them to 8 bits. The EXIF orientation tag is applied so the tensor matches the image as displayed.
 

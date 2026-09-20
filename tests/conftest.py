@@ -16,6 +16,30 @@ torch.set_num_threads(1)
 
 
 @pytest.fixture(autouse=True)
+def _no_network(request, monkeypatch):
+    """Fail any test that opens an internet connection unless it is marked ``network``.
+
+    ADR 0004 makes the default suite offline; this turns that from a convention into a check.
+    Unix-domain sockets stay usable, because data-loader worker processes rely on them.
+    """
+    if request.node.get_closest_marker("network"):
+        return
+    import socket
+
+    real_connect = socket.socket.connect
+
+    def guarded_connect(self, address):
+        if self.family in (socket.AF_INET, socket.AF_INET6):
+            raise RuntimeError(
+                "This test tried to open a network connection. Mark it with "
+                "@pytest.mark.network or build the model without downloading a checkpoint."
+            )
+        return real_connect(self, address)
+
+    monkeypatch.setattr(socket.socket, "connect", guarded_connect)
+
+
+@pytest.fixture(autouse=True)
 def _restore_global_rng_state():
     """Keep tests order-independent: undo any global seeding a test performs."""
     python_state, numpy_state, torch_state = (
