@@ -31,7 +31,7 @@ Status legend: `[x]` verified, `[~]` done but awaiting independent review and me
 ## Research readiness
 
 - [x] frozen baseline benchmark
-- [~] CE baseline benchmark — `end_to_end`; a temperature-scaled classifier was measured and rejected because it lowered few-shot accuracy
+- [~] CE baseline benchmark — `end_to_end`, scored with a converged head like every other mode (ADR 0011); on the synthetic task it matches or exceeds SupCon
 - [x] SupCon benchmark
 - [~] repeated-seed support — `FewShotEvaluator(shots, seeds)` with `aggregate`
 - [x] grouped split support

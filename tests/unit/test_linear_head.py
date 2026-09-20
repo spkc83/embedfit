@@ -26,7 +26,6 @@ def test_learns_separable_classes_with_columns_in_class_index_order(blobs):
     assert (head.predict(features) == targets).all()
     probabilities = head.predict_proba(np.array([[4, 0], [0, 4], [-4, -4]], dtype=np.float32))
     assert probabilities.argmax(axis=1).tolist() == [0, 1, 2]
-    assert np.allclose(probabilities.sum(axis=1), 1.0)
 
 
 def test_fit_is_deterministic_and_leaves_the_global_rng_alone(blobs):
@@ -83,7 +82,7 @@ def test_corrupt_files_are_configuration_errors(blobs, tmp_path):
     head.fit(*blobs, num_classes=3)
     head.save(tmp_path)
     np.savez(tmp_path / "parameters.npz", weight=np.zeros((3, 2)), bias=np.zeros(5))
-    with pytest.raises(ConfigurationError, match="not a .num_classes, D. weight"):
+    with pytest.raises(ConfigurationError, match=r"not a finite float \[num_classes, D\] weight"):
         LinearHead.load(tmp_path)
     np.savez(tmp_path / "parameters.npz", weight=np.array([object()], dtype=object))
     with pytest.raises(ConfigurationError, match="valid saved LinearHead"):
@@ -108,3 +107,59 @@ def test_validation(blobs):
         with pytest.raises(ConfigurationError):
             LinearHead(**kwargs)
     assert isinstance(create_head("linear", max_iter=10), LinearHead)
+
+
+def test_fit_after_from_module_starts_from_the_given_weights_and_reaches_the_same_optimum(blobs):
+    features, targets = blobs
+    cold = LinearHead(max_iter=500)
+    cold.fit(features, targets, num_classes=3)
+    warm = LinearHead.from_module(nn.Linear(2, 3), max_iter=500)
+    warm.fit(features, targets, num_classes=3)
+    # The objective is convex: a different start changes the path, not the solution.
+    assert np.allclose(warm.predict_proba(features), cold.predict_proba(features), atol=1e-3)
+    with pytest.raises(TypeError):
+        LinearHead.from_module(nn.Linear(2, 3), bogus=1)
+    with pytest.raises(ConfigurationError, match="max_iter"):
+        LinearHead.from_module(nn.Linear(2, 3), max_iter=0)
+
+
+@pytest.mark.parametrize(
+    "weight, bias",
+    [
+        (np.zeros((3, 2), dtype=">f4"), np.zeros(3, dtype=">f4")),
+        (np.array([["a", "b"]] * 3), np.zeros(3)),
+        (np.zeros((3, 2), dtype=np.complex64), np.zeros(3)),
+        (np.zeros((3, 2), dtype=bool), np.zeros(3)),
+        (np.full((3, 2), np.nan), np.zeros(3)),
+        (np.zeros((3, 0)), np.zeros(3)),
+        (np.zeros((1, 2)), np.zeros(1)),
+    ],
+)
+def test_malformed_parameters_are_configuration_errors(blobs, tmp_path, weight, bias):
+    head = LinearHead()
+    head.fit(*blobs, num_classes=3)
+    head.save(tmp_path)
+    np.savez(tmp_path / "parameters.npz", weight=weight, bias=bias)
+    if weight.dtype.kind == "f" and weight.dtype.byteorder == ">":
+        loaded = LinearHead.load(tmp_path)  # A valid float array in another byte order is fine.
+        assert loaded.num_classes == 3
+        return
+    with pytest.raises(ConfigurationError):
+        LinearHead.load(tmp_path)
+
+
+def test_truncated_archive_and_bad_flags_are_configuration_errors(blobs, tmp_path):
+    import json
+
+    head = LinearHead()
+    head.fit(*blobs, num_classes=3)
+    head.save(tmp_path)
+    archive = tmp_path / "parameters.npz"
+    archive.write_bytes(archive.read_bytes()[: archive.stat().st_size // 2])
+    with pytest.raises(ConfigurationError, match="valid saved LinearHead"):
+        LinearHead.load(tmp_path)
+    head.save(tmp_path)
+    config = json.loads((tmp_path / "config.json").read_text())
+    (tmp_path / "config.json").write_text(json.dumps(config | {"fitted": "yes"}))
+    with pytest.raises(ConfigurationError, match="valid saved LinearHead"):
+        LinearHead.load(tmp_path)

@@ -478,9 +478,17 @@ def train_representation(
 
         if validation is not None:
             model.eval()
+            # The same batches every epoch, and a mean over samples rather than over batches:
+            # otherwise a reshuffled, uneven last batch makes identical weights score
+            # differently from one epoch to the next and checkpoint selection follows noise.
+            validation.set_epoch(0)
+            total, count = 0.0, 0
             with torch.no_grad(), _autocast(args, device):
-                losses = [validation.loss(batch).item() for batch in validation.loader]
-            eval_losses.append(float(np.mean(losses)))
+                for batch in validation.loader:
+                    size = len(batch[0])
+                    total += validation.loss(batch).item() * size
+                    count += size
+            eval_losses.append(total / count)
             if len(eval_losses) == 1 or eval_losses[-1] < min(eval_losses[:-1]):  # Ties: earliest.
                 best_epoch = epoch + 1
                 # Kept on the CPU so that a GPU backbone is not held in memory twice.

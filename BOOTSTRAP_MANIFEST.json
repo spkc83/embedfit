@@ -22,7 +22,8 @@
     "docs/adrs/0007-canonical-image-tensor.md",
     "docs/adrs/0008-retrieval-index-semantics.md",
     "docs/adrs/0009-model-bundle-format.md",
-    "docs/adrs/0010-pooling-and-provider-preprocessing.md"
+    "docs/adrs/0010-pooling-and-provider-preprocessing.md",
+    "docs/adrs/0011-every-mode-ends-with-a-converged-head.md"
   ],
   "agent_entrypoints": [
     "AGENTS.md",

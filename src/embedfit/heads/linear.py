@@ -1,6 +1,7 @@
 """A PyTorch linear classifier: a standalone head, and the classifier of ``end_to_end`` mode."""
 
 import json
+import zipfile
 from pathlib import Path
 from typing import Self
 
@@ -44,14 +45,26 @@ class LinearHead(ClassificationHead):
         self._layer: nn.Linear | None = None
 
     @classmethod
-    def from_module(cls, layer: nn.Linear, **options: float | int) -> Self:
+    def from_module(
+        cls,
+        layer: nn.Linear,
+        *,
+        weight_decay: float = 1e-4,
+        max_iter: int = 200,
+        seed: int = 42,
+    ) -> Self:
         """Wrap an already trained ``nn.Linear`` (``embedding_dim → num_classes``) as a head.
 
-        The layer is copied to the CPU in float32 and detached from any optimizer.
+        The layer is copied to the CPU in float32 and detached from any optimizer. A later
+        ``fit`` on features of the same width starts from these weights.
+
+        Raises:
+            ConfigurationError: If ``layer`` is not an ``nn.Linear`` with a bias, or an option
+                is invalid.
         """
         if not isinstance(layer, nn.Linear) or layer.bias is None:
             raise ConfigurationError("layer must be an nn.Linear with a bias.")
-        head = cls(**options)  # type: ignore[arg-type]
+        head = cls(weight_decay=weight_decay, max_iter=max_iter, seed=seed)
         copy = nn.Linear(layer.in_features, layer.out_features)
         copy.load_state_dict({k: v.detach().float().cpu() for k, v in layer.state_dict().items()})
         head._layer = copy.requires_grad_(False)
@@ -75,6 +88,11 @@ class LinearHead(ClassificationHead):
         with torch.random.fork_rng(devices=[]):
             torch.manual_seed(self.seed)
             layer = nn.Linear(matrix.shape[1], num_classes)
+        previous = self._layer
+        if previous is not None and previous.weight.shape == layer.weight.shape:
+            # Warm start. The objective is convex, so this changes the path, not the solution.
+            layer.load_state_dict(previous.state_dict())
+            layer.requires_grad_(True)
         optimizer = torch.optim.LBFGS(
             layer.parameters(), max_iter=self.max_iter, line_search_fn="strong_wolfe"
         )
@@ -135,22 +153,38 @@ class LinearHead(ClassificationHead):
                 max_iter=config["max_iter"],
                 seed=config["seed"],
             )
-            if not config["fitted"]:
+            if config["fitted"] is False:
                 return head
             with np.load(directory / "parameters.npz", allow_pickle=False) as parameters:
                 weight, bias = parameters["weight"], parameters["bias"]
-        except (OSError, KeyError, TypeError, ValueError) as exc:
+            if config["fitted"] is not True:
+                raise TypeError("fitted")
+            weight, bias = np.asarray(weight), np.asarray(bias)
+            well_formed = (
+                weight.dtype.kind == "f"
+                and bias.dtype.kind == "f"
+                and weight.ndim == 2
+                and weight.shape[0] >= 2
+                and weight.shape[1] >= 1
+                and bias.shape == weight.shape[:1]
+                and bool(np.isfinite(weight).all() and np.isfinite(bias).all())
+            )
+        except (OSError, KeyError, TypeError, ValueError, zipfile.BadZipFile) as exc:
             raise ConfigurationError(
                 f"'{directory}' does not contain a valid saved LinearHead."
             ) from exc
-        if weight.ndim != 2 or bias.shape != weight.shape[:1] or weight.shape[0] < 2:
+        if not well_formed:
             raise ConfigurationError(
-                f"'{directory}' holds parameters shaped {weight.shape} and {bias.shape}, "
-                "which are not a [num_classes, D] weight and a [num_classes] bias."
+                f"'{directory}' holds parameters shaped {weight.shape} and {bias.shape} of dtype "
+                f"{weight.dtype}, which are not a finite float [num_classes, D] weight and "
+                "[num_classes] bias."
             )
         layer = nn.Linear(weight.shape[1], weight.shape[0])
         layer.load_state_dict(
-            {"weight": torch.from_numpy(weight).float(), "bias": torch.from_numpy(bias).float()}
+            {
+                "weight": torch.from_numpy(weight.astype(np.float32)),
+                "bias": torch.from_numpy(bias.astype(np.float32)),
+            }
         )
         head._layer = layer.requires_grad_(False)
         return head
