@@ -10,6 +10,7 @@ from embedfit.data.dataset import ImageDataset, ImageSample
 from embedfit.data.labels import label_key
 from embedfit.exceptions import ConfigurationError
 
+_MINING_BLOCK = 512  # Anchors per similarity matrix product: [512, N] float64 at a time.
 _RELATIONS = ("same", "different")
 _PAIR_TYPES = ("positive", "negative")
 _SAMPLE_FIELDS = ("label", "sample_id", "group_id", "timestamp", "amount")
@@ -84,6 +85,25 @@ def _field_value(sample: ImageSample, name: str) -> Any:
     return sample.metadata.get(name) if sample.metadata is not None else None
 
 
+def hard_negative_quota(negatives_per_example: int, hard_negative_fraction: float) -> int:
+    """Negatives per anchor that are mined: ``negatives * fraction`` rounded half up."""
+    return int(negatives_per_example * hard_negative_fraction + 0.5)
+
+
+def _most_similar(pool: np.ndarray, similarity: np.ndarray, count: int) -> list[int]:
+    """The ``count`` pool members with the highest similarity, ties by dataset position.
+
+    Everything tied with the last admitted value is kept too, so the order never depends on how
+    a partial sort happens to break ties.
+    """
+    if count < len(pool):
+        cutoff = np.partition(similarity, len(pool) - count)[len(pool) - count]
+        keep = np.flatnonzero(similarity >= cutoff)
+        pool, similarity = pool[keep], similarity[keep]
+    ranked: list[int] = pool[np.lexsort((pool, -similarity))].tolist()
+    return ranked
+
+
 def _codes(values: list[Any], what: str) -> np.ndarray:
     """Map values to integer codes (equal value and type → equal code); ``None`` → -1."""
     table: dict[Any, int] = {}
@@ -111,6 +131,8 @@ class PairSampler:
 
     Memory is ``O(N)``; time is ``O(N^2)`` per epoch in vectorised array operations, because
     each anchor's pools are computed over all samples (a few seconds at 10 000 samples).
+    Hard-negative mining adds an ``N x N`` similarity computation per epoch, done in blocks
+    of 512 anchors (``O(N^2 D)`` time, ``O(512 N)`` extra memory).
 
     Quotas are per anchor, so the split between positive and negative pairs is only roughly
     even: a small class runs out of positive partners, and its samples are drawn often as
@@ -233,15 +255,16 @@ class PairSampler:
             embeddings: Current ``[N, D]`` embeddings of this sampler's own samples, in dataset
                 order. Required for hard-negative mining. Only training data can be mined,
                 because the sampler has no other samples to look at.
-            hard_negative_fraction: Share of each anchor's negative quota, in [0, 1], filled
+            hard_negative_fraction: Share of each anchor's negative quota, in [0, 1] and
+                rounded half up to a whole number of negatives, filled
                 with its *hardest* negatives: the members of its negative pool with the
                 highest cosine similarity to it (ties by dataset position). The rest of the
                 quota stays random, which keeps training stable and the negatives varied.
                 Positives are always random.
 
         Raises:
-            ConfigurationError: If the fraction is outside [0, 1], or mining is requested
-                without valid embeddings.
+            ConfigurationError: If the fraction is outside [0, 1], is positive but rounds to
+                zero mined negatives, or mining is requested without valid embeddings.
         """
         valid = isinstance(hard_negative_fraction, int | float) and not isinstance(
             hard_negative_fraction, bool
@@ -266,12 +289,23 @@ class PairSampler:
                 )
             norms = np.linalg.norm(matrix.astype(np.float64), axis=1, keepdims=True)
             unit = matrix / np.where(norms == 0, 1.0, norms)
-        hard_quota = int(self.negatives_per_example * hard_negative_fraction + 0.5)
+        hard_quota = hard_negative_quota(self.negatives_per_example, hard_negative_fraction)
+        if hard_negative_fraction > 0 and hard_quota == 0:
+            raise ConfigurationError(
+                f"hard_negative_fraction={hard_negative_fraction} of "
+                f"negatives_per_example={self.negatives_per_example} rounds to no mined negative "
+                "at all; raise one of them or set the fraction to 0."
+            )
         rng = np.random.default_rng([self.seed, int(epoch)])
         seen: set[tuple[int, int]] = set()
+        paired = np.zeros(len(self._classes), dtype=np.int64)  # Pairs each sample is already in.
         pairs: list[ImagePair] = []
+        block: np.ndarray | None = None
         for anchor in range(len(self._classes)):
             positive_pool, negative_pool, decided_by = self._pools(anchor)
+            if unit is not None and anchor % _MINING_BLOCK == 0:
+                # One matrix product per block of anchors instead of one gather per anchor.
+                block = unit[anchor : anchor + _MINING_BLOCK] @ unit.T
             for pool, quota, target in (
                 (positive_pool, self.positives_per_example, 1),
                 (negative_pool, self.negatives_per_example, 0),
@@ -281,9 +315,11 @@ class PairSampler:
                 # a few partners are needed, however large the pool is.
                 candidates = rng.permutation(pool).tolist()
                 hardest: list[int] = []
-                if unit is not None and target == 0 and hard_quota and len(pool):
-                    similarity = unit[pool] @ unit[anchor]
-                    hardest = pool[np.lexsort((pool, -similarity))].tolist()
+                if block is not None and target == 0 and len(pool):
+                    # Up to `paired` of the top candidates may already be taken, so look that
+                    # much further down the ranking.
+                    wanted = hard_quota + int(paired[anchor])
+                    hardest = _most_similar(pool, block[anchor % _MINING_BLOCK, pool], wanted)
                 fresh: list[int] = []
                 for ordering, limit in ((hardest, min(hard_quota, quota)), (candidates, quota)):
                     for candidate in ordering:
@@ -294,6 +330,8 @@ class PairSampler:
                             fresh.append(candidate)
                 for partner in fresh:
                     seen.add((min(anchor, partner), max(anchor, partner)))
+                    paired[anchor] += 1
+                    paired[partner] += 1
                     rule_index = int(decided_by[partner])
                     rule = self.rules[rule_index] if rule_index >= 0 else None
                     pairs.append(

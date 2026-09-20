@@ -488,6 +488,8 @@ def train_representation(
                     size = len(batch[0])
                     total += validation.loss(batch).item() * size
                     count += size
+            if count == 0:
+                raise ConfigurationError("The validation data produced no batches.")
             eval_losses.append(total / count)
             if len(eval_losses) == 1 or eval_losses[-1] < min(eval_losses[:-1]):  # Ties: earliest.
                 best_epoch = epoch + 1

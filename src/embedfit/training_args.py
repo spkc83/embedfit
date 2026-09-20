@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from embedfit.exceptions import ConfigurationError
 from embedfit.heads.registry import available_heads
+from embedfit.sampling.pairs import hard_negative_quota
 
 TRAINING_MODES = ("frozen", "supcon", "pair", "triplet", "end_to_end")
 MIXED_PRECISION_MODES = (None, "fp16", "bf16")
@@ -57,7 +58,8 @@ class TrainingArguments:
             At least one of the two must be positive.
         hard_negative_fraction: ``pair`` mode: share of each sample's negative partners, in
             [0, 1], chosen as its most similar different-class training samples under the
-            current backbone instead of at random. 0 disables mining.
+            current backbone instead of at random. The share is rounded half up to a whole
+            number of negatives and must not round to zero. 0 disables mining.
         hard_negative_refresh_epochs: Re-encode the training set for mining every this many
             epochs (>= 1). Encoding runs without gradients and never sees validation data.
 
@@ -122,6 +124,13 @@ class TrainingArguments:
             or (self.training_mode == "pair" and self.negatives_per_example > 0),
             "hard_negative_fraction > 0 requires training_mode='pair' with "
             "negatives_per_example > 0.",
+        )
+        _require(
+            self.hard_negative_fraction == 0
+            or hard_negative_quota(self.negatives_per_example, self.hard_negative_fraction) > 0,
+            f"hard_negative_fraction={self.hard_negative_fraction} of "
+            f"negatives_per_example={self.negatives_per_example} rounds to no mined negative at "
+            "all; raise one of them or set the fraction to 0.",
         )
         _require(
             _is_int(self.seed) and 0 <= self.seed <= 2**32 - 1,
