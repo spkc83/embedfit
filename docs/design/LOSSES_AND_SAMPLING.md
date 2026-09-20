@@ -101,3 +101,11 @@ Later milestone:
 - choose different-class nearest items;
 - refresh periodically;
 - never inspect validation/test data.
+
+### Implemented behaviour (`PairSampler.sample(..., embeddings=, hard_negative_fraction=)`)
+
+Mining changes only *which* negatives an anchor is paired with. For each anchor, `round(negatives_per_example × hard_negative_fraction)` of its negative partners are the members of its negative pool with the highest cosine similarity to it under the current backbone (ties by dataset position); the rest of the quota, and all positives, stay random. A mix is the default recommendation because training on hardest negatives alone is unstable and keeps returning the same few pairs. The negative pool is the one the class labels and relationship rules define, so mining never turns a positive into a negative.
+
+The sampler can only rank its own samples, and `Trainer` builds it from `train_dataset`, so validation and test data cannot be mined. During training the embeddings come from `model.encode` on the training images, which runs without gradients in eval mode and restores training mode, and they are refreshed every `hard_negative_refresh_epochs` epochs. Validation pairs are always random, which keeps the validation loss comparable across epochs and between runs with and without mining.
+
+Mined pairs depend on the weights at the time, so they cannot be drawn ahead of training. The learning-rate schedule is therefore planned on the largest number of pairs an epoch can hold, and the rate ends slightly above zero.

@@ -107,16 +107,38 @@ def _loader(
 
 
 class _PairDataset(Dataset[tuple[torch.Tensor, torch.Tensor, int, float]]):
-    """The current epoch's pairs as preprocessed pixel tensors, targets, and weights."""
+    """The current epoch's pairs as preprocessed pixel tensors, targets, and weights.
 
-    def __init__(self, model: EmbedFitModel, dataset: ImageDataset, sampler: PairSampler) -> None:
+    Without mining, every epoch's pairs depend only on the seed, so they are drawn once and
+    cached (the step count needs all epochs' sizes up front). With hard-negative mining the
+    pairs depend on the backbone's current weights, so each epoch is drawn when it starts,
+    from embeddings of this dataset that are refreshed every ``refresh_epochs`` epochs.
+    """
+
+    def __init__(
+        self,
+        model: EmbedFitModel,
+        dataset: ImageDataset,
+        sampler: PairSampler,
+        *,
+        hard_negative_fraction: float = 0.0,
+        refresh_epochs: int = 1,
+        encode_batch_size: int = 64,
+    ) -> None:
+        self._model = model
         self._backbone = model.backbone
         self._images = dataset.images
         self._sampler = sampler
-        # Every epoch is sampled once: the step count needs all epochs' sizes up front, and
-        # training then reuses the same lists. At most E * N * (positives + negatives) pairs.
+        self._fraction = hard_negative_fraction
+        self._refresh_epochs = refresh_epochs
+        self._encode_batch_size = encode_batch_size
+        self._embeddings: np.ndarray | None = None
         self._cache: dict[int, list[ImagePair]] = {}
-        self.pairs: list[ImagePair] = self.pairs_for(0)
+        self.pairs: list[ImagePair] = [] if self.mines else self.pairs_for(0)
+
+    @property
+    def mines(self) -> bool:
+        return self._fraction > 0
 
     def pairs_for(self, epoch: int) -> list[ImagePair]:
         if epoch not in self._cache:
@@ -124,7 +146,18 @@ class _PairDataset(Dataset[tuple[torch.Tensor, torch.Tensor, int, float]]):
         return self._cache[epoch]
 
     def set_epoch(self, epoch: int) -> None:
-        self.pairs = self.pairs_for(epoch)
+        if not self.mines:
+            self.pairs = self.pairs_for(epoch)
+            return
+        if self._embeddings is None or epoch % self._refresh_epochs == 0:
+            # encode() runs without gradients in eval mode and restores the training mode.
+            encoded = self._model.encode(self._images, batch_size=self._encode_batch_size)
+            assert isinstance(encoded, np.ndarray)
+            self._embeddings = encoded
+            logger.info("Refreshed %d training embeddings for hard-negative mining", len(encoded))
+        self.pairs = self._sampler.sample(
+            epoch, embeddings=self._embeddings, hard_negative_fraction=self._fraction
+        )
 
     def __len__(self) -> int:
         return len(self.pairs)
@@ -157,11 +190,13 @@ def _objective(
     rules: Sequence[RelationshipRule],
     seed: int,
     classifier: nn.Linear | None = None,
+    mine: bool = False,
 ) -> _Objective:
     """Build the objective selected by ``args.training_mode`` for one dataset.
 
     ``classifier`` is the jointly trained linear layer of ``end_to_end`` mode. Validation
     builds the objective without one, which checks the data but cannot compute a loss.
+    ``mine`` enables hard-negative mining (``pair`` mode, training data only).
     """
     parameter = next(model.backbone.parameters(), None)
     device = model.device
@@ -214,7 +249,15 @@ def _objective(
         seed=seed,
         rules=rules,
     )
-    pairs = _PairDataset(model, dataset, pair_sampler)
+    pairs = _PairDataset(
+        model,
+        dataset,
+        pair_sampler,
+        # Only the training objective mines; validation pairs stay random and fixed.
+        hard_negative_fraction=args.hard_negative_fraction if mine else 0.0,
+        refresh_epochs=args.hard_negative_refresh_epochs,
+        encode_batch_size=args.eval_batch_size,
+    )
     pair_loader: DataLoader[Any] = DataLoader(
         pairs, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers
     )
@@ -229,7 +272,10 @@ def _objective(
         return loss
 
     def batches(epoch: int) -> int:
-        return math.ceil(len(pairs.pairs_for(epoch)) / args.batch_size)
+        # Mined pairs cannot be drawn ahead of time, so the schedule is planned on the most
+        # pairs an epoch can hold; the learning rate then ends slightly above zero.
+        count = len(pair_sampler) if pairs.mines else len(pairs.pairs_for(epoch))
+        return math.ceil(count / args.batch_size)
 
     return _Objective(pair_loader, pairs.set_epoch, batches, pair_loss)
 
@@ -359,7 +405,9 @@ def train_representation(
             classifier = nn.Linear(model.embedding_dim, len(model.label_mapping))
         first = next(model.backbone.parameters(), None)
         classifier.to(device=device, dtype=first.dtype if first is not None else torch.float32)
-    objective = _objective(model, train_dataset, args, rules, seed=args.seed, classifier=classifier)
+    objective = _objective(
+        model, train_dataset, args, rules, seed=args.seed, classifier=classifier, mine=True
+    )
     loader = objective.loader
     validation = None
     if eval_dataset is not None:

@@ -126,10 +126,10 @@ Legend:
 
 ## M11 Hard negatives
 
-- [ ] miner
-- [ ] refresh schedule
-- [ ] train-only guard
-- [ ] hard-vs-random test
+- [x] miner
+- [x] refresh schedule
+- [x] train-only guard
+- [x] hard-vs-random test
 
 ## M12 Docs/release
 

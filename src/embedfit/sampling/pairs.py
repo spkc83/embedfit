@@ -219,8 +219,54 @@ class PairSampler:
             decided_by,
         )
 
-    def sample(self, epoch: int = 0) -> list[ImagePair]:
-        """Return the pairs for one epoch, in a deterministic shuffled order."""
+    def sample(
+        self,
+        epoch: int = 0,
+        *,
+        embeddings: np.ndarray | None = None,
+        hard_negative_fraction: float = 0.0,
+    ) -> list[ImagePair]:
+        """Return the pairs for one epoch, in a deterministic shuffled order.
+
+        Args:
+            epoch: Epoch number; with the seed it determines every random choice.
+            embeddings: Current ``[N, D]`` embeddings of this sampler's own samples, in dataset
+                order. Required for hard-negative mining. Only training data can be mined,
+                because the sampler has no other samples to look at.
+            hard_negative_fraction: Share of each anchor's negative quota, in [0, 1], filled
+                with its *hardest* negatives: the members of its negative pool with the
+                highest cosine similarity to it (ties by dataset position). The rest of the
+                quota stays random, which keeps training stable and the negatives varied.
+                Positives are always random.
+
+        Raises:
+            ConfigurationError: If the fraction is outside [0, 1], or mining is requested
+                without valid embeddings.
+        """
+        valid = isinstance(hard_negative_fraction, int | float) and not isinstance(
+            hard_negative_fraction, bool
+        )
+        if not valid or not 0 <= hard_negative_fraction <= 1:
+            raise ConfigurationError(
+                f"hard_negative_fraction must be in [0, 1], got {hard_negative_fraction!r}."
+            )
+        unit = None
+        if hard_negative_fraction > 0:
+            matrix = np.asarray(embeddings) if embeddings is not None else None
+            if (
+                matrix is None
+                or matrix.ndim != 2
+                or len(matrix) != len(self._classes)
+                or not np.issubdtype(matrix.dtype, np.floating)
+                or not np.isfinite(matrix).all()
+            ):
+                raise ConfigurationError(
+                    "Hard-negative mining needs finite float embeddings shaped "
+                    f"[{len(self._classes)}, D], one row per sample of this sampler's dataset."
+                )
+            norms = np.linalg.norm(matrix.astype(np.float64), axis=1, keepdims=True)
+            unit = matrix / np.where(norms == 0, 1.0, norms)
+        hard_quota = int(self.negatives_per_example * hard_negative_fraction + 0.5)
         rng = np.random.default_rng([self.seed, int(epoch)])
         seen: set[tuple[int, int]] = set()
         pairs: list[ImagePair] = []
@@ -233,13 +279,19 @@ class PairSampler:
                 # Partners already paired with this anchor earlier in the epoch are excluded, so
                 # an anchor can end up under its quota. Stop as soon as the quota is met: only
                 # a few partners are needed, however large the pool is.
+                candidates = rng.permutation(pool).tolist()
+                hardest: list[int] = []
+                if unit is not None and target == 0 and hard_quota and len(pool):
+                    similarity = unit[pool] @ unit[anchor]
+                    hardest = pool[np.lexsort((pool, -similarity))].tolist()
                 fresh: list[int] = []
-                for candidate in rng.permutation(pool).tolist():
-                    if len(fresh) == quota:
-                        break
-                    key = (anchor, candidate) if anchor < candidate else (candidate, anchor)
-                    if key not in seen:
-                        fresh.append(candidate)
+                for ordering, limit in ((hardest, min(hard_quota, quota)), (candidates, quota)):
+                    for candidate in ordering:
+                        if len(fresh) >= limit:
+                            break
+                        key = (anchor, candidate) if anchor < candidate else (candidate, anchor)
+                        if key not in seen and candidate not in fresh:
+                            fresh.append(candidate)
                 for partner in fresh:
                     seen.add((min(anchor, partner), max(anchor, partner)))
                     rule_index = int(decided_by[partner])
