@@ -91,9 +91,11 @@ class LabelMapping:
             ConfigurationError: If the label is not in the mapping (same value *and* type).
         """
         if label not in self:
+            # The offending value comes from data, so only its type is reported; the model's own
+            # labels were given as configuration and show what would have been accepted.
             raise ConfigurationError(
-                f"Label {label!r} is not one of the model's labels {list(self._labels)}; "
-                "labels must match in both value and type."
+                f"A label of type {type(_plain(label)).__name__} is not one of the model's labels "
+                f"{list(self._labels)}; labels must match in both value and type."
             )
         return self._index[_key(label)]
 
