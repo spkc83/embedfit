@@ -138,4 +138,4 @@ Legend:
 - [x] domain-risk guide
 - [x] privacy/logging review
 - [x] changelog
-- [ ] v0.1 release checklist
+- [~] v0.1 release checklist (`plans/V0_1_RELEASE.md` lists what is verified and what is open)
