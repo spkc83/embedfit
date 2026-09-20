@@ -106,9 +106,18 @@ class FewShotEvaluator:
         for name, candidate in (("dataset", dataset), ("test_dataset", test_dataset)):
             if not isinstance(candidate, ImageDataset) or len(candidate) == 0:
                 raise ConfigurationError(f"{name} must be a non-empty ImageDataset.")
+        if not callable(model_factory):
+            raise ConfigurationError("model_factory must be callable.")
+        if training_arguments is not None and not isinstance(training_arguments, Mapping):
+            raise ConfigurationError("training_arguments must map method names to arguments.")
         arguments = {}
         for method in methods:
             configured = (training_arguments or {}).get(method)
+            if configured is not None and not isinstance(configured, TrainingArguments):
+                raise ConfigurationError(
+                    f"training_arguments['{method}'] must be a TrainingArguments, got "
+                    f"{type(configured).__name__}."
+                )
             arguments[method] = configured or TrainingArguments(training_mode=method)
             if arguments[method].training_mode != method:
                 raise ConfigurationError(
@@ -121,14 +130,16 @@ class FewShotEvaluator:
             model = model_factory()
             if not isinstance(model, EmbedFitModel):
                 raise ConfigurationError("model_factory must return an EmbedFitModel.")
-            # A reused model, or a new model around a reused backbone, would carry trained
-            # weights from one run into the next.
-            if any(ref() is model or ref() is model.backbone for ref in used):
+            # A reused model, backbone, or even a single shared parameter (a shallow copy, a
+            # shared submodule) would carry trained weights from one run into the next.
+            alive = {id(target) for target in (ref() for ref in used) if target is not None}
+            parameters = list(model.backbone.parameters())
+            if alive & {id(model), id(model.backbone), *(id(p) for p in parameters)}:
                 raise ConfigurationError(
                     "model_factory must return a new EmbedFitModel with a new backbone on "
                     "every call; a shared one would leak trained weights between runs."
                 )
-            used.extend((weakref.ref(model), weakref.ref(model.backbone)))
+            used.extend(weakref.ref(target) for target in (model, model.backbone, *parameters))
             return model
 
         # Fail before any training: the pool must cover the largest shot count, and every
@@ -175,17 +186,19 @@ class FewShotEvaluator:
             of the mean). Rows keep the order in which their group first appears.
 
         Raises:
-            ConfigurationError: If a record lacks one of the expected keys.
+            ConfigurationError: If a record lacks one of the expected keys or its value is not
+                a number.
         """
         groups: dict[tuple[Any, ...], list[float]] = defaultdict(list)
         try:
             for record in records:
+                record["seed"]  # Required, although runs are not grouped by it.
                 key = (record["method"], record["backbone"], record["shots"], record["metric"])
                 groups[key].append(float(record["value"]))
-        except (KeyError, TypeError) as exc:
+        except (KeyError, TypeError, ValueError) as exc:
             raise ConfigurationError(
                 "records must be mappings with the keys method, backbone, shots, seed, metric, "
-                "and value."
+                "and a numeric value."
             ) from exc
         rows: list[Record] = []
         for (method, backbone, shots, metric), values in groups.items():

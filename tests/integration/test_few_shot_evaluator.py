@@ -112,12 +112,20 @@ def test_aggregate_hand_computed():
     assert math.isnan(undefined[0]["mean"]) and undefined[0]["num_undefined"] == 1
     with pytest.raises(ConfigurationError, match="keys method, backbone"):
         FewShotEvaluator.aggregate([{"method": "m"}])
+    complete = {"method": "m", "backbone": "b", "shots": 4, "seed": 1, "metric": "accuracy"}
+    with pytest.raises(ConfigurationError, match="numeric value"):
+        FewShotEvaluator.aggregate([complete | {"value": "high"}])
+    with pytest.raises(ConfigurationError, match="keys method, backbone"):
+        FewShotEvaluator.aggregate(
+            [{k: v for k, v in complete.items() if k != "seed"} | {"value": 1}]
+        )
+    assert FewShotEvaluator.aggregate([]) == []
 
 
 def test_aggregate_of_a_real_run(records):
     rows = FewShotEvaluator.aggregate(records)
     assert len(rows) == len(records) // 2  # Two seeds per group.
-    assert all(row["num_runs"] == 2 and row["std"] >= 0 for row in rows)
+    assert all(row["num_runs"] == 2 and row["num_undefined"] == 0 for row in rows)
 
 
 def test_every_method_trains_on_the_same_few_shot_sample_and_never_on_test_data(
@@ -129,9 +137,11 @@ def test_every_method_trains_on_the_same_few_shot_sample_and_never_on_test_data(
     original = benchmark.Trainer
 
     class SpyTrainer(original):
-        def __init__(self, model, args, train_dataset, *a, **k):
+        def __init__(self, model, args, train_dataset, eval_dataset=None, **k):
+            # No validation data is used inside the benchmark, least of all the test set.
+            assert eval_dataset is None
             seen.append((args.training_mode, args.seed, tuple(id(s) for s in train_dataset)))
-            super().__init__(model, args, train_dataset, *a, **k)
+            super().__init__(model, args, train_dataset, eval_dataset, **k)
 
     monkeypatch.setattr(benchmark, "Trainer", SpyTrainer)
     FewShotEvaluator(shots=[2], seeds=[5, 6]).run(
@@ -203,6 +213,25 @@ def test_invalid_run_arguments(pool, test_set):
         run(model_factory=lambda: EmbedFitModel(shared.backbone, labels=LABELS))
     with pytest.raises(ConfigurationError, match="must return an EmbedFitModel"):
         run(model_factory=lambda: "model")
+    import copy
+
+    with pytest.raises(ConfigurationError, match="new EmbedFitModel with a new backbone"):
+        # A shallow copy is a new object that still shares every parameter.
+        run(model_factory=lambda: EmbedFitModel(copy.copy(shared.backbone), labels=LABELS))
+
+    def shares_a_submodule():
+        model = factory()
+        model.backbone.features = shared.backbone.features
+        return model
+
+    with pytest.raises(ConfigurationError, match="new EmbedFitModel with a new backbone"):
+        run(model_factory=shares_a_submodule)
+    with pytest.raises(ConfigurationError, match="must be callable"):
+        run(model_factory="factory")
+    with pytest.raises(ConfigurationError, match="must be a TrainingArguments, got str"):
+        run(training_arguments={"frozen": "fast"})
+    with pytest.raises(ConfigurationError, match="must map method names"):
+        run(training_arguments=["frozen"])
     with pytest.raises(ConfigurationError, match="fewer than 64 samples"):
         FewShotEvaluator(shots=[4, 64], seeds=[1]).run(
             pool, test_dataset=test_set, methods=["frozen"], model_factory=factory

@@ -206,21 +206,21 @@ class Trainer:
         self.model.eval()
 
         if result is not None and result.classifier is not None:
-            # ADR 0002: end-to-end is a baseline in which the classifier is trained with the
-            # backbone, so there is no separate head-fitting phase.
+            # The jointly trained classifier becomes the head and is then refitted to
+            # convergence like every other mode's head (ADR 0011). Otherwise this baseline
+            # would be scored with a half-trained classifier while the other methods get a
+            # converged one, and the comparison would measure the head, not the backbone.
             self.model.head = LinearHead.from_module(result.classifier, seed=self.args.seed)
             self.model.head_name = "linear"
-            logger.info("Phase 2/2 (head): skipped, the linear classifier was trained in phase 1")
         elif self.model.head_name is not None and self.model.head_name != self.args.head:
             self.model.head = create_head(self.args.head)
             self.model.head_name = self.args.head
-        if result is None or result.classifier is None:
-            logger.info("Phase 2/2 (head): fitting %s", type(self.model.head).__name__)
-            self.model.fit_head(
-                self.train_dataset.images,
-                self.train_dataset.labels,
-                batch_size=self.args.eval_batch_size,
-            )
+        logger.info("Phase 2/2 (head): fitting %s", type(self.model.head).__name__)
+        self.model.fit_head(
+            self.train_dataset.images,
+            self.train_dataset.labels,
+            batch_size=self.args.eval_batch_size,
+        )
         self._last_output = TrainOutput(
             training_mode=self.args.training_mode,
             num_train_samples=len(self.train_dataset),
@@ -258,9 +258,9 @@ class Trainer:
     def evaluate(self, dataset: ImageDataset | None = None) -> dict[str, float]:
         """Compute aggregate metrics on held-out data.
 
-        ``eval_dataset`` is the default, and in ``supcon`` mode it also chose which epoch's
-        weights were kept, so metrics on it are optimistically biased. Pass a separate test
-        set for an unbiased estimate.
+        ``eval_dataset`` is the default, and in every mode that trains the backbone it also
+        chose which epoch's weights were kept, so metrics on it are optimistically biased. Pass
+        a separate test set for an unbiased estimate.
 
         Args:
             dataset: Samples to evaluate. Defaults to ``eval_dataset``.

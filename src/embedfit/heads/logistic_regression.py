@@ -1,6 +1,7 @@
 """scikit-learn logistic regression as a classification head."""
 
 import json
+import zipfile
 from pathlib import Path
 from typing import Any, Self
 
@@ -140,7 +141,7 @@ class LogisticRegressionHead(ClassificationHead):
             with np.load(directory / "parameters.npz", allow_pickle=False) as parameters:
                 coef, intercept = parameters["coef"], parameters["intercept"]
                 n_iter = parameters["n_iter"]
-        except (OSError, KeyError, TypeError, ValueError) as exc:
+        except (OSError, KeyError, TypeError, ValueError, zipfile.BadZipFile) as exc:
             raise ConfigurationError(
                 f"'{directory}' does not contain a valid saved LogisticRegressionHead."
             ) from exc

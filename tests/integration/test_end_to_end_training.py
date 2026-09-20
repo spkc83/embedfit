@@ -63,15 +63,15 @@ def test_the_jointly_trained_classifier_becomes_the_head(trained):
     assert model.predict_proba(test.images).shape == (30, 3)
 
 
-def test_logs_say_that_no_separate_head_was_fitted(caplog, logged_messages):
+def test_the_jointly_trained_classifier_is_refitted_to_convergence(caplog, logged_messages):
     caplog.set_level(logging.INFO, logger="embedfit")
     Trainer(make_model(), e2e_args(num_epochs=1), dataset(6, 0)).train()
     messages = logged_messages()
     assert "Phase 1/2 (representation): 'end_to_end'" in messages
-    assert "Phase 2/2 (head): skipped" in messages and "Fitted head" not in messages
+    assert "Phase 2/2 (head): fitting LinearHead" in messages and "Fitted head on 18" in messages
 
 
-def test_batches_are_reshuffled_each_epoch_from_the_seed():
+def test_runs_are_reproducible_per_seed():
     runs = [
         Trainer(make_model(), e2e_args(num_epochs=3), dataset(6, 0)).train().train_losses
         for _ in range(2)
@@ -82,20 +82,90 @@ def test_batches_are_reshuffled_each_epoch_from_the_seed():
 
 
 def test_best_epoch_restores_backbone_and_classifier_together():
+    from embedfit import representation
+
     images, labels = make_bar_images(4, num_classes=3, seed=2)
     rotated = [LABELS[(LABELS.index(label) + 1) % 3] for label in labels]
     validation = ImageDataset.from_lists(images, rotated)  # Contradicts the images on purpose.
     model = make_model()
     # Early epochs lower even this loss while the initial logits settle; once the classifier
     # becomes confident about the real classes the contradictory labels make it rise again.
-    output = Trainer(model, e2e_args(num_epochs=20), dataset(6, 0), eval_dataset=validation).train()
-    assert output.best_epoch < 20 and output.eval_losses[-1] > min(output.eval_losses)
-    # The restored pair reproduces the recorded validation loss of the best epoch.
+    result = representation.train_representation(
+        model, dataset(6, 0), validation, e2e_args(num_epochs=20)
+    )
+    assert result.best_epoch < 20 and result.eval_losses[-1] > min(result.eval_losses)
+    # The restored backbone and classifier together reproduce the best epoch's recorded loss.
+    model.eval()
+    pixels = torch.stack([model.backbone.preprocess(image) for image in images])
     targets = torch.tensor([LABELS.index(label) for label in rotated])
-    probabilities = torch.from_numpy(model.predict_proba(images))
-    loss = torch.nn.functional.nll_loss(probabilities.log(), targets).item()
-    assert loss == pytest.approx(output.eval_losses[output.best_epoch - 1], rel=1e-3)
-    assert loss != pytest.approx(output.eval_losses[-1], rel=1e-2)
+    with torch.no_grad():
+        loss = torch.nn.functional.cross_entropy(result.classifier(model(pixels)), targets).item()
+    assert loss == pytest.approx(result.eval_losses[result.best_epoch - 1], rel=1e-4)
+    assert loss != pytest.approx(result.eval_losses[-1], rel=1e-2)
+
+
+def test_validation_loss_is_identical_for_identical_weights(monkeypatch):
+    """Uneven validation batches must not be reshuffled, or checkpoint selection follows noise."""
+    from embedfit import representation
+
+    monkeypatch.setattr(representation.torch.optim.AdamW, "step", lambda self, *a, **k: None)
+    validation = dataset(5, 2)  # 15 samples in batches of 6: 6, 6, and 3.
+    result = representation.train_representation(
+        make_model(), dataset(6, 0), validation, e2e_args(num_epochs=5, batch_size=6)
+    )
+    assert len(set(result.eval_losses)) == 1  # The weights never changed, nor may the loss.
+    assert result.best_epoch == 1  # Ties go to the earliest epoch.
+
+
+def test_validation_loss_is_the_mean_over_samples(monkeypatch):
+    from embedfit import representation
+
+    monkeypatch.setattr(representation.torch.optim.AdamW, "step", lambda self, *a, **k: None)
+    validation = dataset(5, 2)
+    model = make_model()
+    result = representation.train_representation(
+        model, dataset(6, 0), validation, e2e_args(num_epochs=1, batch_size=6)
+    )
+    model.eval()
+    pixels = torch.stack([model.backbone.preprocess(image) for image in validation.images])
+    targets = torch.tensor([LABELS.index(label) for label in validation.labels])
+    with torch.no_grad():
+        expected = torch.nn.functional.cross_entropy(result.classifier(model(pixels)), targets)
+    assert result.eval_losses[0] == pytest.approx(expected.item(), rel=1e-5)
+
+
+def test_training_batches_are_reshuffled_every_epoch():
+    from embedfit import representation
+
+    model = make_model()
+    objective = representation._objective(
+        model,
+        dataset(6, 0),
+        e2e_args(batch_size=6),
+        (),
+        seed=3,
+        classifier=torch.nn.Linear(32, 3),
+    )
+    orders = []
+    for epoch in (0, 1, 0):
+        objective.set_epoch(epoch)
+        orders.append(list(iter(objective.loader.sampler)))
+    assert orders[0] != orders[1] and orders[0] == orders[2]
+    assert sorted(orders[0]) == list(range(18))
+
+
+def test_an_untrained_baseline_falls_back_to_frozen_features_not_to_chance():
+    """With a learning rate too small to train anything, the head must still be usable."""
+    train, test = dataset(8, 0), dataset(10, 1)
+    trainer = Trainer(make_model(), e2e_args(num_epochs=2, learning_rate=1e-9), train)
+    trainer.train()
+    frozen = Trainer(make_model(head="linear"), TrainingArguments(training_mode="frozen"), train)
+    frozen.train()
+    untrained = trainer.evaluate(test)["accuracy"]
+    # Both heads are L-BFGS fits of the same convex problem on (almost) the same features;
+    # they stop within tolerance of each other, a test sample or two apart.
+    assert abs(untrained - frozen.evaluate(test)["accuracy"]) <= 0.1
+    assert untrained > 0.4  # Chance is 1/3: a classifier that never trained would sit there.
 
 
 def test_trained_model_survives_save_and_reload(trained, tmp_path):
@@ -110,7 +180,9 @@ def test_head_configuration_conflicts_fail_when_the_trainer_is_created():
     train = dataset(6, 0)
     with pytest.raises(ConfigurationError, match="trains its own linear classifier"):
         Trainer(make_model(head=LogisticRegressionHead()), e2e_args(), train)
-    assert Trainer(make_model(), e2e_args(head="linear"), train) is not None
+    accepted = Trainer(make_model(), e2e_args(head="linear", num_epochs=1), train)
+    accepted.train()
+    assert accepted.model.head_name == "linear"
 
 
 def test_the_head_reproduces_the_training_time_probabilities():

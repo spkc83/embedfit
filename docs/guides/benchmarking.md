@@ -29,7 +29,11 @@ summary = evaluator.aggregate(records)
 
 **No selection on the test set.** The benchmark passes no validation data to training, so representation training keeps its last epoch. Hyperparameters chosen by looking at benchmark results are tuned on the test set; choose them on a separate validation split first, then run the benchmark once.
 
-**Strong baselines with an equal budget.** `frozen` costs nothing, and `end_to_end` is the method any practitioner would try first, so a representation-tuning method has to beat both. Give `end_to_end` the same epochs, batch size, and learning rate as the contrastive modes. At 4 shots an epoch is a single batch, so ten epochs are ten optimizer steps; a baseline that looks weak may simply be undertrained.
+**Strong baselines with an equal budget.** `frozen` costs nothing, and `end_to_end` is the method any practitioner would try first, so a representation-tuning method has to beat both. Give every trained method the same epochs, batch size, and learning rate. Every mode is scored with a head fitted to convergence on its final embeddings (ADR 0011), so the methods differ only in how the backbone was adapted.
+
+**A learning rate that actually trains.** The representation learning rate has to suit the backbone: around 2e-5 for a pretrained encoder, around 1e-2 for the untrained demo network in the examples. If it is too small, every trained method quietly reduces to the frozen baseline and the benchmark compares nothing. Check `TrainOutput.train_losses` from a single run before launching a benchmark: a loss that barely moves means the comparison is void. At 4 shots an epoch is a single batch, so ten epochs are only ten optimizer steps, and the schedule decays the rate linearly to zero over them.
+
+**Batch statistics.** With a backbone that uses batch normalisation, training runs on batch statistics and evaluation on running statistics. That affects every trained method alike, but small few-shot batches make the running statistics noisy; prefer a batch size of at least 16.
 
 **Enough seeds to see the noise.** Few-shot results vary a lot between draws. With three seeds a standard deviation is barely an estimate; five or more is better, and a gap smaller than the standard deviations of the two methods is not a result.
 
