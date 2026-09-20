@@ -133,9 +133,9 @@ Legend:
 
 ## M12 Docs/release
 
-- [ ] README quickstart
-- [ ] examples
-- [ ] domain-risk guide
+- [x] README quickstart
+- [x] examples
+- [x] domain-risk guide
 - [ ] privacy/logging review
-- [ ] changelog
+- [x] changelog
 - [ ] v0.1 release checklist

@@ -149,6 +149,14 @@ Importable today:
 
 The `triplet` training mode, hard-negative mining, augmentation profiles, and the `timm` and Hugging Face providers from [`SPEC.md`](SPEC.md) are not implemented yet; `Trainer` rejects an unavailable `training_mode` when it is created.
 
+## Examples and guides
+
+- [`examples/`](examples/README.md): six runnable scripts on synthetic images, from the frozen baseline to a rare-event risk workflow and a few-shot benchmark.
+- [Avoiding data leakage](docs/guides/leakage.md): choosing splits and checking them.
+- [Benchmarking few-shot methods](docs/guides/benchmarking.md): what makes a comparison fair.
+- [Rare-event risk workflows](docs/guides/rare-event-risk.md): splits, positive class, metrics, thresholds, and retrieval for rare, costly classes.
+- [`CHANGELOG.md`](CHANGELOG.md).
+
 ## Development
 
 ```bash
