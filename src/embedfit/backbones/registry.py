@@ -137,6 +137,30 @@ def _load_dummy(path: Path) -> ImageBackbone:
     return DummyBackbone.from_pretrained(path)
 
 
+def _create_timm(name: str, **kwargs: Any) -> ImageBackbone:
+    from embedfit.backbones.timm_backbone import TimmBackbone
+
+    return TimmBackbone(name, **kwargs)
+
+
+def _load_timm(path: Path) -> ImageBackbone:
+    from embedfit.backbones.timm_backbone import TimmBackbone
+
+    return TimmBackbone.from_pretrained(path)
+
+
+def _create_hf(name: str, **kwargs: Any) -> ImageBackbone:
+    from embedfit.backbones.hf_backbone import HFBackbone
+
+    return HFBackbone(name, **kwargs)
+
+
+def _load_hf(path: Path) -> ImageBackbone:
+    from embedfit.backbones.hf_backbone import HFBackbone
+
+    return HFBackbone.from_pretrained(path)
+
+
 def _create_torchvision(name: str, **kwargs: Any) -> ImageBackbone:
     from embedfit.backbones.torchvision_backbone import TorchvisionBackbone
 
@@ -155,3 +179,5 @@ def _create_dummy(name: str, **kwargs: Any) -> ImageBackbone:
 
 register_backbone_provider("torchvision", _create_torchvision, loader=_load_torchvision)
 register_backbone_provider("dummy", _create_dummy, loader=_load_dummy)
+register_backbone_provider("timm", _create_timm, loader=_load_timm)
+register_backbone_provider("hf", _create_hf, loader=_load_hf)

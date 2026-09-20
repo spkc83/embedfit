@@ -92,10 +92,10 @@ Legend:
 
 ## M7 Providers
 
-- [ ] timm adapter
-- [ ] HF Transformers adapter
-- [ ] pooling configuration
-- [ ] opt-in external checkpoint tests
+- [x] timm adapter
+- [x] HF Transformers adapter
+- [x] pooling configuration
+- [x] opt-in external checkpoint tests
 
 ## M8 Serialization
 

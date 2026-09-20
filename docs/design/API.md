@@ -41,6 +41,20 @@ EmbedFitModel.from_pretrained("torchvision/resnet50", weights="IMAGENET1K_V2", i
 EmbedFitModel.from_pretrained("torchvision/resnet18", weights=None)  # random init, no download
 ```
 
+Three providers are built in, each installed by the extra of the same name:
+
+| Identifier | Adapter | Options |
+| --- | --- | --- |
+| `torchvision/<name>` | `TorchvisionBackbone` | `weights`, `image_size`, `resize_size`, `interpolation`, `mean`, `std` |
+| `timm/<name>[.<tag>]` | `TimmBackbone` | `pretrained`, `pooling`, `image_size`, `interpolation`, `mean`, `std` |
+| `hf/<repo-id>` | `HFBackbone` | `pooling`, `config`, `image_size`, `resize_size`, `interpolation`, `mean`, `std` |
+
+Every adapter takes its resize, crop, interpolation, and normalisation settings from the checkpoint (the torchvision weights preset, the `timm` data configuration, or the Transformers image processor) and reproduces that pipeline on float tensors, aligned to the pixel with the provider's own transform. Options override single settings. A provider whose package is missing raises an error naming the extra to install; nothing falls back to another provider.
+
+`pooling` selects how a transformer encoder's tokens become one vector: `"provider_default"` (the model's own pooled output; for Transformers models the `pooler_output` when there is one, otherwise the class token), `"cls"` (the class token), or `"mean"` (the mean of the patch tokens, excluding the class token). Token pooling is rejected when the backbone is created if the model produces feature maps instead of tokens. The policy is part of the saved model and is verified when it is loaded.
+
+`TimmBackbone(..., pretrained=False)` and `HFBackbone(name, config=...)` build randomly initialised models without any download, which is how the offline tests exercise them.
+
 `device=None` keeps the model on CPU, `"auto"` selects CUDA → MPS → CPU, and an explicit device that is unavailable raises.
 
 ## Frozen baseline
