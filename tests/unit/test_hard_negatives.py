@@ -57,8 +57,11 @@ def test_fraction_splits_the_quota_between_hard_and_random():
     assert none == make_sampler().sample(0)  # Fraction 0 is exactly the random sampler.
 
 
-def test_mining_keeps_every_pair_guarantee():
-    pairs = make_sampler().sample(3, embeddings=geometry(), hard_negative_fraction=1.0)
+@pytest.mark.parametrize("fraction", [0.25, 0.5, 0.75, 1.0])
+def test_mining_keeps_every_pair_guarantee(fraction):
+    # With a partial fraction the random pass runs after the mined one and must not pick a
+    # partner the mined pass already took.
+    pairs = make_sampler().sample(3, embeddings=geometry(), hard_negative_fraction=fraction)
     assert all(p.left != p.right for p in pairs)
     unordered = [frozenset((p.left, p.right)) for p in pairs]
     assert len(set(unordered)) == len(unordered)
@@ -122,3 +125,58 @@ def test_invalid_mining_arguments(embeddings, fraction, match):
 def test_mining_arguments_are_validated_with_the_configuration(kwargs, match):
     with pytest.raises(ConfigurationError, match=match):
         TrainingArguments(**kwargs)
+
+
+def test_mining_matches_a_brute_force_ranking_on_random_problems():
+    rng = np.random.default_rng(0)
+    for trial in range(40):
+        count, classes = int(rng.integers(6, 40)), int(rng.integers(2, 5))
+        labels = [f"c{i % classes}" for i in range(count)]
+        embeddings = rng.normal(size=(count, 4)).astype(np.float32)
+        if trial % 4 == 0:
+            embeddings[count // 2 :] = embeddings[: count - count // 2]  # Exact duplicates.
+        dataset = ImageDataset.from_lists(["x"] * count, labels)
+        sampler = PairSampler(dataset, positives_per_example=1, negatives_per_example=3, seed=trial)
+        pairs = sampler.sample(0, embeddings=embeddings, hard_negative_fraction=1.0)
+        unit = embeddings.astype(np.float64)
+        unit /= np.linalg.norm(unit, axis=1, keepdims=True)
+        taken: set[frozenset[int]] = set()
+        by_anchor: dict[int, list] = {}
+        for pair in pairs:  # Shuffled output: rebuild the anchor order first.
+            by_anchor.setdefault(pair.left, []).append(pair)
+        for anchor in range(count):
+            mined = sorted(p.right for p in by_anchor.get(anchor, []) if p.target == 0)
+            pool = [
+                i
+                for i in range(count)
+                if labels[i] != labels[anchor] and frozenset((anchor, i)) not in taken
+            ]
+            positives = [p.right for p in by_anchor.get(anchor, []) if p.target == 1]
+            scores = {i: float(unit[i] @ unit[anchor]) for i in pool}
+            ranked = sorted(pool, key=lambda i: (-round(scores[i], 9), i))
+            assert mined == sorted(ranked[: len(mined)]), (trial, anchor)
+            assert len(mined) == min(3, len(pool))
+            taken.update(frozenset((anchor, i)) for i in mined + positives)
+
+
+def test_a_fraction_that_rounds_to_no_mined_negative_is_rejected():
+    assert TrainingArguments(
+        training_mode="pair", hard_negative_fraction=0.125
+    ).hard_negative_fraction
+    with pytest.raises(ConfigurationError, match="rounds to no mined negative"):
+        TrainingArguments(training_mode="pair", hard_negative_fraction=0.1)  # 4 * 0.1 -> 0.
+    with pytest.raises(ConfigurationError, match="rounds to no mined negative"):
+        make_sampler().sample(0, embeddings=geometry(), hard_negative_fraction=0.05)
+
+
+def test_mining_a_few_thousand_samples_takes_seconds():
+    import time
+
+    count = 3000
+    dataset = ImageDataset.from_lists(["x"] * count, [f"c{i % 5}" for i in range(count)])
+    embeddings = np.random.default_rng(0).normal(size=(count, 64)).astype(np.float32)
+    start = time.perf_counter()
+    pairs = PairSampler(dataset, seed=0).sample(
+        0, embeddings=embeddings, hard_negative_fraction=0.5
+    )
+    assert len(pairs) > 20_000 and time.perf_counter() - start < 30  # Was minutes per epoch.

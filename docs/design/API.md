@@ -129,7 +129,7 @@ metrics = trainer.evaluate()
 - The learning-rate schedule spans the exact number of optimizer steps. Epochs differ slightly in length because of pair de-duplication, so every epoch's pairs are drawn once up front and reused during training.
 - The loss's `negative_target` is fixed at 0 in `Trainer`; other values are available by using `CosinePairLoss` directly.
 - A training or validation set from which no positive pair or no negative pair can be formed is rejected when the `Trainer` is created.
-- `hard_negative_fraction` (default 0) fills that share of every sample's negative partners with its most similar different-class training samples under the current backbone, re-encoding the training set every `hard_negative_refresh_epochs` epochs without gradients. Only training data is ever mined, validation pairs stay random, and both arguments are rejected outside `pair` mode when `TrainingArguments` is created.
+- `hard_negative_fraction` (default 0) fills that share of every sample's negative partners with its most similar different-class training samples under the current backbone, re-encoding the training set every `hard_negative_refresh_epochs` epochs without gradients. The share is rounded half up to a whole number of negatives, and a positive share that rounds to zero is rejected. Only training data is ever mined, validation pairs stay random, and a positive `hard_negative_fraction` is rejected outside `pair` mode when `TrainingArguments` is created.
 
 ### End-to-end baseline (`end_to_end`)
 
