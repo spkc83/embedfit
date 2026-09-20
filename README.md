@@ -138,7 +138,7 @@ Importable today:
 | `RetrievalResult`, `RetrievalBackend`, `BruteForceCosineBackend` | `embedfit.retrieval` | One neighbour (`id`, `score`, `rank`, `metadata`); the backend contract future FAISS or pgvector adapters implement; the exhaustive v0.1 backend |
 | `retrieval_precision_at_k`, `retrieval_recall_at_k`, `mean_reciprocal_rank`, `mean_average_precision` | `embedfit.retrieval` | Ranking quality of retrieved results against known-relevant ids, without calling a model |
 | `ImageBackbone` | `embedfit.backbones` | Contract for provider adapters, which own preprocessing, feature extraction, and their own serialization |
-| `TimmBackbone`, `HFBackbone` | `embedfit.backbones` | `timm/<name>` and `hf/<repo-id>` encoders (for example `timm/convnext_tiny.fb_in22k_ft_in1k`, `hf/facebook/dinov2-base`), each preprocessing images as its checkpoint specifies, with `pooling="provider_default"`, `"cls"`, or `"mean"` |
+| `TimmBackbone`, `HFBackbone` | `embedfit.backbones` | `timm/<name>` and `hf/<repo-id>` encoders (for example `timm/convnext_tiny.fb_in22k_ft_in1k`, `hf/facebook/dinov2-base`), each reproducing its checkpoint's preprocessing (unsupported settings raise rather than being ignored), with `pooling="provider_default"`, `"cls"`, or `"mean"` |
 | `TorchvisionBackbone` | `embedfit.backbones` | torchvision classification models with the linear classifier removed (`torchvision/<name>`); models without one, such as SqueezeNet, are rejected |
 | `create_backbone`, `load_backbone`, `register_backbone_provider` | `embedfit.backbones` | Resolve `<provider>/<name>` identifiers (the provider is never guessed) and reload saved backbones |
 | `to_rgb_tensor` | `embedfit.data` | Converts any supported image form to a float RGB tensor in [0, 1] |

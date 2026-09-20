@@ -31,7 +31,7 @@ dependencies = [
 [project.optional-dependencies]
 torchvision = ["torchvision>=0.16"]
 timm = ["timm>=0.9"]
-hf = ["transformers>=4.35"]
+hf = ["transformers>=5.0"]
 datasets = ["datasets>=2.14"]
 pandas = ["pandas>=2.0"]
 all = ["embedfit[torchvision,timm,hf,datasets,pandas]"]

@@ -1,5 +1,7 @@
 """Offline tests: every model is built with ``pretrained=False``, so nothing is downloaded."""
 
+import math
+
 import numpy as np
 import pytest
 import torch
@@ -22,7 +24,7 @@ def test_convolutional_model_uses_its_data_config():
     assert isinstance(backbone, ImageBackbone) and backbone.identifier == "timm/resnet10t"
     assert backbone.pooling == "provider_default" and backbone.embedding_dim == 512
     assert backbone.image_size == data["input_size"][-1] == 176
-    assert backbone.resize_size == round(176 / data["crop_pct"])
+    assert backbone.resize_size == math.floor(176 / data["crop_pct"])  # timm floors.
     assert (backbone.interpolation, backbone.mean, backbone.std) == (
         data["interpolation"],
         tuple(data["mean"]),
@@ -172,3 +174,132 @@ def test_missing_package_names_the_extra(monkeypatch):
 def test_pretrained_checkpoint_loads_and_encodes():
     model = EmbedFitModel.from_pretrained("timm/resnet10t.c3_in1k")
     assert model.encode([Image.new("RGB", (300, 200), "gray")]).shape == (1, 512)
+
+
+def blocky_image(height, width, seed=0):
+    """Hard-edged blocks: a one-pixel misalignment shows up as a large difference."""
+    blocks = np.random.default_rng(seed).random((height // 10, width // 10, 3))
+    pixels = blocks.repeat(10, axis=0).repeat(10, axis=1)
+    return Image.fromarray((pixels * 255).astype(np.uint8))
+
+
+def assert_matches_timm(backbone, data, image):
+    import timm
+
+    reference = timm.data.create_transform(**data, is_training=False)(image)
+    ours = backbone.preprocess(image)
+    assert ours.shape == reference.shape
+    difference = (ours - reference).abs() * torch.tensor(backbone.std).view(3, 1, 1)
+    # Interpolation noise stays below these bounds; a one-pixel shift measures max > 0.7.
+    assert difference.mean().item() < 0.01 and difference.max().item() < 0.15
+
+
+@pytest.mark.parametrize("shape", [(200, 300), (300, 200), (224, 224), (250, 333)])
+def test_crop_pct_whose_floor_and_round_differ_matches_timm(shape):
+    import timm
+
+    backbone = TimmBackbone(VIT, pretrained=False)  # crop_pct 0.9: 224 / 0.9 = 248.9.
+    data = timm.data.resolve_data_config({}, model=backbone.model)
+    assert data["crop_pct"] == 0.9 and backbone.resize_size == 248
+    assert_matches_timm(backbone, data, blocky_image(*shape))
+
+
+@pytest.mark.parametrize("shape", [(200, 400), (400, 200), (176, 176)])
+def test_squash_crop_mode_matches_timm(monkeypatch, shape):
+    import timm
+
+    real = timm.data.resolve_data_config
+    squash = lambda *a, **k: {**real(*a, **k), "crop_mode": "squash", "crop_pct": 1.0}  # noqa: E731
+    monkeypatch.setattr(timm.data, "resolve_data_config", squash)
+    backbone = TimmBackbone("resnet10t", pretrained=False)
+    assert backbone.resize_size == (176, 176)
+    assert_matches_timm(backbone, squash({}, model=backbone.model), blocky_image(*shape))
+
+
+def test_unsupported_crop_mode_is_rejected(monkeypatch):
+    import timm
+
+    real = timm.data.resolve_data_config
+    monkeypatch.setattr(
+        timm.data, "resolve_data_config", lambda *a, **k: {**real(*a, **k), "crop_mode": "border"}
+    )
+    with pytest.raises(BackboneProviderError, match="crop_mode 'border'"):
+        TimmBackbone("resnet10t", pretrained=False)
+    assert TimmBackbone("resnet10t", pretrained=False, resize_size=200).resize_size == 200
+
+
+def test_architectures_that_hide_their_prefix_tokens_refuse_token_pooling():
+    # xcit has a class token but no num_prefix_tokens attribute.
+    for pooling in ("cls", "mean"):
+        with pytest.raises(ConfigurationError, match="does not declare num_prefix_tokens"):
+            TimmBackbone("xcit_nano_12_p16_224", pretrained=False, pooling=pooling)
+    assert TimmBackbone("xcit_nano_12_p16_224", pretrained=False).embedding_dim == 128
+
+
+def test_prefix_tokens_beyond_the_class_token_are_excluded_from_the_mean():
+    backbone = TimmBackbone(
+        "deit_tiny_distilled_patch16_224", pretrained=False, pooling="mean", image_size=32
+    ).eval()
+    assert backbone.model.num_prefix_tokens == 2  # Class and distillation tokens.
+    batch = torch.rand(2, 3, 32, 32)
+    with torch.no_grad():
+        tokens = backbone.model.forward_features(batch)
+        assert torch.allclose(backbone(batch), tokens[:, 2:].mean(dim=1), atol=1e-6)
+
+
+def test_saved_preprocessing_does_not_depend_on_timm_defaults(tmp_path, monkeypatch):
+    import json
+
+    import timm
+
+    backbone = TimmBackbone("resnet10t", pretrained=False, image_size=32)
+    backbone.save_pretrained(tmp_path)
+    assert json.loads((tmp_path / "config.json").read_text())["resize_size"] == 36
+    real = timm.data.resolve_data_config
+    monkeypatch.setattr(
+        timm.data, "resolve_data_config", lambda *a, **k: {**real(*a, **k), "crop_pct": 0.5}
+    )
+    assert TimmBackbone.from_pretrained(tmp_path).resize_size == 36
+
+
+def test_pickled_weights_and_bad_configs_are_configuration_errors(tmp_path):
+    import json
+    import pickle
+
+    backbone = TimmBackbone("resnet10t", pretrained=False, image_size=32)
+    backbone.save_pretrained(tmp_path)
+    good = (tmp_path / "config.json").read_text()
+
+    class Payload:
+        def __reduce__(self):
+            return (print, ("executed",))
+
+    (tmp_path / "weights.pt").write_bytes(pickle.dumps({"w": Payload()}, protocol=2))
+    with pytest.raises(ConfigurationError, match="not a tensor-only state dict"):
+        TimmBackbone.from_pretrained(tmp_path)
+
+    backbone.save_pretrained(tmp_path)
+    config = json.loads(good)
+    for mutation in (
+        {"pretrained": None},
+        {"name": {"x": 1}},
+        {"embedding_dim": 7},
+        {"resize_size": "big"},
+        {"pooling": "max"},
+    ):
+        (tmp_path / "config.json").write_text(json.dumps(config | mutation))
+        with pytest.raises(ConfigurationError, match="not a TimmBackbone directory"):
+            TimmBackbone.from_pretrained(tmp_path)
+    for key in config:
+        (tmp_path / "config.json").write_text(
+            json.dumps({k: v for k, v in config.items() if k != key})
+        )
+        with pytest.raises(ConfigurationError):
+            TimmBackbone.from_pretrained(tmp_path)
+
+
+def test_unknown_names_and_tags_are_provider_errors():
+    with pytest.raises(BackboneProviderError, match="Did you mean.*resnet10t"):
+        TimmBackbone("resnet10tt", pretrained=False)
+    with pytest.raises(BackboneProviderError, match="pretrained tag"):
+        TimmBackbone("resnet10t.no_such_tag", pretrained=False)

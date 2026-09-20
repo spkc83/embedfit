@@ -46,12 +46,18 @@ Three providers are built in, each installed by the extra of the same name:
 | Identifier | Adapter | Options |
 | --- | --- | --- |
 | `torchvision/<name>` | `TorchvisionBackbone` | `weights`, `image_size`, `resize_size`, `interpolation`, `mean`, `std` |
-| `timm/<name>[.<tag>]` | `TimmBackbone` | `pretrained`, `pooling`, `image_size`, `interpolation`, `mean`, `std` |
+| `timm/<name>[.<tag>]` | `TimmBackbone` | `pretrained`, `pooling`, `image_size`, `resize_size`, `interpolation`, `mean`, `std` |
 | `hf/<repo-id>` | `HFBackbone` | `pooling`, `config`, `image_size`, `resize_size`, `interpolation`, `mean`, `std` |
 
-Every adapter takes its resize, crop, interpolation, and normalisation settings from the checkpoint (the torchvision weights preset, the `timm` data configuration, or the Transformers image processor) and reproduces that pipeline on float tensors, aligned to the pixel with the provider's own transform. Options override single settings. A provider whose package is missing raises an error naming the extra to install; nothing falls back to another provider.
+Every adapter takes its resize, crop, interpolation, and normalisation settings from the checkpoint (the torchvision weights preset, the `timm` data configuration, or the Transformers image processor) and reproduces that pipeline on float tensors with the provider's own size and crop arithmetic. Options override single settings. What each adapter reproduces is explicit, and anything else raises instead of being ignored:
 
-`pooling` selects how a transformer encoder's tokens become one vector: `"provider_default"` (the model's own pooled output; for Transformers models the `pooler_output` when there is one, otherwise the class token), `"cls"` (the class token), or `"mean"` (the mean of the patch tokens, excluding the class token). Token pooling is rejected when the backbone is created if the model produces feature maps instead of tokens. The policy is part of the saved model and is verified when it is loaded.
+- `timm`: `input_size`, `crop_pct` (floored, as `timm` does), `crop_mode` `"center"` and `"squash"`, `interpolation`, `mean`, `std`. `crop_mode="border"` raises.
+- Transformers: `size` as `shortest_edge` or a square `height`/`width`, a square `crop_size` with `do_center_crop`, ConvNeXt-style `crop_pct`, nearest / bilinear / bicubic `resample`, `do_normalize` with `image_mean` / `image_std`, and rescaling by 1/255. `do_resize=False`, another rescale factor, non-square sizes, and other resampling filters raise, with a message that says to pass the preprocessing options explicitly.
+- For both, passing only `image_size` keeps the checkpoint's resize-to-crop ratio, so naming the checkpoint's own size changes nothing.
+
+The tests compare each adapter with `timm.data.create_transform` and with Transformers image processors on hard-edged images, where a one-pixel misalignment would show. Remaining differences are interpolation noise from resizing floats instead of 8-bit pixels. A provider whose package is missing raises an error naming the extra to install; nothing falls back to another provider.
+
+`pooling` selects how a transformer encoder's tokens become one vector: `"provider_default"` (the model's own pooled output; for Transformers models the `pooler_output` when there is one, otherwise the class token), `"cls"` (the class token), or `"mean"` (the mean of the patch tokens, excluding the class token and any distillation or register tokens). The number of leading non-patch tokens comes from the model (`num_prefix_tokens` in `timm`; the class token plus `config.num_register_tokens` in Transformers); a `timm` architecture that does not declare it cannot use token pooling. Token pooling is rejected when the backbone is created if the model produces feature maps instead of tokens. The policy is part of the saved model and is verified when it is loaded.
 
 `TimmBackbone(..., pretrained=False)` and `HFBackbone(name, config=...)` build randomly initialised models without any download, which is how the offline tests exercise them.
 

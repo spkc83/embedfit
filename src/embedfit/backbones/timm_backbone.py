@@ -1,6 +1,8 @@
 """Adapter for ``timm`` image models used as feature extractors."""
 
+import difflib
 import json
+import math
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -13,11 +15,12 @@ from embedfit.backbones._preprocess import (
     resize_crop_normalize,
     validate_interpolation,
     validate_pooling,
+    validate_resize,
     validate_size,
 )
 from embedfit.backbones.base import ImageBackbone
 from embedfit.data.image import ImageLike, to_rgb_tensor
-from embedfit.exceptions import BackboneProviderError, ConfigurationError
+from embedfit.exceptions import BackboneProviderError, ConfigurationError, EmbedFitError
 
 _CONFIG_FILE = "config.json"
 _WEIGHTS_FILE = "weights.pt"
@@ -37,9 +40,11 @@ def _import_timm() -> Any:
 class TimmBackbone(ImageBackbone):
     """A ``timm`` model built without its classifier (``num_classes=0``).
 
-    Preprocessing follows the model's own ``timm`` data configuration: resize the shorter side
-    to ``image_size / crop_pct`` with the configured interpolation, centre-crop to
-    ``image_size``, and normalise with the configured mean and standard deviation.
+    Preprocessing follows the model's own ``timm`` data configuration, with the same arithmetic
+    as ``timm.data.create_transform``: resize to ``floor(image_size / crop_pct)`` (the shorter
+    side for ``crop_mode="center"``, both sides for ``"squash"``) with the configured
+    interpolation, centre-crop to ``image_size``, and normalise with the configured mean and
+    standard deviation. ``crop_mode="border"`` is not supported and raises.
 
     Args:
         name: ``timm`` model name, optionally with a pretrained tag, e.g.
@@ -52,13 +57,17 @@ class TimmBackbone(ImageBackbone):
         image_size: Side of the square input. Defaults to the model's configured size.
             Transformer models are rebuilt for this size (``img_size``); convolutional models
             accept any size.
+        resize_size: Overrides the resize step: an int for the shorter side, or
+            ``(height, width)``.
         interpolation: Overrides the configured resize mode.
         mean: Overrides the configured normalisation mean.
         std: Overrides the configured normalisation standard deviation (with ``mean``).
 
     Raises:
-        BackboneProviderError: If ``timm`` is not installed or the model name is unknown.
-        ConfigurationError: If an option is invalid or the pooling does not suit the model.
+        BackboneProviderError: If ``timm`` is not installed, the model name or pretrained tag
+            is unknown, or the model's data configuration uses an unsupported ``crop_mode``.
+        ConfigurationError: If an option is invalid, the pooling does not suit the model, or
+            the model does not accept ``image_size``.
     """
 
     def __init__(
@@ -68,6 +77,7 @@ class TimmBackbone(ImageBackbone):
         pretrained: bool = True,
         pooling: str = "provider_default",
         image_size: int | None = None,
+        resize_size: int | tuple[int, int] | None = None,
         interpolation: str | None = None,
         mean: Sequence[float] | None = None,
         std: Sequence[float] | None = None,
@@ -77,22 +87,43 @@ class TimmBackbone(ImageBackbone):
         self._pooling = validate_pooling(pooling)
         if image_size is not None:
             validate_size(image_size, "image_size")
-        if not timm.is_model(name.split(".")[0]):
-            close = timm.list_models(f"*{name.split('.')[0][:6]}*")[:3]
+        if not isinstance(name, str) or not timm.is_model(name.split(".")[0]):
+            close = difflib.get_close_matches(str(name).split(".")[0], timm.list_models(), n=3)
             hint = f" Did you mean: {', '.join(close)}?" if close else ""
             raise BackboneProviderError(
                 f"Unknown timm model '{name}'.{hint} See timm.list_models() for valid names."
             )
         options: dict[str, Any] = {"pretrained": pretrained, "num_classes": 0}
         try:
-            sized = {"img_size": image_size} if image_size is not None else {}
-            self.model = timm.create_model(name, **options, **sized)
-        except TypeError:  # Convolutional models take no img_size: they accept any input size.
-            self.model = timm.create_model(name, **options)
+            try:
+                sized = {"img_size": image_size} if image_size is not None else {}
+                self.model = timm.create_model(name, **options, **sized)
+            except TypeError as exc:
+                if "img_size" not in str(exc):
+                    raise
+                # Convolutional models take no img_size: they accept any input size.
+                self.model = timm.create_model(name, **options)
+        except (RuntimeError, TypeError, ValueError) as exc:
+            raise BackboneProviderError(
+                f"timm could not build '{name}'; check the model name and its pretrained tag."
+            ) from exc
 
         data = timm.data.resolve_data_config({}, model=self.model)
         self.image_size: int = image_size if image_size is not None else int(data["input_size"][-1])
-        self.resize_size: int = max(self.image_size, round(self.image_size / data["crop_pct"]))
+        if resize_size is None:
+            # timm floors here; rounding would shift the centre crop by a pixel for crop_pct 0.9.
+            scaled = max(self.image_size, math.floor(self.image_size / data["crop_pct"]))
+            crop_mode = data.get("crop_mode", "center")
+            if crop_mode == "squash":
+                resize_size = (scaled, scaled)
+            elif crop_mode == "center":
+                resize_size = scaled
+            else:
+                raise BackboneProviderError(
+                    f"timm model '{name}' uses crop_mode '{crop_mode}', which is not supported; "
+                    "pass resize_size explicitly to choose the resize yourself."
+                )
+        self.resize_size: int | tuple[int, int] = validate_resize(resize_size)
         self.interpolation = validate_interpolation(interpolation or data["interpolation"])
         if mean is None and std is None:
             mean, std = data["mean"], data["std"]
@@ -102,9 +133,17 @@ class TimmBackbone(ImageBackbone):
 
         was_training = self.model.training
         self.model.eval()
-        with torch.no_grad():  # One probe fixes the output width and validates the pooling.
-            probe = self.forward_features(torch.zeros(1, 3, self.image_size, self.image_size))
-        self.model.train(was_training)
+        try:
+            with torch.no_grad():  # One probe fixes the output width and validates the pooling.
+                probe = self.forward_features(torch.zeros(1, 3, self.image_size, self.image_size))
+        except EmbedFitError:
+            raise  # Already actionable, e.g. a pooling policy the model cannot serve.
+        except (AssertionError, RuntimeError, ValueError) as exc:
+            raise ConfigurationError(
+                f"timm model '{name}' does not accept {self.image_size}x{self.image_size} input."
+            ) from exc
+        finally:
+            self.model.train(was_training)
         self._embedding_dim = int(probe.shape[1])
 
     @property
@@ -152,11 +191,21 @@ class TimmBackbone(ImageBackbone):
             pooled: torch.Tensor = self.model(pixel_values)
             return pooled.flatten(start_dim=1)
         tokens = self.model.forward_features(pixel_values)
-        prefix = int(getattr(self.model, "num_prefix_tokens", 0))
-        return pool_tokens(tokens, self._pooling, prefix_tokens=prefix)
+        prefix = getattr(self.model, "num_prefix_tokens", None)
+        if tokens.ndim == 3 and not isinstance(prefix, int):
+            # Guessing 0 would average a class token into "mean" and refuse a valid "cls".
+            raise ConfigurationError(
+                f"timm model '{self.name}' does not declare num_prefix_tokens, so its class and "
+                "patch tokens cannot be told apart; use pooling='provider_default'."
+            )
+        return pool_tokens(tokens, self._pooling, prefix_tokens=int(prefix or 0))
 
     def save_pretrained(self, path: str | Path) -> None:
-        """Write ``config.json`` (name, pooling, preprocessing, dtype) and ``weights.pt``."""
+        """Write ``config.json`` (name, pooling, preprocessing, dtype) and ``weights.pt``.
+
+        Every preprocessing value is written, including the resize size, so a later ``timm``
+        release that changes a model's defaults cannot change a saved backbone.
+        """
         directory = Path(path)
         directory.mkdir(parents=True, exist_ok=True)
         config = {
@@ -165,6 +214,7 @@ class TimmBackbone(ImageBackbone):
             "pretrained": self.pretrained,
             "pooling": self._pooling,
             "image_size": self.image_size,
+            "resize_size": self.resize_size,
             "interpolation": self.interpolation,
             "mean": self.mean,
             "std": self.std,
@@ -185,25 +235,29 @@ class TimmBackbone(ImageBackbone):
         config_path, weights_path = directory / _CONFIG_FILE, directory / _WEIGHTS_FILE
         try:
             config = json.loads(config_path.read_text())
-            if config["provider"] != "timm":
+            if config["provider"] != "timm" or not isinstance(config["pretrained"], bool):
                 raise KeyError("provider")
+            resize = config["resize_size"]
             backbone = cls(
                 config["name"],
                 pretrained=False,
                 pooling=config["pooling"],
                 image_size=config["image_size"],
+                resize_size=tuple(resize) if isinstance(resize, list) else resize,
                 interpolation=config["interpolation"],
                 mean=config["mean"],
                 std=config["std"],
             )
             dtype = getattr(torch, str(config["dtype"]), None)
-        except (OSError, KeyError, TypeError, json.JSONDecodeError) as exc:
+            if backbone.embedding_dim != config["embedding_dim"]:
+                raise ValueError("embedding_dim")
+            backbone.pretrained = config["pretrained"]
+        except (OSError, KeyError, TypeError, ValueError, AttributeError, EmbedFitError) as exc:
             raise ConfigurationError(
                 f"'{directory}' is not a TimmBackbone directory written by save_pretrained."
             ) from exc
         if not isinstance(dtype, torch.dtype) or not dtype.is_floating_point:
             raise ConfigurationError(f"'{config_path}' names an unsupported dtype.")
-        backbone.pretrained = config["pretrained"]
         try:
             state = torch.load(weights_path, map_location="cpu", weights_only=True)
             backbone.load_state_dict(state)
