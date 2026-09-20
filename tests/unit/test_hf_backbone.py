@@ -209,3 +209,142 @@ def test_processor_resize_is_kept_unless_a_size_is_passed(monkeypatch):
 
     with pytest.raises(ConfigurationError, match="no integer image_size"):
         HFBackbone("local/x", config=resnet_config())  # ResNet configs carry no image size.
+
+
+def compare_with_processor(processor, image, config=None):
+    backbone = HFBackbone(
+        "local/x", config=config or vit_config(), **_processor_settings(processor)
+    )
+    reference = torch.from_numpy(processor(image, return_tensors="np")["pixel_values"][0])
+    ours = backbone.preprocess(image)
+    assert ours.shape == reference.shape
+    scale = torch.tensor(backbone.std).view(3, 1, 1) if backbone.std else 1.0
+    difference = (ours - reference).abs() * scale
+    assert difference.mean().item() < 0.01 and difference.max().item() < 0.15
+
+
+def blocky_image(height, width):
+    blocks = np.random.default_rng(0).random((height // 8, width // 8, 3))
+    return Image.fromarray((blocks.repeat(8, axis=0).repeat(8, axis=1) * 255).astype(np.uint8))
+
+
+@pytest.mark.parametrize("shape", [(96, 120), (120, 96), (64, 64)])
+def test_convnext_crop_pct_is_reproduced(shape):
+    processor = transformers.ConvNextImageProcessor(
+        size={"shortest_edge": 32},
+        crop_pct=0.875,
+        resample=3,
+        image_mean=[0.5] * 3,
+        image_std=[0.25] * 3,
+    )
+    settings = _processor_settings(processor)
+    assert (settings["resize_size"], settings["image_size"]) == (36, 32)  # int(32 / 0.875)
+    compare_with_processor(processor, blocky_image(*shape))
+
+
+def test_half_pixel_crop_offsets_match_the_processor():
+    # Resize 45 then crop 32 on a landscape image: offsets land on x.5.
+    processor = transformers.BitImageProcessor(
+        size={"shortest_edge": 45},
+        crop_size={"height": 32, "width": 32},
+        do_center_crop=True,
+        resample=2,
+        image_mean=[0.5] * 3,
+        image_std=[0.5] * 3,
+    )
+    for shape in [(90, 150), (150, 90), (91, 137)]:
+        compare_with_processor(processor, blocky_image(*shape))
+
+
+@pytest.mark.parametrize(
+    "kwargs, match",
+    [
+        ({"do_resize": False}, "do_resize=False"),
+        ({"do_rescale": False}, "rescaling other than 1/255"),
+        ({"rescale_factor": 1 / 127.5}, "rescaling other than 1/255"),
+        ({"resample": 1}, "resampling filter 1"),
+        ({"size": {"height": 32, "width": 40}}, "non-square size"),
+    ],
+)
+def test_unsupported_processor_settings_raise_instead_of_being_ignored(kwargs, match):
+    options = {"size": {"height": 32, "width": 32}, **kwargs}
+    with pytest.raises(BackboneProviderError, match=match):
+        _processor_settings(transformers.ViTImageProcessor(**options))
+    with pytest.raises(BackboneProviderError, match="non-square crop_size"):
+        _processor_settings(
+            transformers.BitImageProcessor(
+                size={"shortest_edge": 48},
+                crop_size={"height": 32, "width": 40},
+                do_center_crop=True,
+            )
+        )
+
+
+def test_mean_pooling_excludes_register_tokens():
+    config = transformers.Dinov2WithRegistersConfig(
+        hidden_size=32,
+        num_hidden_layers=1,
+        num_attention_heads=2,
+        image_size=28,
+        patch_size=14,
+        num_register_tokens=4,
+    )
+    backbone = HFBackbone("local/registers", config=config, pooling="mean").eval()
+    batch = torch.rand(2, 3, 28, 28)
+    with torch.no_grad():
+        tokens = backbone.model(pixel_values=batch).last_hidden_state
+        assert tokens.shape[1] == 1 + 4 + 4  # Class token, registers, 2x2 patches.
+        assert torch.allclose(backbone(batch), tokens[:, 5:].mean(dim=1), atol=1e-6)
+
+
+def test_an_explicit_image_size_keeps_the_resize_to_crop_ratio(monkeypatch):
+    processor = transformers.BitImageProcessor(
+        size={"shortest_edge": 48},
+        crop_size={"height": 32, "width": 32},
+        do_center_crop=True,
+        image_mean=[0.5] * 3,
+        image_std=[0.5] * 3,
+    )
+    monkeypatch.setattr(
+        transformers.AutoModel,
+        "from_pretrained",
+        lambda *a, **k: transformers.AutoModel.from_config(resnet_config()),
+    )
+    monkeypatch.setattr(
+        transformers.AutoImageProcessor, "from_pretrained", lambda *a, **k: processor
+    )
+    same = HFBackbone("some/checkpoint", image_size=32)
+    assert (same.resize_size, same.image_size) == (48, 32)  # Naming the default changes nothing.
+    larger = HFBackbone("some/checkpoint", image_size=64)
+    assert (larger.resize_size, larger.image_size) == (96, 64)
+    assert HFBackbone("some/checkpoint", image_size=64, resize_size=70).resize_size == 70
+
+
+def test_corrupt_bundles_are_configuration_errors(tmp_path):
+    import json
+
+    backbone = HFBackbone("local/tiny-vit", config=vit_config())
+    backbone.save_pretrained(tmp_path)
+    config = json.loads((tmp_path / "config.json").read_text())
+    for mutation in (
+        {"repo_id": {"x": 1}},
+        {"resize_size": "big"},
+        {"embedding_dim": 7},
+        {"dtype": "int64"},
+        {"pooling": "max"},
+    ):
+        (tmp_path / "config.json").write_text(json.dumps(config | mutation))
+        with pytest.raises(ConfigurationError, match="not an HFBackbone directory"):
+            HFBackbone.from_pretrained(tmp_path)
+    (tmp_path / "config.json").write_text(json.dumps(config))
+    (tmp_path / "model" / "model.safetensors").write_bytes(b"garbage")
+    with pytest.raises(ConfigurationError, match="not an HFBackbone directory"):
+        HFBackbone.from_pretrained(tmp_path)
+
+
+def test_a_model_without_pooler_or_tokens_gets_an_accurate_error():
+    config = transformers.PoolFormerConfig(hidden_sizes=[8, 8, 8, 8], depths=[1, 1, 1, 1])
+    with pytest.raises(ConfigurationError, match="neither a pooler_output nor a token sequence"):
+        HFBackbone("local/poolformer", config=config, image_size=64)
+    with pytest.raises(ConfigurationError, match="does not accept 48x48"):
+        HFBackbone("local/tiny-vit", config=vit_config(), image_size=48)

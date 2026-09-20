@@ -35,6 +35,13 @@ def validate_size(value: object, name: str) -> int:
     return value
 
 
+def validate_resize(value: object) -> int | tuple[int, int]:
+    """Accept an int (shorter side) or a ``(height, width)`` pair of positive ints."""
+    if isinstance(value, list | tuple) and len(value) == 2:
+        return (validate_size(value[0], "resize_size"), validate_size(value[1], "resize_size"))
+    return validate_size(value, "resize_size")
+
+
 def channel_stats(
     mean: Sequence[float] | None, std: Sequence[float] | None
 ) -> tuple[tuple[float, ...] | None, tuple[float, ...] | None]:
