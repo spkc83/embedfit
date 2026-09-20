@@ -91,7 +91,7 @@ def hard_negative_quota(negatives_per_example: int, hard_negative_fraction: floa
 
 
 def _most_similar(pool: np.ndarray, similarity: np.ndarray, count: int) -> list[int]:
-    """The ``count`` pool members with the highest similarity, ties by dataset position.
+    """The ``count`` (>= 1) pool members with the highest similarity, ties by dataset position.
 
     Everything tied with the last admitted value is kept too, so the order never depends on how
     a partial sort happens to break ties.

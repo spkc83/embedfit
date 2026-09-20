@@ -17,7 +17,7 @@ All notable changes to EmbedFit are recorded here, following [Keep a Changelog](
 - `RetrievalIndex` with a brute-force cosine backend, exclusion by id, by the query's own id, and by group, and ranking metrics.
 - `FewShotEvaluator` for methods × shots × seeds benchmarks with tidy records.
 - Pickle-free model bundles with atomic saving and consistency checks on load.
-- Runnable examples on synthetic data, and guides on data leakage and benchmarking.
+- Runnable examples on synthetic data, and guides on data leakage, benchmarking, and rare-event risk workflows.
 
 ### Not yet available
 

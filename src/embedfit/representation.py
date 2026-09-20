@@ -194,8 +194,8 @@ def _objective(
 ) -> _Objective:
     """Build the objective selected by ``args.training_mode`` for one dataset.
 
-    ``classifier`` is the jointly trained linear layer of ``end_to_end`` mode. Validation
-    builds the objective without one, which checks the data but cannot compute a loss.
+    ``classifier`` is the jointly trained linear layer of ``end_to_end`` mode; without one the
+    objective can check the data but not compute a loss.
     ``mine`` enables hard-negative mining (``pair`` mode, training data only).
     """
     parameter = next(model.backbone.parameters(), None)

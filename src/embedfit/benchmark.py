@@ -132,7 +132,8 @@ class FewShotEvaluator:
                 raise ConfigurationError("model_factory must return an EmbedFitModel.")
             # A reused model, backbone, or even a single shared parameter (a shallow copy, a
             # shared submodule) would carry trained weights from one run into the next.
-            alive = {id(target) for target in (ref() for ref in used) if target is not None}
+            used[:] = [ref for ref in used if ref() is not None]  # Forget collected models.
+            alive = {id(ref()) for ref in used}
             parameters = list(model.backbone.parameters())
             if alive & {id(model), id(model.backbone), *(id(p) for p in parameters)}:
                 raise ConfigurationError(

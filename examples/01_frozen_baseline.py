@@ -10,7 +10,7 @@ from embedfit.testing import BAR_CLASSES, make_bar_images
 
 
 def main(argv: list[str] | None = None) -> dict[str, float]:
-    args = parse_args(__doc__, argv)
+    args = parse_args(__doc__, argv, trains_backbone=False)
     labels = list(BAR_CLASSES[:3])
     train = ImageDataset.from_lists(*make_bar_images(12, num_classes=3, seed=args.seed))
     test = ImageDataset.from_lists(*make_bar_images(20, num_classes=3, seed=args.seed + 1))
@@ -24,9 +24,11 @@ def main(argv: list[str] | None = None) -> dict[str, float]:
     print(f"test accuracy {metrics['accuracy']:.2f}, macro F1 {metrics['macro_f1']:.2f}")
     print("first prediction:", model.predict(test.images[0])[0])
     probabilities = model.predict_proba(test.images[0])[0]
+    # The untrained demo backbone gives nearly uniform probabilities; a pretrained encoder
+    # (--backbone torchvision/resnet18) separates the classes far more sharply.
     print(
         "its probabilities:",
-        {label: round(float(p), 2) for label, p in zip(labels, probabilities, strict=False)},
+        {label: round(float(p), 4) for label, p in zip(labels, probabilities, strict=True)},
     )
     return metrics
 
