@@ -7,7 +7,7 @@ All notable changes to EmbedFit are recorded here, following [Keep a Changelog](
 ### Added
 
 - `EmbedFitModel`: `from_pretrained` for `<provider>/<name>` identifiers and saved directories, `encode`, `fit_head`, `predict`, `predict_proba`, `risk_score`, `freeze_backbone` / `unfreeze_backbone`, `save_pretrained`.
-- Backbone providers `torchvision` and `dummy`, the `ImageBackbone` contract, and a provider registry. Adapters own resizing, interpolation, and normalisation.
+- Backbone providers `torchvision`, `timm`, `hf` (Hugging Face Transformers), and `dummy`, the `ImageBackbone` contract, and a provider registry. Adapters own resizing, interpolation, and normalisation, and transformer encoders offer `provider_default`, `cls`, and `mean` pooling.
 - `Trainer` with the training modes `frozen`, `supcon`, `pair`, and the `end_to_end` cross-entropy baseline; `TrainingArguments` validated on creation; best-epoch selection on validation data; `evaluate` and `save_model`.
 - Hard-negative mining for `pair` training (`hard_negative_fraction`, `hard_negative_refresh_epochs`), restricted to training data.
 - Losses `SupConLoss` and `CosinePairLoss`; samplers `BalancedClassBatchSampler`, `PairSampler` with `RelationshipRule`, and `sample_few_shot`.
@@ -21,5 +21,4 @@ All notable changes to EmbedFit are recorded here, following [Keep a Changelog](
 
 ### Not yet available
 
-- `timm` and Hugging Face backbone providers and configurable pooling.
 - The `triplet` training mode and augmentation profiles.
