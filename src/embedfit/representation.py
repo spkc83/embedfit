@@ -311,14 +311,7 @@ def validate_representation_setup(
                 raise ConfigurationError(f"{name} is empty.")
             _objective(model, dataset, args, rules, seed=args.seed)
     if args.training_mode == "end_to_end":
-        assert model.label_mapping is not None
-        present = set(model.label_mapping.encode(train_dataset.labels).tolist())
-        absent = len(model.label_mapping) - len(present)
-        if absent:  # The starting linear probe needs every class.
-            raise ConfigurationError(
-                f"{absent} of the model's {len(model.label_mapping)} labels have no samples in "
-                "train_dataset; end_to_end needs at least one of every class."
-            )
+        require_every_class(model, train_dataset)  # The starting linear probe needs them all.
     if not any(True for _ in model.backbone.parameters()):
         raise ConfigurationError("The backbone has no parameters to train.")
     if args.mixed_precision == "fp16" and device.type != "cuda":
@@ -331,6 +324,21 @@ def validate_representation_setup(
             raise ConfigurationError("mixed_precision='bf16' is not supported by this GPU.")
     if args.mixed_precision is not None and device.type == "mps":
         raise ConfigurationError("mixed_precision is not supported on MPS; use None.")
+
+
+def require_every_class(model: EmbedFitModel, dataset: ImageDataset) -> None:
+    """Raise ``ConfigurationError`` unless every class of the model has a sample in ``dataset``.
+
+    The message gives counts only, never label values.
+    """
+    assert model.label_mapping is not None
+    present = set(model.label_mapping.encode(dataset.labels).tolist())
+    absent = len(model.label_mapping) - len(present)
+    if absent:
+        raise ConfigurationError(
+            f"{absent} of the model's {len(model.label_mapping)} labels have no samples in "
+            "train_dataset; every class needs at least one."
+        )
 
 
 def _linear_probe(
@@ -346,7 +354,13 @@ def _linear_probe(
     targets = model.label_mapping.encode(dataset.labels)
     probe = LinearHead(seed=args.seed)
     probe.fit(np.asarray(features), targets, num_classes=len(model.label_mapping))
-    return probe.to_module()
+    layer = probe.to_module()
+    with torch.no_grad():
+        logits = layer(torch.from_numpy(np.asarray(features)))
+        loss = nn.functional.cross_entropy(logits, torch.from_numpy(targets.astype(np.int64)))
+    probe_loss = loss.item()  # A mean over the training set: an aggregate, safe to log.
+    logger.info("Starting from a linear probe: training cross-entropy %.4f", probe_loss)
+    return layer
 
 
 def _autocast(args: TrainingArguments, device: torch.device) -> torch.autocast:

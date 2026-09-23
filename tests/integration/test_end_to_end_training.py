@@ -274,3 +274,19 @@ def test_a_class_without_training_samples_fails_before_training():
     two_classes = ImageDataset.from_lists(*make_bar_images(6, num_classes=2, seed=0))
     with pytest.raises(ConfigurationError, match="1 of the model's 3 labels have no samples"):
         representation.train_representation(make_model(), two_classes, None, e2e_args())
+
+
+def test_the_classifier_is_fine_tuned_with_the_backbone(caplog, logged_messages):
+    """LP-FT trains the probe further; a classifier left out of the optimizer stays at it."""
+    from embedfit import representation
+
+    caplog.set_level(logging.INFO, logger="embedfit")
+    train = dataset(6, 0)
+    model = make_model()
+    args = e2e_args(num_epochs=3)
+    probe, _, _ = probe_for(model, train, args.seed)
+    result = representation.train_representation(model, train, None, args)
+    start = probe.to_module()
+    assert not torch.allclose(result.classifier.weight, start.weight, atol=1e-3)
+    assert not torch.allclose(result.classifier.bias, start.bias, atol=1e-3)
+    assert "Starting from a linear probe: training cross-entropy" in logged_messages()

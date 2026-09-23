@@ -14,7 +14,11 @@ from embedfit.exceptions import ConfigurationError, UndefinedMetricError
 from embedfit.heads.linear import LinearHead
 from embedfit.heads.registry import create_head
 from embedfit.model import EmbedFitModel
-from embedfit.representation import train_representation, validate_representation_setup
+from embedfit.representation import (
+    require_every_class,
+    train_representation,
+    validate_representation_setup,
+)
 from embedfit.sampling.pairs import RelationshipRule
 from embedfit.training_args import TrainingArguments
 from embedfit.utils.device import resolve_device
@@ -137,13 +141,7 @@ class Trainer:
             raise ConfigurationError("train_dataset is empty.")
         # Reject unknown labels, and labels without samples, before any work starts: the head
         # needs every class, and finding that out after representation training wastes a run.
-        present = set(model.label_mapping.encode(train_dataset.labels).tolist())
-        absent = len(model.label_mapping) - len(present)
-        if absent:
-            raise ConfigurationError(
-                f"{absent} of the model's {len(model.label_mapping)} labels have no samples in "
-                "train_dataset; every class needs at least one."
-            )
+        require_every_class(model, train_dataset)
 
         self.model = model
         self.args = args

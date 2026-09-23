@@ -32,6 +32,7 @@ LOGGED_NAMES = {
     "split",
     "side",
     "realised",
+    "probe_loss",
     "fraction",
     "count",
 }

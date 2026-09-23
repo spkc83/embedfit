@@ -79,6 +79,17 @@ def test_to_module_returns_an_independent_trainable_copy(blobs):
     assert np.allclose(LinearHead.from_module(head.to_module()).predict_proba(features), expected)
 
 
+def test_copies_between_head_and_module_leave_the_global_rng_alone(blobs):
+    features, targets = blobs
+    head = LinearHead()
+    head.fit(features, targets, num_classes=3)
+    torch.manual_seed(3)
+    expected_next = torch.rand(1)
+    torch.manual_seed(3)
+    LinearHead.from_module(head.to_module())
+    assert torch.equal(torch.rand(1), expected_next)
+
+
 def test_save_and_load_round_trip_without_pickle(blobs, tmp_path):
     features, targets = blobs
     head = LinearHead(weight_decay=0.01, max_iter=50, seed=9)

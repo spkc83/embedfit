@@ -65,7 +65,9 @@ class LinearHead(ClassificationHead):
         if not isinstance(layer, nn.Linear) or layer.bias is None:
             raise ConfigurationError("layer must be an nn.Linear with a bias.")
         head = cls(weight_decay=weight_decay, max_iter=max_iter, seed=seed)
-        copy = nn.Linear(layer.in_features, layer.out_features)
+        # skip_init: the initial weights are replaced at once, so drawing them from the global
+        # RNG would only disturb other code's random numbers.
+        copy = nn.utils.skip_init(nn.Linear, layer.in_features, layer.out_features)
         copy.load_state_dict({k: v.detach().float().cpu() for k, v in layer.state_dict().items()})
         head._layer = copy.requires_grad_(False)
         return head
@@ -78,8 +80,10 @@ class LinearHead(ClassificationHead):
         """
         if self._layer is None:
             raise HeadNotFittedError("The head has not been fitted; call fit first.")
-        copy = nn.Linear(self._layer.in_features, self._layer.out_features)
-        copy.load_state_dict({k: v.detach().clone() for k, v in self._layer.state_dict().items()})
+        copy: nn.Linear = nn.utils.skip_init(
+            nn.Linear, self._layer.in_features, self._layer.out_features
+        )
+        copy.load_state_dict(self._layer.state_dict())  # Copies into the new layer's own tensors.
         return copy
 
     @property
