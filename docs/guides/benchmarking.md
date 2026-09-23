@@ -47,4 +47,4 @@ The number of training runs is `len(methods) × len(shots) × len(seeds)`, and e
 
 ## A runnable version
 
-[`examples/06_few_shot_benchmark.py`](../../examples/06_few_shot_benchmark.py) runs this comparison on synthetic images in a few seconds.
+[`examples/06_few_shot_benchmark.py`](../../examples/06_few_shot_benchmark.py) runs this comparison on synthetic images in a few seconds. [EuroSAT with DINOv2-small](../benchmarks/eurosat-dinov2-small.md) is a run on real images, including the learning-rate selection on a validation split.
