@@ -67,6 +67,8 @@ Repository examples must use generated/synthetic images only.
 
 Do not commit real checks or realistic account/routing numbers.
 
+Benchmark scripts in `benchmarks/` may use public research datasets. They download the data at run time into a cache outside the repository; only aggregate metrics are committed.
+
 ## How the library meets these requirements
 
 | Requirement | Mechanism |

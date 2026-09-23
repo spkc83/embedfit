@@ -37,7 +37,7 @@ Status legend: `[x]` verified on `main`, `[ ]` open. Every code milestone was re
 - [x] grouped split support
 - [x] temporal split support
 
-No benchmark on real images has been run. Every accuracy figure in the docs and tests comes from synthetic bar images on an untrained demo backbone and says nothing about real data; the experiments in `docs/research/EXPERIMENT_MATRIX.md` are still to be done.
+One benchmark on real images has been run: EuroSAT with DINOv2-small at 4, 8, and 16 shots ([results](../docs/benchmarks/eurosat-dinov2-small.md)). There, `end_to_end` beat every other mode on all nine few-shot samples and neither contrastive mode separated from `frozen`. The rest of `docs/research/EXPERIMENT_MATRIX.md` (other backbones, 32 to 128 shots, document imagery, hard negatives, retrieval, and out-of-time evaluation) is still to be done. The other accuracy figures in the docs and tests come from synthetic images on an untrained demo backbone and say nothing about real data.
 
 ## Release hygiene
 

@@ -138,4 +138,4 @@ Legend:
 - [x] domain-risk guide
 - [x] privacy/logging review
 - [x] changelog
-- [~] v0.1 release checklist (`plans/V0_1_RELEASE.md`: built items are verified; the version number, the package-name check, a real-image benchmark, and the unbuilt spec items remain open)
+- [~] v0.1 release checklist (`plans/V0_1_RELEASE.md`: built items are verified; the version number, the package-name check, the benchmarks beyond the first real-image one, and the unbuilt spec items remain open)
