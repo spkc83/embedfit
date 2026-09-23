@@ -69,7 +69,7 @@ Optional for v0.1; required by v0.2 if deferred.
 
 ### `end_to_end`
 
-A baseline using a differentiable linear classification head and cross-entropy.
+A baseline using a differentiable linear classification head and cross-entropy. The head starts from a linear probe fitted on the frozen pretrained embeddings, and head and backbone are then fine-tuned together (ADR 0012).
 
 This is for comparison, not the primary workflow.
 

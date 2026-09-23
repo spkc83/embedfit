@@ -1,6 +1,6 @@
 # ADR 0011 — Every Training Mode Ends with a Converged Head
 
-Status: Accepted
+Status: Accepted. Amended by ADR 0012: `end_to_end` now starts from a linear probe, so the measurements below describe the earlier, randomly initialised baseline.
 
 ## Decision
 

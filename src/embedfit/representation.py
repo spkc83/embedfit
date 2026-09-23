@@ -17,6 +17,7 @@ from torch.utils.data import DataLoader, Dataset, RandomSampler
 
 from embedfit.data.dataset import ImageDataset
 from embedfit.exceptions import ConfigurationError, TrainingDivergedError
+from embedfit.heads.linear import LinearHead
 from embedfit.losses.registry import create_loss
 from embedfit.model import EmbedFitModel
 from embedfit.sampling.balanced import BalancedClassBatchSampler
@@ -294,7 +295,8 @@ def validate_representation_setup(
         ConfigurationError: If the training (or validation) data is empty or cannot supply
             the objective (``supcon``: batch size below 4, fewer than 2 classes, or a class
             with fewer than 2 samples; ``pair``: no positive or no negative pair can be
-            formed), relationship rules are given for a mode other than ``pair``, the backbone
+            formed; ``end_to_end``: a class of the model without training samples),
+            relationship rules are given for a mode other than ``pair``, the backbone
             has no trainable parameters, or the mixed-precision mode is not supported on the
             device.
     """
@@ -308,6 +310,15 @@ def validate_representation_setup(
             if len(dataset) == 0:
                 raise ConfigurationError(f"{name} is empty.")
             _objective(model, dataset, args, rules, seed=args.seed)
+    if args.training_mode == "end_to_end":
+        assert model.label_mapping is not None
+        present = set(model.label_mapping.encode(train_dataset.labels).tolist())
+        absent = len(model.label_mapping) - len(present)
+        if absent:  # The starting linear probe needs every class.
+            raise ConfigurationError(
+                f"{absent} of the model's {len(model.label_mapping)} labels have no samples in "
+                "train_dataset; end_to_end needs at least one of every class."
+            )
     if not any(True for _ in model.backbone.parameters()):
         raise ConfigurationError("The backbone has no parameters to train.")
     if args.mixed_precision == "fp16" and device.type != "cuda":
@@ -320,6 +331,22 @@ def validate_representation_setup(
             raise ConfigurationError("mixed_precision='bf16' is not supported by this GPU.")
     if args.mixed_precision is not None and device.type == "mps":
         raise ConfigurationError("mixed_precision is not supported on MPS; use None.")
+
+
+def _linear_probe(
+    model: EmbedFitModel, dataset: ImageDataset, args: TrainingArguments
+) -> nn.Linear:
+    """The starting classifier of ``end_to_end`` mode: a converged linear probe (ADR 0012).
+
+    Fitted on the embeddings the model produces before any backbone update, with the same
+    ``LinearHead`` settings as the head that is refitted after training (ADR 0011).
+    """
+    assert model.label_mapping is not None
+    features = model.encode(dataset.images, batch_size=args.eval_batch_size)
+    targets = model.label_mapping.encode(dataset.labels)
+    probe = LinearHead(seed=args.seed)
+    probe.fit(np.asarray(features), targets, num_classes=len(model.label_mapping))
+    return probe.to_module()
 
 
 def _autocast(args: TrainingArguments, device: torch.device) -> torch.autocast:
@@ -353,11 +380,13 @@ def train_representation(
     ``"supcon"`` draws class-balanced batches and applies the supervised contrastive loss.
     ``"pair"`` draws a bounded set of positive and negative pairs each epoch (``PairSampler``)
     and applies the cosine pair loss; ``rules`` optionally decide pair targets and weights
-    from fields other than the class label. ``"end_to_end"`` is the comparison baseline: a
-    linear classifier on the model's embeddings is trained jointly with the backbone under
-    cross-entropy on uniformly shuffled batches, and returned in ``classifier``. The classifier
-    sees exactly the embeddings the model produces (normalised or not) and ``temperature`` plays
-    no part, so the baseline shares no hyperparameter with the contrastive losses.
+    from fields other than the class label. ``"end_to_end"`` is the comparison baseline:
+    linear-probe-then-fine-tune (ADR 0012). A ``LinearHead`` is first fitted to convergence on
+    the embeddings of the untouched backbone; that linear classifier is then trained jointly
+    with the backbone under cross-entropy on uniformly shuffled batches, and returned in
+    ``classifier``. The classifier sees exactly the embeddings the model produces (normalised
+    or not) and ``temperature`` plays no part, so the baseline shares no hyperparameter with
+    the contrastive losses.
 
     Each epoch draws its batches from ``train_dataset`` only. When ``eval_dataset``
     is given, its loss is measured after every epoch (without gradients) on a
@@ -399,10 +428,9 @@ def train_representation(
         validate_representation_setup(model, train_dataset, eval_dataset, args, device, rules)
     classifier = None
     if args.training_mode == "end_to_end":
-        assert model.label_mapping is not None
-        with torch.random.fork_rng(devices=[]):
-            torch.manual_seed(args.seed)
-            classifier = nn.Linear(model.embedding_dim, len(model.label_mapping))
+        # Built before the objectives, the optimizer, and the best-epoch state, which must all
+        # hold this same layer.
+        classifier = _linear_probe(model, train_dataset, args)
         first = next(model.backbone.parameters(), None)
         classifier.to(device=device, dtype=first.dtype if first is not None else torch.float32)
     objective = _objective(

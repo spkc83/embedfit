@@ -70,6 +70,18 @@ class LinearHead(ClassificationHead):
         head._layer = copy.requires_grad_(False)
         return head
 
+    def to_module(self) -> nn.Linear:
+        """Return a trainable float32 CPU copy of the fitted layer; the inverse of ``from_module``.
+
+        Raises:
+            HeadNotFittedError: If the head has not been fitted.
+        """
+        if self._layer is None:
+            raise HeadNotFittedError("The head has not been fitted; call fit first.")
+        copy = nn.Linear(self._layer.in_features, self._layer.out_features)
+        copy.load_state_dict({k: v.detach().clone() for k, v in self._layer.state_dict().items()})
+        return copy
+
     @property
     def is_fitted(self) -> bool:
         """Whether the head holds trained weights."""
