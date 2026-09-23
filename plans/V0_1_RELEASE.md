@@ -31,7 +31,7 @@ Status legend: `[x]` verified on `main`, `[ ]` open. Every code milestone was re
 ## Research readiness
 
 - [x] frozen baseline benchmark
-- [x] CE baseline benchmark — `end_to_end`, scored with a converged head like every other mode (ADR 0011); on the synthetic task it matches SupCon from 8 shots up, and at 4 shots the ordering varies by seed
+- [x] CE baseline benchmark — `end_to_end`, scored with a converged head like every other mode (ADR 0011); it starts from a linear probe (ADR 0012); on the synthetic task (five seeds, the example's shared learning rate 1e-2, at which the first epoch disturbs the probe; ADR 0012) it trails SupCon at 4 and 8 shots (0.86 and 0.97 against 0.96 and 1.00) and matches it at 16
 - [x] SupCon benchmark
 - [x] repeated-seed support — `FewShotEvaluator(shots, seeds)` with `aggregate`
 - [x] grouped split support

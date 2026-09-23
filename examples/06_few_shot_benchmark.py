@@ -17,7 +17,8 @@ def main(argv: list[str] | None = None, shots=(4, 8, 16), seeds=(1, 2, 3)) -> li
     pool = ImageDataset.from_lists(*make_bar_images(24, num_classes=3, seed=args.seed))
     test = ImageDataset.from_lists(*make_bar_images(20, num_classes=3, seed=args.seed + 1))
 
-    # Every trained method gets the same budget, so the comparison is about the objective.
+    # One budget, learning rate included, keeps this demo short. In a real benchmark choose each
+    # method's learning rate on a validation split (docs/guides/benchmarking.md).
     budget = {
         "num_epochs": args.epochs,
         "batch_size": 12,

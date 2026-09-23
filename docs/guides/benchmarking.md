@@ -5,7 +5,8 @@
 ```python
 from embedfit import EmbedFitModel, FewShotEvaluator, TrainingArguments
 
-budget = {"num_epochs": 10, "batch_size": 32, "learning_rate": 2e-5}
+budget = {"num_epochs": 10, "batch_size": 32}
+learning_rates = {"end_to_end": 1e-5, "supcon": 5e-5}  # Each chosen on a validation split.
 evaluator = FewShotEvaluator(shots=[4, 8, 16, 32, 64], seeds=[13, 42, 101, 7, 99])
 records = evaluator.run(
     train_pool,
@@ -13,7 +14,8 @@ records = evaluator.run(
     methods=["frozen", "end_to_end", "supcon"],
     model_factory=lambda: EmbedFitModel.from_pretrained("torchvision/resnet18", labels=labels),
     training_arguments={
-        mode: TrainingArguments(training_mode=mode, **budget) for mode in ("end_to_end", "supcon")
+        mode: TrainingArguments(training_mode=mode, learning_rate=rate, **budget)
+        for mode, rate in learning_rates.items()
     },
 )
 summary = evaluator.aggregate(records)
@@ -29,9 +31,9 @@ summary = evaluator.aggregate(records)
 
 **No selection on the test set.** The benchmark passes no validation data to training, so representation training keeps its last epoch. Hyperparameters chosen by looking at benchmark results are tuned on the test set; choose them on a separate validation split first, then run the benchmark once.
 
-**Strong baselines with an equal budget.** `frozen` costs nothing, and `end_to_end` is the method any practitioner would try first, so a representation-tuning method has to beat both. Give every trained method the same epochs, batch size, and learning rate. Every mode is scored with a head fitted to convergence on its final embeddings (ADR 0011), so the methods differ only in how the backbone was adapted.
+**Strong baselines with an equal budget.** `frozen` costs nothing, and `end_to_end` is the method any practitioner would try first, so a representation-tuning method has to beat both. Give every trained method the same epochs and batch size, and choose each method's learning rate on validation data: the objectives differ in scale, so a single shared rate favours whichever method it happens to suit. `end_to_end` starts from a linear probe fitted on the pretrained embeddings (ADR 0012), and logs the probe's training cross-entropy when training starts; a rate large enough to disturb the probe shows up as a first epoch whose loss is above it. Every mode is scored with a head fitted to convergence on its final embeddings (ADR 0011), so the methods differ only in how the backbone was adapted.
 
-**A learning rate that actually trains.** The representation learning rate has to suit the backbone: around 2e-5 for a pretrained encoder, around 1e-2 for the untrained demo network in the examples. If it is too small, every trained method quietly reduces to the frozen baseline and the benchmark compares nothing. Check `TrainOutput.train_losses` from a single run before launching a benchmark: a loss that barely moves means the comparison is void. At 4 shots an epoch is a single batch, so ten epochs are only ten optimizer steps, and the schedule decays the rate linearly to zero over them.
+**A learning rate that actually trains.** The representation learning rate has to suit the backbone: around 2e-5 for a pretrained encoder, around 1e-2 for the untrained demo network in the examples. If it is too small, every trained method quietly reduces to the frozen baseline and the benchmark compares nothing. Check `TrainOutput.train_losses` from a single run before launching a benchmark: for the contrastive modes a loss that barely moves means the comparison is void. `end_to_end` starts from the probe's loss, which can already be close to zero on separable few-shot data, so a small loss there is no sign of a problem; compare its accuracy with `frozen` instead. At 4 shots an epoch is a single batch, so ten epochs are only ten optimizer steps, and the schedule decays the rate linearly to zero over them.
 
 **Batch statistics.** With a backbone that uses batch normalisation, training runs on batch statistics and evaluation on running statistics. That affects every trained method alike, but small few-shot batches make the running statistics noisy; prefer a batch size of at least 16.
 

@@ -61,6 +61,35 @@ def test_from_module_copies_a_trained_layer(blobs):
         LinearHead.from_module(nn.Linear(2, 3, bias=False))
 
 
+def test_to_module_returns_an_independent_trainable_copy(blobs):
+    features, targets = blobs
+    head = LinearHead()
+    with pytest.raises(HeadNotFittedError):
+        head.to_module()
+    head.fit(features, targets, num_classes=3)
+    layer = head.to_module()
+    assert isinstance(layer, nn.Linear) and layer.weight.dtype == torch.float32
+    assert all(p.requires_grad for p in layer.parameters())
+    expected = head.predict_proba(features)
+    with torch.no_grad():
+        probabilities = torch.softmax(layer(torch.from_numpy(features)), dim=1).double().numpy()
+        assert np.allclose(probabilities, expected, atol=1e-6)
+        layer.weight.zero_()  # Training the copy must not change the head.
+    assert np.array_equal(head.predict_proba(features), expected)
+    assert np.allclose(LinearHead.from_module(head.to_module()).predict_proba(features), expected)
+
+
+def test_copies_between_head_and_module_leave_the_global_rng_alone(blobs):
+    features, targets = blobs
+    head = LinearHead()
+    head.fit(features, targets, num_classes=3)
+    torch.manual_seed(3)
+    expected_next = torch.rand(1)
+    torch.manual_seed(3)
+    LinearHead.from_module(head.to_module())
+    assert torch.equal(torch.rand(1), expected_next)
+
+
 def test_save_and_load_round_trip_without_pickle(blobs, tmp_path):
     features, targets = blobs
     head = LinearHead(weight_decay=0.01, max_iter=50, seed=9)

@@ -5,6 +5,7 @@ import logging
 import numpy as np
 import pytest
 import torch
+from torch import nn
 
 from embedfit import EmbedFitModel, ImageDataset, Trainer, TrainingArguments
 from embedfit.exceptions import ConfigurationError
@@ -48,8 +49,16 @@ def test_backbone_and_classifier_are_trained_jointly(trained):
         not torch.equal(p, b) for p, b in zip(model.backbone.parameters(), before, strict=True)
     )
     assert output.training_mode == "end_to_end" and output.representation_steps == 90
-    assert output.train_losses[-1] < 0.6 * output.train_losses[0]
-    assert output.eval_losses[-1] < 0.8 * output.eval_losses[0]
+    # Fine-tuning takes the loss far below the linear probe it starts from (ADR 0012). The
+    # first epoch is no reference: at this learning rate it disturbs the probe's classifier.
+    probe, features, targets = probe_for(make_model(), dataset(12, 0), seed=42)
+    with torch.no_grad():
+        logits = probe.to_module()(torch.from_numpy(features))
+        start = torch.nn.functional.cross_entropy(
+            logits, torch.from_numpy(targets.astype(np.int64))
+        )
+    assert output.train_losses[-1] < 0.1 * start.item()
+    assert output.eval_losses[-1] < 0.1 * start.item()
     assert output.best_epoch == int(np.argmin(output.eval_losses)) + 1
 
 
@@ -88,8 +97,9 @@ def test_best_epoch_restores_backbone_and_classifier_together():
     rotated = [LABELS[(LABELS.index(label) + 1) % 3] for label in labels]
     validation = ImageDataset.from_lists(images, rotated)  # Contradicts the images on purpose.
     model = make_model()
-    # Early epochs lower even this loss while the initial logits settle; once the classifier
-    # becomes confident about the real classes the contradictory labels make it rise again.
+    # At this learning rate the first epoch disturbs the starting probe; this loss falls as
+    # training recovers and rises again once the classifier becomes confident about the real
+    # classes, which the contradictory labels penalise.
     result = representation.train_representation(
         model, dataset(6, 0), validation, e2e_args(num_epochs=20)
     )
@@ -208,3 +218,75 @@ def test_temperature_does_not_affect_the_baseline():
         for t in (0.07, 1.0)
     ]
     assert losses[0] == losses[1]
+
+
+def probe_for(model, train, seed):
+    features = model.encode(train.images)
+    targets = model.label_mapping.encode(train.labels)
+    probe = LinearHead(seed=seed)
+    probe.fit(features, targets, num_classes=len(LABELS))
+    return probe, features, targets
+
+
+def test_fine_tuning_starts_from_a_converged_linear_probe():
+    """ADR 0012: the classifier starts from a probe fitted on the untouched backbone."""
+    from embedfit import representation
+
+    train = dataset(6, 0)
+    model = make_model()
+    # One batch holds all 18 samples, so the first epoch's loss is measured before any step,
+    # and the learning rate is too small for that one step to move anything measurably.
+    args = e2e_args(num_epochs=1, batch_size=32, learning_rate=1e-12)
+    probe, features, targets = probe_for(model, train, args.seed)
+    result = representation.train_representation(model, train, None, args)
+
+    trained = LinearHead.from_module(result.classifier).predict_proba(features)
+    assert np.allclose(trained, probe.predict_proba(features), atol=1e-5)
+    inputs, labels = torch.from_numpy(features), torch.from_numpy(targets.astype(np.int64))
+    with torch.no_grad():
+        probe_loss = torch.nn.functional.cross_entropy(probe.to_module()(inputs), labels).item()
+        torch.manual_seed(args.seed)
+        random_loss = torch.nn.functional.cross_entropy(nn.Linear(32, 3)(inputs), labels).item()
+    assert result.train_losses[0] == pytest.approx(probe_loss, rel=1e-4)
+    assert result.train_losses[0] < random_loss  # What the baseline started from before.
+
+
+def test_the_probe_sees_the_embeddings_the_model_produces():
+    from embedfit import representation
+
+    train = dataset(6, 0)
+    model = make_model(normalize_embeddings=False)
+    model.unfreeze_backbone()
+    model.train()
+    args = e2e_args()
+    probe, features, _ = probe_for(model, train, args.seed)
+    assert not np.allclose(np.linalg.norm(features, axis=1), 1.0)  # Really unnormalised.
+    layer = representation._linear_probe(model, train, args)
+    assert model.backbone.training  # encode() restored the training mode.
+    with torch.no_grad():
+        probabilities = torch.softmax(layer(torch.from_numpy(features)), dim=1).double().numpy()
+    assert np.allclose(probabilities, probe.predict_proba(features), atol=1e-6)
+
+
+def test_a_class_without_training_samples_fails_before_training():
+    from embedfit import representation
+
+    two_classes = ImageDataset.from_lists(*make_bar_images(6, num_classes=2, seed=0))
+    with pytest.raises(ConfigurationError, match="1 of the model's 3 labels have no samples"):
+        representation.train_representation(make_model(), two_classes, None, e2e_args())
+
+
+def test_the_classifier_is_fine_tuned_with_the_backbone(caplog, logged_messages):
+    """LP-FT trains the probe further; a classifier left out of the optimizer stays at it."""
+    from embedfit import representation
+
+    caplog.set_level(logging.INFO, logger="embedfit")
+    train = dataset(6, 0)
+    model = make_model()
+    args = e2e_args(num_epochs=3)
+    probe, _, _ = probe_for(model, train, args.seed)
+    result = representation.train_representation(model, train, None, args)
+    start = probe.to_module()
+    assert not torch.allclose(result.classifier.weight, start.weight, atol=1e-3)
+    assert not torch.allclose(result.classifier.bias, start.bias, atol=1e-3)
+    assert "Starting from a linear probe: training cross-entropy" in logged_messages()

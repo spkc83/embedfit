@@ -16,9 +16,11 @@ pretrained encoder
 
 ```text
 pretrained encoder
-→ linear head
-→ cross-entropy fine-tuning
+→ linear head fitted on frozen embeddings (linear probe)
+→ cross-entropy fine-tuning of head and backbone together
 ```
+
+Starting from a converged probe (LP-FT, ADR 0012) keeps the baseline from being trained through a random classifier at a learning rate chosen for the backbone.
 
 Allow either full or explicitly configured partial unfreezing.
 
