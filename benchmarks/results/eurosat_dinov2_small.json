@@ -1,5 +1,5 @@
 {
- "description": "EuroSAT RGB few-shot test-split results, hf/facebook/dinov2-small at 112 px; see docs/benchmarks/eurosat-dinov2-small.md",
+ "description": "EuroSAT RGB few-shot test-split results, hf/facebook/dinov2-small at 112 px; see docs/benchmarks/eurosat-dinov2-small.md. Two runs are merged: frozen, supcon, and pair, then end_to_end after ADR 0012; embedfit_commit is the library code each ran on (later commits train identically).",
  "runs": [
   {
    "methods": [
@@ -49,7 +49,8 @@
     "device": "cpu",
     "threads": 4,
     "processor": "x86_64",
-    "elapsed_seconds": 7833.5
+    "elapsed_seconds": 7833.5,
+    "embedfit_commit": "60afa2c"
    }
   },
   {
@@ -94,7 +95,8 @@
     "device": "cpu",
     "threads": 4,
     "processor": "x86_64",
-    "elapsed_seconds": 2322.8
+    "elapsed_seconds": 2322.8,
+    "embedfit_commit": "381c31e"
    }
   }
  ],

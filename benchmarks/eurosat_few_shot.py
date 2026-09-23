@@ -40,6 +40,10 @@ def load_splits(
     for label in range(len(source.classes)):
         order = rng.permutation(np.flatnonzero(targets == label))
         cuts = np.cumsum([pool, validation, test])
+        if cuts[-1] > len(order):
+            raise SystemExit(
+                f"Class {label} has {len(order)} images, fewer than the {cuts[-1]} requested."
+            )
         for name, part in zip(chosen, np.split(order[: cuts[-1]], cuts[:-1]), strict=True):
             chosen[name].extend(part.tolist())
     splits = {}
@@ -67,12 +71,19 @@ def parse_learning_rates(values: list[str], default: float) -> dict[str, float]:
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--data-root", type=Path, default=Path("~/.cache/embedfit").expanduser())
+    parser.add_argument(
+        "--data-root", type=lambda value: Path(value).expanduser(), default="~/.cache/embedfit"
+    )
     parser.add_argument("--backbone", default="hf/facebook/dinov2-small")
     parser.add_argument(
         "--image-size", type=int, default=112, help="input side; EuroSAT tiles are 64x64"
     )
-    parser.add_argument("--methods", nargs="+", default=["frozen", *TRAINED_METHODS])
+    parser.add_argument(
+        "--methods",
+        nargs="+",
+        choices=["frozen", *TRAINED_METHODS],
+        default=["frozen", *TRAINED_METHODS],
+    )
     parser.add_argument("--shots", nargs="+", type=int, default=[4, 8, 16])
     parser.add_argument("--seeds", nargs="+", type=int, default=[0, 1, 2])
     parser.add_argument("--epochs", type=int, default=10)
@@ -94,6 +105,10 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--threads", type=int, default=4)
     parser.add_argument("--output", type=Path, required=True, help="JSON file for the records")
     args = parser.parse_args(argv)
+    try:  # Before loading any data, so that a typo fails at once.
+        rates = parse_learning_rates(args.learning_rate, args.default_learning_rate)
+    except ValueError:
+        parser.error("--learning-rate expects METHOD=RATE with a number as RATE")
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
     torch.set_num_threads(args.threads)
 
@@ -104,7 +119,6 @@ def main(argv: list[str] | None = None) -> None:
         test=args.eval_per_class,
         seed=args.split_seed,
     )
-    rates = parse_learning_rates(args.learning_rate, args.default_learning_rate)
     budget = {"num_epochs": args.epochs, "batch_size": args.batch_size, "num_workers": 0}
     arguments = {
         method: TrainingArguments(training_mode=method, learning_rate=rates[method], **budget)
