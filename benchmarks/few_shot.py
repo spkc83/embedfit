@@ -1,60 +1,131 @@
-"""Few-shot benchmark on EuroSAT (RGB) with a pretrained backbone.
+"""Few-shot benchmark on a public image dataset with a pretrained backbone.
 
-Compares training modes with ``FewShotEvaluator`` on the public EuroSAT land-cover dataset
-(10 classes, 64x64 Sentinel-2 RGB patches). The dataset is downloaded once by torchvision into
-``--data-root``; nothing from it is written into the repository.
+Compares training modes with ``FewShotEvaluator``. Two datasets are supported, both downloaded
+on first use into a cache outside the repository; nothing from them is written into it:
 
-Three disjoint per-class splits are drawn from the full dataset with ``--split-seed``: a
-training pool that few-shot samples come from, a validation set for choosing learning rates,
-and a test set. Tune with ``--evaluate-on validation``; report with ``--evaluate-on test``.
+- ``eurosat``: EuroSAT RGB land cover (10 classes, 64x64 Sentinel-2 tiles), via torchvision into
+  ``--data-root``. It has no official split, so disjoint per-class pool, validation, and test
+  sets are drawn with ``--split-seed``.
+- ``rvl-cdip``: document images from RVL-CDIP (16 classes), the Hugging Face dataset
+  ``jinhybr/rvl_cdip_400_train_val_test`` (400 training, 100 validation, and 100 test images
+  per class). Its own splits are kept: the pool is drawn from the training split. Pages are
+  shrunk to a shorter side of 512 px when loaded and kept in grayscale, which bounds memory;
+  512 px is still larger than the model input.
 
-    python benchmarks/eurosat_few_shot.py --evaluate-on validation --shots 8 --seeds 0 \\
-        --methods supcon --learning-rate supcon=1e-5 --output tune.json
+Few-shot samples come from the pool. Tune with ``--evaluate-on validation`` and report with
+``--evaluate-on test``. Only the pool and the evaluated split are loaded. An evaluation image
+whose pixels exactly match a pool image is dropped, and the count is recorded.
+
+    python benchmarks/few_shot.py --dataset eurosat --evaluate-on validation --shots 8 \\
+        --seeds 0 --methods supcon --learning-rate supcon=1e-5 --output tune.json
 """
 
 import argparse
+import hashlib
 import json
 import logging
 import platform
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 import numpy as np
 import torch
-from torchvision.datasets import EuroSAT
+from PIL import Image
 
 import embedfit
 from embedfit import EmbedFitModel, FewShotEvaluator, ImageDataset, TrainingArguments
 
 TRAINED_METHODS = ("end_to_end", "supcon", "pair")
+DOCUMENT_SHORT_SIDE = 512
+DEFAULT_IMAGE_SIZE = {"eurosat": 112, "rvl-cdip": 224}
+
+Split = list[tuple[Image.Image, str]]
 
 
-def load_splits(
-    root: Path, *, pool: int, validation: int, test: int, seed: int
-) -> tuple[dict[str, ImageDataset], list[str]]:
-    """Draw disjoint per-class pool/validation/test splits and load their images."""
+def _per_class(labels: np.ndarray, count: int, rng: np.random.Generator) -> list[int]:
+    """Up to ``count`` random positions of every class, in class order."""
+    chosen = []
+    for label in np.unique(labels):
+        members = np.flatnonzero(labels == label)
+        if count > len(members):
+            raise SystemExit(f"Class {label} has {len(members)} images, fewer than {count}.")
+        chosen.extend(rng.permutation(members)[:count].tolist())
+    return chosen
+
+
+def eurosat_splits(
+    root: Path, *, pool: int, evaluation: int, evaluate_on: str, seed: int
+) -> tuple[dict[str, Split], list[str]]:
+    from torchvision.datasets import EuroSAT
+
     source = EuroSAT(str(root), download=True)
     targets = np.asarray(source.targets)
     rng = np.random.default_rng(seed)
     chosen: dict[str, list[int]] = {"pool": [], "validation": [], "test": []}
     for label in range(len(source.classes)):
         order = rng.permutation(np.flatnonzero(targets == label))
-        cuts = np.cumsum([pool, validation, test])
+        cuts = np.cumsum([pool, evaluation, evaluation])
         if cuts[-1] > len(order):
             raise SystemExit(
                 f"Class {label} has {len(order)} images, fewer than the {cuts[-1]} requested."
             )
         for name, part in zip(chosen, np.split(order[: cuts[-1]], cuts[:-1]), strict=True):
             chosen[name].extend(part.tolist())
-    splits = {}
-    for name, indices in chosen.items():
-        images, labels = [], []
-        for index in indices:
-            image, target = source[index]
-            images.append(image.convert("RGB"))
-            labels.append(source.classes[target])
-        splits[name] = ImageDataset.from_lists(images, labels)
+    splits = {
+        name: [
+            (source[index][0].convert("RGB"), source.classes[source[index][1]])
+            for index in chosen[name]
+        ]
+        for name in ("pool", evaluate_on)
+    }
     return splits, list(source.classes)
+
+
+def rvl_cdip_splits(
+    root: Path, *, pool: int, evaluation: int, evaluate_on: str, seed: int
+) -> tuple[dict[str, Split], list[str]]:
+    from datasets import load_dataset
+
+    source = load_dataset("jinhybr/rvl_cdip_400_train_val_test")
+    names = source["train"].features["label"].names
+
+    def take(split: str, count: int, stream: int) -> Split:
+        data = source[split]
+        rng = np.random.default_rng([seed, stream])  # Independent of which splits are loaded.
+        rows = data.select(_per_class(np.asarray(data["label"]), count, rng))
+        return [(_shrink(row["image"]), names[row["label"]]) for row in rows]
+
+    splits = {"pool": take("train", pool, 0)}
+    splits[evaluate_on] = take(evaluate_on, evaluation, 1 if evaluate_on == "validation" else 2)
+    return splits, names
+
+
+def _shrink(image: Image.Image) -> Image.Image:
+    scale = DOCUMENT_SHORT_SIDE / min(image.size)
+    if scale < 1:
+        size = (round(image.width * scale), round(image.height * scale))
+        image = image.resize(size, Image.Resampling.BICUBIC)
+    return image.convert("L")
+
+
+LOADERS: dict[str, Callable[..., tuple[dict[str, Split], list[str]]]] = {
+    "eurosat": eurosat_splits,
+    "rvl-cdip": rvl_cdip_splits,
+}
+
+
+def _digest(image: Image.Image) -> str:
+    return hashlib.sha256(f"{image.mode}{image.size}".encode() + image.tobytes()).hexdigest()
+
+
+def drop_pool_duplicates(splits: dict[str, Split], evaluate_on: str) -> int:
+    """Remove evaluation images whose pixels match a pool image; return how many."""
+    pool = {_digest(image) for image, _ in splits["pool"]}
+    kept = [(image, label) for image, label in splits[evaluate_on] if _digest(image) not in pool]
+    dropped = len(splits[evaluate_on]) - len(kept)
+    splits[evaluate_on] = kept
+    return dropped
 
 
 def parse_learning_rates(values: list[str], default: float) -> dict[str, float]:
@@ -74,9 +145,13 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--data-root", type=lambda value: Path(value).expanduser(), default="~/.cache/embedfit"
     )
+    parser.add_argument("--dataset", choices=sorted(LOADERS), required=True)
     parser.add_argument("--backbone", default="hf/facebook/dinov2-small")
     parser.add_argument(
-        "--image-size", type=int, default=112, help="input side; EuroSAT tiles are 64x64"
+        "--image-size",
+        type=int,
+        default=None,
+        help=f"model input side; defaults per dataset: {DEFAULT_IMAGE_SIZE}",
     )
     parser.add_argument(
         "--methods",
@@ -98,6 +173,11 @@ def main(argv: list[str] | None = None) -> None:
         default=1,
         help="pair mode: positive and negative partners per sample per epoch",
     )
+    parser.add_argument(
+        "--train-mode-batch-norm",
+        action="store_true",
+        help="update batch-norm statistics during training (freeze_batch_norm=False, ADR 0013)",
+    )
     parser.add_argument("--evaluate-on", choices=["validation", "test"], required=True)
     parser.add_argument("--pool-per-class", type=int, default=100)
     parser.add_argument("--eval-per-class", type=int, default=100)
@@ -111,15 +191,27 @@ def main(argv: list[str] | None = None) -> None:
         parser.error("--learning-rate expects METHOD=RATE with a number as RATE")
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
     torch.set_num_threads(args.threads)
+    if args.image_size is None:
+        args.image_size = DEFAULT_IMAGE_SIZE[args.dataset]
 
-    splits, labels = load_splits(
+    loaded, labels = LOADERS[args.dataset](
         args.data_root,
         pool=args.pool_per_class,
-        validation=args.eval_per_class,
-        test=args.eval_per_class,
+        evaluation=args.eval_per_class,
+        evaluate_on=args.evaluate_on,
         seed=args.split_seed,
     )
-    budget = {"num_epochs": args.epochs, "batch_size": args.batch_size, "num_workers": 0}
+    duplicates = drop_pool_duplicates(loaded, args.evaluate_on)
+    splits = {
+        name: ImageDataset.from_lists([image for image, _ in items], [label for _, label in items])
+        for name, items in loaded.items()
+    }
+    budget = {
+        "num_epochs": args.epochs,
+        "batch_size": args.batch_size,
+        "num_workers": 0,
+        "freeze_batch_norm": not args.train_mode_batch_norm,
+    }
     arguments = {
         method: TrainingArguments(training_mode=method, learning_rate=rates[method], **budget)
         for method in args.methods
@@ -153,6 +245,9 @@ def main(argv: list[str] | None = None) -> None:
         if key not in {"data_root", "output"}
     }
     config["learning_rates"] = {method: rates[method] for method in arguments}
+    config["freeze_batch_norm"] = not args.train_mode_batch_norm
+    config["evaluation_duplicates_dropped"] = duplicates
+    config["evaluation_size"] = len(splits[args.evaluate_on])
     environment = {
         "embedfit": embedfit.__version__,
         "torch": torch.__version__,

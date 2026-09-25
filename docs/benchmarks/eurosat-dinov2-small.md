@@ -66,11 +66,11 @@ On this machine, `frozen`, `supcon`, and `pair` together took 131 minutes for al
 ```bash
 pip install -e ".[hf,torchvision]"
 # Choose learning rates on the validation split, one command per candidate rate:
-python benchmarks/eurosat_few_shot.py --evaluate-on validation --shots 8 --seeds 0 \
+python benchmarks/few_shot.py --dataset eurosat --evaluate-on validation --shots 8 --seeds 0 \
     --methods frozen end_to_end supcon pair \
     --learning-rate end_to_end=1e-5 supcon=1e-5 pair=1e-5 --output tune_1e-5.json
 # Then run the test split once with the chosen rates:
-python benchmarks/eurosat_few_shot.py --evaluate-on test \
+python benchmarks/few_shot.py --dataset eurosat --evaluate-on test \
     --learning-rate end_to_end=1e-5 supcon=5e-5 pair=1e-5 --output results.json
 ```
 
