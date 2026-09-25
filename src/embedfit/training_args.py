@@ -65,7 +65,8 @@ class TrainingArguments:
         freeze_batch_norm: Keep batch-normalisation layers in eval mode during representation
             training, so their running statistics stay those of the pretrained backbone while
             their scale and shift parameters still train (ADR 0013). Few-shot batches are too
-            small for reliable batch statistics. No effect on backbones without batch norm.
+            small for reliable batch statistics. No effect on backbones without batch norm, or on
+            batch-norm layers built without running statistics.
 
     Raises:
         ConfigurationError: If any value is invalid. Raised at construction, never mid-training.

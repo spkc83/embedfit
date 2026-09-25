@@ -4,7 +4,7 @@ Status: Accepted
 
 ## Decision
 
-During representation training, batch-normalisation layers run in eval mode by default: they normalise with the running statistics of the pretrained backbone and do not update them, while their scale and shift parameters are trained like every other weight. `TrainingArguments.freeze_batch_norm` (default `True`) controls this; `False` restores standard train-mode batch norm. Backbones without batch norm are unaffected.
+During representation training, batch-normalisation layers run in eval mode by default: they normalise with the running statistics of the pretrained backbone and do not update them, while their scale and shift parameters are trained like every other weight. `TrainingArguments.freeze_batch_norm` (default `True`) controls this; `False` restores standard train-mode batch norm. Backbones without batch norm are unaffected, as are batch-norm layers built without running statistics (`track_running_stats=False`), which normalise with batch statistics in either mode.
 
 The layers are put back into eval mode at the start of every epoch, after anything that re-encodes the training set (hard-negative mining), because encoding restores the backbone's previous mode.
 
@@ -12,7 +12,7 @@ The layers are put back into eval mode at the start of every epoch, after anythi
 
 In train mode, a batch-norm layer normalises each batch with that batch's own mean and variance and moves its running statistics towards them. Few-shot batches hold a few dozen images of a few classes, which gives noisy statistics and, over ten epochs, replaces the statistics the backbone was pretrained with.
 
-Measured on EuroSAT with ImageNet ResNet-50 (`torchvision/resnet50`) at 8 shots per class, seed 0, validation split, frozen baseline 0.770:
+Measured on EuroSAT with ImageNet ResNet-50 (`torchvision/resnet50`) at 8 shots per class: 112-pixel input, batch size 32, ten epochs, one seed (0), scored on 100 validation images per class. The frozen baseline scored 0.770. These are single-run figures, but the gaps are 6 to 13 points:
 
 | Learning rate | Method | Train-mode batch norm | Batch norm fixed |
 |---|---|---|---|
