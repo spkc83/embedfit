@@ -24,7 +24,8 @@
     "docs/adrs/0009-model-bundle-format.md",
     "docs/adrs/0010-pooling-and-provider-preprocessing.md",
     "docs/adrs/0011-every-mode-ends-with-a-converged-head.md",
-    "docs/adrs/0012-end-to-end-starts-from-a-linear-probe.md"
+    "docs/adrs/0012-end-to-end-starts-from-a-linear-probe.md",
+    "docs/adrs/0013-batch-norm-statistics-stay-fixed-during-training.md"
   ],
   "agent_entrypoints": [
     "AGENTS.md",

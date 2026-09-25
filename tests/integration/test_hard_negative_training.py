@@ -125,7 +125,10 @@ def test_mining_encodes_in_eval_mode_without_gradients_and_leaves_batch_statisti
     model.encode = mining_encode
     from embedfit import representation
 
-    representation.train_representation(model, dataset(6, 0), None, mining_args(num_epochs=2))
+    # Train-mode batch norm (not the default, ADR 0013), so that training batches do update the
+    # statistics and a refresh that left them moving would be caught.
+    arguments = mining_args(num_epochs=2, freeze_batch_norm=False)
+    representation.train_representation(model, dataset(6, 0), None, arguments)
     assert backbone.observed, "mining never encoded anything"
     assert all(training is False and grad is False for training, grad, _ in backbone.observed)
     assert int(backbone.norm.num_batches_tracked) > 0  # Training batches did update them.

@@ -363,6 +363,13 @@ def _linear_probe(
     return layer
 
 
+def _freeze_batch_norm(model: EmbedFitModel) -> None:
+    """Put batch-norm layers in eval mode: running statistics fixed, affine parameters trained."""
+    for module in model.modules():
+        if isinstance(module, nn.modules.batchnorm._BatchNorm):
+            module.eval()
+
+
 def _autocast(args: TrainingArguments, device: torch.device) -> torch.autocast:
     dtype = torch.float16 if args.mixed_precision == "fp16" else torch.bfloat16
     return torch.autocast(device.type, dtype=dtype, enabled=args.mixed_precision is not None)
@@ -414,7 +421,9 @@ def train_representation(
     work), which costs start-up time that only pays off on larger datasets.
 
     This function only updates backbone weights. Freezing the backbone and switching the
-    model to eval mode afterwards is the caller's job.
+    model to eval mode afterwards is the caller's job. Without ``eval_dataset`` the model is
+    returned in train mode, with its batch-norm layers in eval mode if
+    ``args.freeze_batch_norm`` is set.
 
     Args:
         model: The model whose backbone is trained. It must have labels.
@@ -486,7 +495,9 @@ def train_representation(
     best_epoch, steps = 0, 0
     for epoch in range(args.num_epochs):
         model.train()
-        objective.set_epoch(epoch)
+        objective.set_epoch(epoch)  # May re-encode for mining, which restores train mode.
+        if args.freeze_batch_norm:
+            _freeze_batch_norm(model)
         batch_losses: list[float] = []
         optimizer.zero_grad(set_to_none=True)
         for index, batch in enumerate(loader):
