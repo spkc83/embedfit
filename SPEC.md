@@ -163,6 +163,7 @@ positives_per_example: int = 4   # pair mode (§11)
 negatives_per_example: int = 4   # pair mode (§11)
 hard_negative_fraction: float = 0.0       # pair mode: share of mined negatives (§11)
 hard_negative_refresh_epochs: int = 1     # how often training embeddings are re-encoded
+freeze_batch_norm: bool = True   # batch-norm running statistics fixed during training (ADR 0013)
 ```
 
 ## 6. Input data

@@ -62,6 +62,10 @@ class TrainingArguments:
             number of negatives and must not round to zero. 0 disables mining.
         hard_negative_refresh_epochs: Re-encode the training set for mining every this many
             epochs (>= 1). Encoding runs without gradients and never sees validation data.
+        freeze_batch_norm: Keep batch-normalisation layers in eval mode during representation
+            training, so their running statistics stay those of the pretrained backbone while
+            their scale and shift parameters still train (ADR 0013). Few-shot batches are too
+            small for reliable batch statistics. No effect on backbones without batch norm.
 
     Raises:
         ConfigurationError: If any value is invalid. Raised at construction, never mid-training.
@@ -90,6 +94,7 @@ class TrainingArguments:
     negatives_per_example: int = 4
     hard_negative_fraction: float = 0.0
     hard_negative_refresh_epochs: int = 1
+    freeze_batch_norm: bool = True
 
     def __post_init__(self) -> None:
         _require(
@@ -164,7 +169,7 @@ class TrainingArguments:
             self.device is None or isinstance(self.device, str),
             f"device must be a str or None, got {type(self.device).__name__}.",
         )
-        for name in ("freeze_backbone_before_head", "deterministic"):
+        for name in ("freeze_backbone_before_head", "deterministic", "freeze_batch_norm"):
             value = getattr(self, name)
             _require(isinstance(value, bool), f"{name} must be a bool, got {value!r}.")
         _require(
