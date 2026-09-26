@@ -27,9 +27,12 @@ import contextlib
 import hashlib
 import json
 import logging
+import os
 import platform
+import tempfile
 import time
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -42,6 +45,10 @@ from embedfit.sampling import sample_few_shot
 
 TRAINED_METHODS = ("end_to_end", "supcon", "pair")
 DOCUMENT_SHORT_SIDE = 512
+RVL_CDIP_DATASET = "jinhybr/rvl_cdip_400_train_val_test"
+RVL_CDIP_REVISION = (
+    "13462a42e3375e80a9bd46a64c58e1bcaba77874"  # Pinned: the page cache is keyed on it.
+)
 DEFAULT_IMAGE_SIZE = {"eurosat": 112, "rvl-cdip": 224}
 
 Split = list[tuple[Image.Image | Path, str]]
@@ -96,29 +103,55 @@ def rvl_cdip_splits(
             'rvl-cdip needs the datasets extra: pip install -e ".[datasets]"'
         ) from None
 
-    source = load_dataset("jinhybr/rvl_cdip_400_train_val_test")
+    source = load_dataset(RVL_CDIP_DATASET, revision=RVL_CDIP_REVISION)
     names = source["train"].features["label"].names
+    cache = _page_cache(root / "rvl-cdip")
 
     def take(split: str, count: int, stream: int) -> Split:
         data = source[split]
+        labels = np.asarray(data["label"])
         rng = np.random.default_rng([seed, stream])  # Independent of which splits are loaded.
-        positions = _per_class(np.asarray(data["label"]), count, rng)
-        directory = root / "rvl-cdip" / split
+        directory = cache / split
         directory.mkdir(parents=True, exist_ok=True)
         items: Split = []
-        for position in positions:
-            path = directory / f"{position}.png"  # Named by row position, which is stable.
-            row = data[position]
-            if not path.exists():
-                staging = path.with_name(path.name + ".partial")
-                _shrink(row["image"]).save(staging, format="PNG")
-                staging.replace(path)
-            items.append((path, names[int(row["label"])]))
+        for position in _per_class(labels, count, rng):
+            path = directory / f"{position}.png"  # Named by row position, stable for a revision.
+            if not path.exists():  # Only then is the full-resolution page decoded.
+                _write_page(_shrink(data[position]["image"]), path)
+            items.append((path, names[int(labels[position])]))
         return items
 
     splits = {"pool": take("train", pool, 0)}
     splits[evaluate_on] = take(evaluate_on, evaluation, 1 if evaluate_on == "validation" else 2)
     return splits, names
+
+
+def _page_cache(directory: Path) -> Path:
+    """The page cache, refusing one built from another dataset revision or page size."""
+    expected = {
+        "dataset": RVL_CDIP_DATASET,
+        "revision": RVL_CDIP_REVISION,
+        "short_side": DOCUMENT_SHORT_SIDE,
+    }
+    manifest = directory / "manifest.json"
+    if manifest.exists():
+        if json.loads(manifest.read_text()) != expected:
+            raise SystemExit(f"{directory} holds pages of another dataset revision; move it away.")
+    else:
+        directory.mkdir(parents=True, exist_ok=True)
+        manifest.write_text(json.dumps(expected, indent=1))
+    return directory
+
+
+def _write_page(image: Image.Image, path: Path) -> None:
+    """Write ``image`` as a PNG so that ``path`` never holds a partial file, whoever writes it."""
+    with tempfile.NamedTemporaryFile(
+        dir=path.parent, prefix=path.name + ".", suffix=".partial", delete=False
+    ) as staging:
+        image.save(staging, format="PNG")
+        staging.flush()
+        os.fsync(staging.fileno())
+    os.replace(staging.name, path)
 
 
 def _shrink(image: Image.Image) -> Image.Image:
@@ -158,13 +191,25 @@ def read_previous(output: Path, config: dict) -> dict | None:
         return None
     try:
         previous = json.loads(output.read_text())
-        previous["records"], previous["environment"]["sessions"]
+        previous["environment"]["sessions"]
+        {(int(record["shots"]), int(record["seed"])) for record in previous["records"]}
         saved = previous["config"]
-    except (json.JSONDecodeError, KeyError, TypeError):
+        saved.setdefault("gradient_accumulation_steps", 1)  # Files from before the option.
+        saved.setdefault("dataset_revision", None)
+    except (json.JSONDecodeError, KeyError, TypeError, ValueError):
         raise SystemExit(f"{output} is not a results file written by this script.") from None
-    if any(saved.get(key) != value for key, value in config.items()):
+    measured = {"evaluation_duplicates_dropped", "evaluation_size"}  # Known after loading.
+    if set(saved) - measured != set(config) or any(
+        saved[key] != value for key, value in config.items()
+    ):
         raise SystemExit(f"{output} holds results for a different configuration.")
     return previous
+
+
+def positive_int(value: str) -> int:
+    if not value.isdigit() or int(value) < 1:
+        raise argparse.ArgumentTypeError(f"expected a positive int, got {value!r}")
+    return int(value)
 
 
 def parse_learning_rates(values: list[str], default: float) -> dict[str, float]:
@@ -204,9 +249,10 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument(
         "--gradient-accumulation-steps",
-        type=int,
+        type=positive_int,
         default=1,
-        help="batches per optimizer step; batch 16 with 2 steps costs half the memory of 32",
+        help="batches per optimizer step: batch 16 in 2 steps takes the same number of steps as "
+        "batch 32 at half the memory, but a supcon or pair batch then holds 16 samples, not 32",
     )
     parser.add_argument(
         "--learning-rate", nargs="*", default=[], help="per-method rates, e.g. supcon=1e-5"
@@ -272,10 +318,12 @@ def main(argv: list[str] | None = None) -> None:
     }
     config["learning_rates"] = {method: rates[method] for method in arguments}
     config["freeze_batch_norm"] = not args.train_mode_batch_norm
+    config["dataset_revision"] = RVL_CDIP_REVISION if args.dataset == "rvl-cdip" else None
     previous = read_previous(args.output, config)
     records: list[dict] = previous["records"] if previous else []
     sessions: list[dict] = previous["environment"]["sessions"] if previous else []
     done = {(r["shots"], r["seed"]) for r in records}
+    elapsed = sum(entry["elapsed_seconds"] for entry in sessions)
 
     loaded, labels = LOADERS[args.dataset](
         args.data_root,
@@ -304,7 +352,8 @@ def main(argv: list[str] | None = None) -> None:
     sample_few_shot(splits["pool"], shots=max(args.shots), seed=args.seeds[0])
     smallest = sample_few_shot(splits["pool"], shots=min(args.shots), seed=args.seeds[0])
     for method in args.methods:
-        Trainer(model_factory(), arguments.get(method, TrainingArguments("frozen")), smallest)
+        options = arguments.get(method, TrainingArguments(training_mode="frozen"))
+        Trainer(model_factory(), replace(options, seed=args.seeds[0]), smallest)
 
     session = {
         "embedfit": embedfit.__version__,
@@ -334,8 +383,11 @@ def main(argv: list[str] | None = None) -> None:
             environment = {**session, "elapsed_seconds": elapsed, "sessions": sessions}
             payload = {"config": config, "environment": environment, "records": records}
             staging = args.output.with_name(args.output.name + ".partial")
-            staging.write_text(json.dumps(payload, indent=1))
-            staging.replace(args.output)  # A crash mid-write never corrupts the results.
+            with staging.open("w") as handle:  # A crash mid-write never corrupts the results.
+                handle.write(json.dumps(payload, indent=1))
+                handle.flush()
+                os.fsync(handle.fileno())
+            staging.replace(args.output)
 
     evaluator = FewShotEvaluator(shots=args.shots, seeds=args.seeds)
     summary = evaluator.aggregate(records)
