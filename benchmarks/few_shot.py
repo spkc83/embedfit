@@ -8,7 +8,9 @@ on first use into a cache outside the repository; nothing from them is written i
   sets are drawn with ``--split-seed``.
 - ``rvl-cdip``: document images from RVL-CDIP (16 classes), the Hugging Face dataset
   ``jinhybr/rvl_cdip_400_train_val_test`` (400 training, 100 validation, and 100 test images
-  per class). Its own splits are kept: the pool is drawn from the training split. Pages are
+  per class; ``pip install -e ".[hf,datasets]"``), cached by the ``datasets`` library rather
+  than under ``--data-root``. Its own splits are kept: the pool is drawn from the training
+  split. Pages are
   shrunk to a shorter side of 512 px when loaded and kept in grayscale, which bounds memory;
   512 px is still larger than the model input.
 
@@ -34,7 +36,8 @@ import torch
 from PIL import Image
 
 import embedfit
-from embedfit import EmbedFitModel, FewShotEvaluator, ImageDataset, TrainingArguments
+from embedfit import EmbedFitModel, FewShotEvaluator, ImageDataset, Trainer, TrainingArguments
+from embedfit.sampling import sample_few_shot
 
 TRAINED_METHODS = ("end_to_end", "supcon", "pair")
 DOCUMENT_SHORT_SIDE = 512
@@ -85,7 +88,12 @@ def eurosat_splits(
 def rvl_cdip_splits(
     root: Path, *, pool: int, evaluation: int, evaluate_on: str, seed: int
 ) -> tuple[dict[str, Split], list[str]]:
-    from datasets import load_dataset
+    try:
+        from datasets import load_dataset
+    except ImportError:
+        raise SystemExit(
+            'rvl-cdip needs the datasets extra: pip install -e ".[datasets]"'
+        ) from None
 
     source = load_dataset("jinhybr/rvl_cdip_400_train_val_test")
     names = source["train"].features["label"].names
@@ -102,11 +110,14 @@ def rvl_cdip_splits(
 
 
 def _shrink(image: Image.Image) -> Image.Image:
+    image = image.convert(
+        "L"
+    )  # Before resizing: bilevel scans would otherwise be resampled NEAREST.
     scale = DOCUMENT_SHORT_SIDE / min(image.size)
     if scale < 1:
         size = (round(image.width * scale), round(image.height * scale))
         image = image.resize(size, Image.Resampling.BICUBIC)
-    return image.convert("L")
+    return image
 
 
 LOADERS: dict[str, Callable[..., tuple[dict[str, Split], list[str]]]] = {
@@ -126,6 +137,21 @@ def drop_pool_duplicates(splits: dict[str, Split], evaluate_on: str) -> int:
     dropped = len(splits[evaluate_on]) - len(kept)
     splits[evaluate_on] = kept
     return dropped
+
+
+def read_previous(output: Path, config: dict) -> dict | None:
+    """Results already in ``output``, or ``None``; exit if they are for another configuration."""
+    if not output.exists():
+        return None
+    try:
+        previous = json.loads(output.read_text())
+        previous["records"], previous["environment"]["sessions"]
+        saved = previous["config"]
+    except (json.JSONDecodeError, KeyError, TypeError):
+        raise SystemExit(f"{output} is not a results file written by this script.") from None
+    if any(saved.get(key) != value for key, value in config.items()):
+        raise SystemExit(f"{output} holds results for a different configuration.")
+    return previous
 
 
 def parse_learning_rates(values: list[str], default: float) -> dict[str, float]:
@@ -194,18 +220,6 @@ def main(argv: list[str] | None = None) -> None:
     if args.image_size is None:
         args.image_size = DEFAULT_IMAGE_SIZE[args.dataset]
 
-    loaded, labels = LOADERS[args.dataset](
-        args.data_root,
-        pool=args.pool_per_class,
-        evaluation=args.eval_per_class,
-        evaluate_on=args.evaluate_on,
-        seed=args.split_seed,
-    )
-    duplicates = drop_pool_duplicates(loaded, args.evaluate_on)
-    splits = {
-        name: ImageDataset.from_lists([image for image, _ in items], [label for _, label in items])
-        for name, items in loaded.items()
-    }
     budget = {
         "num_epochs": args.epochs,
         "batch_size": args.batch_size,
@@ -226,34 +240,61 @@ def main(argv: list[str] | None = None) -> None:
             **budget,
         )
 
+    # Results are written after every (shots, seed) group, and a rerun with the same output
+    # file and configuration skips the groups already there. Each group's few-shot sample
+    # depends only on its shots and seed, so a resumed run gives the same records. The thread
+    # count is not part of the configuration, so a run can be resumed with a different one;
+    # every session's environment is recorded.
     config = {
         key: str(value) if isinstance(value, Path) else value
         for key, value in vars(args).items()
-        if key not in {"data_root", "output"}
+        if key not in {"data_root", "output", "threads"}
     }
     config["learning_rates"] = {method: rates[method] for method in arguments}
     config["freeze_batch_norm"] = not args.train_mode_batch_norm
+    previous = read_previous(args.output, config)
+    records: list[dict] = previous["records"] if previous else []
+    sessions: list[dict] = previous["environment"]["sessions"] if previous else []
+    done = {(r["shots"], r["seed"]) for r in records}
+
+    loaded, labels = LOADERS[args.dataset](
+        args.data_root,
+        pool=args.pool_per_class,
+        evaluation=args.eval_per_class,
+        evaluate_on=args.evaluate_on,
+        seed=args.split_seed,
+    )
+    duplicates = drop_pool_duplicates(loaded, args.evaluate_on)
+    splits = {
+        name: ImageDataset.from_lists([image for image, _ in items], [label for _, label in items])
+        for name, items in loaded.items()
+    }
     config["evaluation_duplicates_dropped"] = duplicates
     config["evaluation_size"] = len(splits[args.evaluate_on])
-
-    # Results are written after every (shots, seed) group, and a rerun with the same output
-    # file and configuration skips the groups already there. Each group's few-shot sample
-    # depends only on its shots and seed, so a resumed run gives the same records.
-    records: list[dict] = []
-    elapsed = 0.0
-    if args.output.exists():
-        previous = json.loads(args.output.read_text())
-        if previous["config"] != config:
-            raise SystemExit(f"{args.output} holds results for a different configuration.")
-        records = previous["records"]
-        elapsed = previous["environment"]["elapsed_seconds"]
-    done = {(r["shots"], r["seed"]) for r in records}
+    if previous and previous["config"] != config:
+        raise SystemExit(f"{args.output} holds results for different evaluation data.")
 
     def model_factory() -> EmbedFitModel:
         return EmbedFitModel.from_pretrained(
             args.backbone, labels=labels, image_size=args.image_size
         )
 
+    # Fail before any training: the pool must cover the largest shot count and every method
+    # must accept the smallest, as one evaluator over all groups would have checked.
+    sample_few_shot(splits["pool"], shots=max(args.shots), seed=args.seeds[0])
+    smallest = sample_few_shot(splits["pool"], shots=min(args.shots), seed=args.seeds[0])
+    for method in args.methods:
+        Trainer(model_factory(), arguments.get(method, TrainingArguments("frozen")), smallest)
+
+    session = {
+        "embedfit": embedfit.__version__,
+        "torch": torch.__version__,
+        "device": "cpu",
+        "threads": args.threads,
+        "processor": platform.processor() or platform.machine(),
+        "elapsed_seconds": 0.0,
+    }
+    sessions.append(session)
     for shots in args.shots:
         for seed in args.seeds:
             if (shots, seed) in done:
@@ -266,17 +307,13 @@ def main(argv: list[str] | None = None) -> None:
                 model_factory=model_factory,
                 training_arguments=arguments,
             )
-            elapsed += time.perf_counter() - started
-            environment = {
-                "embedfit": embedfit.__version__,
-                "torch": torch.__version__,
-                "device": "cpu",
-                "threads": args.threads,
-                "processor": platform.processor() or platform.machine(),
-                "elapsed_seconds": round(elapsed, 1),
-            }
+            session["elapsed_seconds"] = round(
+                session["elapsed_seconds"] + time.perf_counter() - started, 1
+            )
+            elapsed = sum(entry["elapsed_seconds"] for entry in sessions)
+            environment = {**session, "elapsed_seconds": elapsed, "sessions": sessions}
             payload = {"config": config, "environment": environment, "records": records}
-            staging = args.output.with_suffix(".partial")
+            staging = args.output.with_name(args.output.name + ".partial")
             staging.write_text(json.dumps(payload, indent=1))
             staging.replace(args.output)  # A crash mid-write never corrupts the results.
 
