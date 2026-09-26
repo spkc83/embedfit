@@ -226,19 +226,6 @@ def main(argv: list[str] | None = None) -> None:
             **budget,
         )
 
-    evaluator = FewShotEvaluator(shots=args.shots, seeds=args.seeds)
-    started = time.perf_counter()
-    records = evaluator.run(
-        splits["pool"],
-        test_dataset=splits[args.evaluate_on],
-        methods=args.methods,
-        model_factory=lambda: EmbedFitModel.from_pretrained(
-            args.backbone, labels=labels, image_size=args.image_size
-        ),
-        training_arguments=arguments,
-    )
-    elapsed = time.perf_counter() - started
-
     config = {
         key: str(value) if isinstance(value, Path) else value
         for key, value in vars(args).items()
@@ -248,18 +235,52 @@ def main(argv: list[str] | None = None) -> None:
     config["freeze_batch_norm"] = not args.train_mode_batch_norm
     config["evaluation_duplicates_dropped"] = duplicates
     config["evaluation_size"] = len(splits[args.evaluate_on])
-    environment = {
-        "embedfit": embedfit.__version__,
-        "torch": torch.__version__,
-        "device": "cpu",
-        "threads": args.threads,
-        "processor": platform.processor() or platform.machine(),
-        "elapsed_seconds": round(elapsed, 1),
-    }
-    args.output.write_text(
-        json.dumps({"config": config, "environment": environment, "records": records}, indent=1)
-    )
 
+    # Results are written after every (shots, seed) group, and a rerun with the same output
+    # file and configuration skips the groups already there. Each group's few-shot sample
+    # depends only on its shots and seed, so a resumed run gives the same records.
+    records: list[dict] = []
+    elapsed = 0.0
+    if args.output.exists():
+        previous = json.loads(args.output.read_text())
+        if previous["config"] != config:
+            raise SystemExit(f"{args.output} holds results for a different configuration.")
+        records = previous["records"]
+        elapsed = previous["environment"]["elapsed_seconds"]
+    done = {(r["shots"], r["seed"]) for r in records}
+
+    def model_factory() -> EmbedFitModel:
+        return EmbedFitModel.from_pretrained(
+            args.backbone, labels=labels, image_size=args.image_size
+        )
+
+    for shots in args.shots:
+        for seed in args.seeds:
+            if (shots, seed) in done:
+                continue
+            started = time.perf_counter()
+            records += FewShotEvaluator(shots=[shots], seeds=[seed]).run(
+                splits["pool"],
+                test_dataset=splits[args.evaluate_on],
+                methods=args.methods,
+                model_factory=model_factory,
+                training_arguments=arguments,
+            )
+            elapsed += time.perf_counter() - started
+            environment = {
+                "embedfit": embedfit.__version__,
+                "torch": torch.__version__,
+                "device": "cpu",
+                "threads": args.threads,
+                "processor": platform.processor() or platform.machine(),
+                "elapsed_seconds": round(elapsed, 1),
+            }
+            payload = {"config": config, "environment": environment, "records": records}
+            staging = args.output.with_suffix(".partial")
+            staging.write_text(json.dumps(payload, indent=1))
+            staging.replace(args.output)  # A crash mid-write never corrupts the results.
+
+    evaluator = FewShotEvaluator(shots=args.shots, seeds=args.seeds)
     summary = evaluator.aggregate(records)
     print(
         f"\n{args.evaluate_on} accuracy (mean ± std over {len(args.seeds)} seeds), "
