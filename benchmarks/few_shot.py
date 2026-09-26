@@ -8,11 +8,11 @@ on first use into a cache outside the repository; nothing from them is written i
   sets are drawn with ``--split-seed``.
 - ``rvl-cdip``: document images from RVL-CDIP (16 classes), the Hugging Face dataset
   ``jinhybr/rvl_cdip_400_train_val_test`` (400 training, 100 validation, and 100 test images
-  per class; ``pip install -e ".[hf,datasets]"``), cached by the ``datasets`` library rather
-  than under ``--data-root``. Its own splits are kept: the pool is drawn from the training
-  split. Pages are
-  shrunk to a shorter side of 512 px when loaded and kept in grayscale, which bounds memory;
-  512 px is still larger than the model input.
+  per class; ``pip install -e ".[hf,datasets]"``), downloaded by the ``datasets`` library into
+  its own cache. Its own splits are kept: the pool is drawn from the training split. Pages are
+  converted to grayscale, shrunk to a shorter side of 512 px (still larger than the model
+  input) and written once as PNG files under ``--data-root``; the run reads them from disk, so
+  memory holds only the model and the current batch.
 
 Few-shot samples come from the pool. Tune with ``--evaluate-on validation`` and report with
 ``--evaluate-on test``. Only the pool and the evaluated split are loaded. An evaluation image
@@ -23,6 +23,7 @@ whose pixels exactly match a pool image is dropped, and the count is recorded.
 """
 
 import argparse
+import contextlib
 import hashlib
 import json
 import logging
@@ -43,7 +44,7 @@ TRAINED_METHODS = ("end_to_end", "supcon", "pair")
 DOCUMENT_SHORT_SIDE = 512
 DEFAULT_IMAGE_SIZE = {"eurosat": 112, "rvl-cdip": 224}
 
-Split = list[tuple[Image.Image, str]]
+Split = list[tuple[Image.Image | Path, str]]
 
 
 def _per_class(labels: np.ndarray, count: int, rng: np.random.Generator) -> list[int]:
@@ -101,8 +102,19 @@ def rvl_cdip_splits(
     def take(split: str, count: int, stream: int) -> Split:
         data = source[split]
         rng = np.random.default_rng([seed, stream])  # Independent of which splits are loaded.
-        rows = data.select(_per_class(np.asarray(data["label"]), count, rng))
-        return [(_shrink(row["image"]), names[row["label"]]) for row in rows]
+        positions = _per_class(np.asarray(data["label"]), count, rng)
+        directory = root / "rvl-cdip" / split
+        directory.mkdir(parents=True, exist_ok=True)
+        items: Split = []
+        for position in positions:
+            path = directory / f"{position}.png"  # Named by row position, which is stable.
+            row = data[position]
+            if not path.exists():
+                staging = path.with_name(path.name + ".partial")
+                _shrink(row["image"]).save(staging, format="PNG")
+                staging.replace(path)
+            items.append((path, names[int(row["label"])]))
+        return items
 
     splits = {"pool": take("train", pool, 0)}
     splits[evaluate_on] = take(evaluate_on, evaluation, 1 if evaluate_on == "validation" else 2)
@@ -126,8 +138,9 @@ LOADERS: dict[str, Callable[..., tuple[dict[str, Split], list[str]]]] = {
 }
 
 
-def _digest(image: Image.Image) -> str:
-    return hashlib.sha256(f"{image.mode}{image.size}".encode() + image.tobytes()).hexdigest()
+def _digest(item: Image.Image | Path) -> str:
+    with Image.open(item) if isinstance(item, Path) else contextlib.nullcontext(item) as image:
+        return hashlib.sha256(f"{image.mode}{image.size}".encode() + image.tobytes()).hexdigest()
 
 
 def drop_pool_duplicates(splits: dict[str, Split], evaluate_on: str) -> int:
@@ -190,6 +203,12 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument(
+        "--gradient-accumulation-steps",
+        type=int,
+        default=1,
+        help="batches per optimizer step; batch 16 with 2 steps costs half the memory of 32",
+    )
+    parser.add_argument(
         "--learning-rate", nargs="*", default=[], help="per-method rates, e.g. supcon=1e-5"
     )
     parser.add_argument("--default-learning-rate", type=float, default=2e-5)
@@ -224,6 +243,7 @@ def main(argv: list[str] | None = None) -> None:
         "num_epochs": args.epochs,
         "batch_size": args.batch_size,
         "num_workers": 0,
+        "gradient_accumulation_steps": args.gradient_accumulation_steps,
         "freeze_batch_norm": not args.train_mode_batch_norm,
     }
     arguments = {
