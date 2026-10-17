@@ -132,7 +132,7 @@ foo/resnet50
 
 must produce an actionable provider error.
 
-Invalid training-mode/loss combinations must fail during configuration validation, not halfway through training.
+Invalid configurations, such as an unavailable training mode (`triplet`) or options that contradict the mode, must fail when `TrainingArguments` or `Trainer` is created, not halfway through training.
 
 ## L. Privacy defaults
 

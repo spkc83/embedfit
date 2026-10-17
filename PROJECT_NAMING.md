@@ -49,6 +49,7 @@ All project-name assumptions should be concentrated in:
 - `pyproject.toml`
 - package directory name
 - top-level docs
-- serialization metadata `framework_name`
+- install hints (`pip install 'embedfit[...]'`) in provider errors
+- serialization: the `framework` key in the bundle config and the marker file `embedfit_config.json`; renaming either needs a new `format_version`
 
 Do not encode `embedfit` into model architecture classes or file formats unnecessarily.

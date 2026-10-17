@@ -27,4 +27,4 @@ High-bit-depth PIL modes are decoded explicitly (`I;16` scaled by 65535, `F` val
 
 Adapters resize the float tensor, whereas provider reference pipelines usually resize 8-bit pixels. The results differ by roughly 0.001 of the intensity range on average. The float path is kept because it does not quantise float and 16-bit input.
 
-Dataset-level options such as skipping corrupt images are layered on top of `to_rgb_tensor` by the data pipeline; `encode` itself always raises.
+`encode` always raises on a corrupt image. Dataset-level options such as skipping corrupt images belong in the data pipeline on top of `to_rgb_tensor`; that `skip` policy is not built.

@@ -41,22 +41,28 @@ dataset
 → predict
 ```
 
-### Provider integration
+### Provider adapters
 
-Marked tests:
+Offline tests build torchvision, timm, and Transformers models with random weights and compare EmbedFit's preprocessing with the providers' own pipelines. Each provider's test module skips when its optional extra is not installed (`pytest.importorskip`).
+
+Only the tests that download a pretrained checkpoint are marked:
 
 ```python
 @pytest.mark.network
 @pytest.mark.slow
 ```
 
-Examples:
+The `addopts` in `pyproject.toml` deselect both markers and pass `--strict-markers`. Run the checkpoint tests with `pytest -m network`. There is no CI configuration in the repository.
 
-- torchvision checkpoint if packaged weights are not required
-- timm model construction
-- Hugging Face DINO-family loading
+## Suite-wide enforcement
 
-Default CI excludes these.
+`tests/conftest.py` applies to every test:
+
+- an autouse network guard: opening an IPv4 or IPv6 connection fails unless the test is marked `network`; Unix-domain sockets stay usable, because data-loader worker processes rely on them. `test_the_default_suite_cannot_reach_the_network` checks the guard itself;
+- an autouse fixture that restores the Python, NumPy, and torch global RNG state after each test, so tests do not depend on their order;
+- `torch.set_num_threads(1)`, for speed on tiny tensors and bit-for-bit reproducible tiny training runs.
+
+`tests/unit/test_privacy_audit.py` parses every module under `src/embedfit` and checks what library code may print, log, and raise (`SECURITY_PRIVACY.md`). `tests/integration/test_examples.py` runs every example offline and checks its results.
 
 ## Synthetic dataset
 
@@ -86,7 +92,7 @@ Verify:
 
 Verify:
 
-- no self-pairs unless configured
+- no self-pairs
 - bounded pair count
 - class semantics
 - deterministic seed behavior

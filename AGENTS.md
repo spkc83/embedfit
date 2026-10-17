@@ -27,7 +27,8 @@ Before modifying code, read:
 4. `IMPLEMENTATION_PLAN.md`
 5. `ACCEPTANCE_CRITERIA.md`
 6. `TEST_STRATEGY.md`
-7. all ADRs in `docs/adrs/`
+7. `SECURITY_PRIVACY.md`
+8. all ADRs in `docs/adrs/`
 
 Do not begin by writing large amounts of code without reconciling the task with these documents.
 

@@ -63,7 +63,7 @@ Owns:
 - optimizer/scheduler
 - representation phase
 - head fitting phase
-- evaluation callbacks
+- per-epoch validation loss (when `eval_dataset` is given)
 - checkpoint selection
 
 The two phases must be explicit in code and logs.
@@ -106,7 +106,7 @@ prepare dataset
 ```text
 prepare class-balanced loader
 → train encoder under supervised contrastive objective
-→ restore/select best representation checkpoint
+→ restore best epoch (when eval_dataset is given)
 → freeze encoder
 → encode training images
 → fit logistic-regression head
@@ -123,6 +123,21 @@ generate bounded pairs
 → evaluate
 ```
 
+### End-to-end path
+
+The comparison baseline (ADRs 0011, 0012):
+
+```text
+fit LinearHead probe on embeddings of the untouched backbone
+→ train backbone and linear classifier jointly under cross-entropy
+→ restore best epoch (when eval_dataset is given)
+→ freeze encoder
+→ refit classifier as LinearHead to convergence
+→ evaluate
+```
+
+In every path that trains the encoder, batch-norm layers stay in eval mode by default (`freeze_batch_norm=True`, ADR 0013).
+
 ## Embedding contract
 
 Backbone output after pooling:
@@ -138,14 +153,9 @@ No module may silently change embedding dimensionality unless that change is an 
 
 ## Projection head policy
 
-v0.1 should avoid a mandatory projection head.
+There is no projection head. The backbone output that representation training adapts is the embedding that the head and retrieval use.
 
-If SupCon experiments need a projection head, implement it as an optional component with explicit choice about whether:
-
-- the projected representation is used downstream; or
-- only the backbone representation is retained.
-
-Do not accidentally train on one representation and classify on another without documenting it.
+An optional projection head would have to state which representation is used downstream: the projected one, or only the backbone's.
 
 ## Backbone providers
 
@@ -155,7 +165,10 @@ Provider prefix syntax:
 torchvision/<name>
 timm/<name>
 hf/<repo-id>
+dummy/tiny
 ```
+
+`dummy/tiny` is a small untrained CNN for offline tests.
 
 Do not guess across providers when ambiguous.
 
@@ -163,7 +176,7 @@ Do not guess across providers when ambiguous.
 
 `ImageDataset` normalizes records, not pixels.
 
-Pixel transforms belong to the active backbone/data-collator pipeline.
+Pixel transforms belong to the active backbone's `preprocess`.
 
 Reason: preprocessing requirements belong to the checkpoint.
 
@@ -183,7 +196,7 @@ This keeps evaluation testable and reusable.
 
 Saved models should be reconstructable without the training dataset.
 
-A save bundle contains model/config/head state only.
+A save bundle holds configuration, backbone weights, head state, label names, and aggregate training metadata only.
 
 ## Future ROI architecture
 

@@ -50,6 +50,6 @@ print(report.summary())     # counts only; identifier values are never printed
 ## Rules the library follows
 
 - Representation training and head fitting use `train_dataset` only. `Trainer` never trains on `eval_dataset`: it is scored after each epoch solely to choose which epoch's weights to keep, which is why it must be validation data and never the test set. `select_threshold` documents that it is for validation data.
-- Splits are reproducible: each function takes a `seed` and uses its own random generator.
+- Splits are reproducible: `stratified_split` and `grouped_split` take a `seed` and use their own random generator, and `temporal_split` is deterministic.
 - `find_split_overlap` refuses to run when a requested identifier is absent from every sample of a split, because a check that cannot fail is worse than no check. Samples with a missing identifier are counted in `report.missing`.
 - Reports and errors give counts. Identifier values are available programmatically in `report.overlaps` but never appear in messages or logs.
