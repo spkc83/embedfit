@@ -92,15 +92,20 @@ trainer.evaluate(test)
 `training_mode="pair"` adapts the backbone on sampled positive and negative image pairs with a cosine pair loss instead. `relationship_rules` can declare pairs similar or dissimilar from any sample field, without the library knowing what the field means:
 
 ```python
+from embedfit.data import ImageSample
 from embedfit.sampling import RelationshipRule
 
+train = ImageDataset([                     # from_lists cannot set group_id
+    ImageSample(image, label, group_id=group)
+    for image, label, group in zip(train_images, train_labels, train_groups)
+])
 rule = RelationshipRule(field="group_id", relation="same", pair_type="positive", weight=2.0)
 Trainer(model, TrainingArguments(training_mode="pair"), train, relationship_rules=[rule]).train()
 ```
 
 `encode` accepts PIL images, numpy arrays, torch tensors, and file paths, and returns one L2-normalised row per image. Resolution, interpolation mode, and normalisation constants come from the selected checkpoint, never from a global default; pass `image_size=` to run a convolutional backbone at higher resolution.
 
-Importable today:
+Public components:
 
 | Component | Location | Purpose |
 | --- | --- | --- |
@@ -129,11 +134,11 @@ Importable today:
 | `to_rgb_tensor` | `embedfit.data` | Converts any supported image form to a float RGB tensor in [0, 1] |
 | `set_seed` | `embedfit.utils` | Seeds Python, NumPy, and torch (CPU + CUDA); optional deterministic mode |
 | `resolve_device` | `embedfit.utils` | `"auto"` resolves CUDA → MPS → CPU; an explicit device never falls back silently |
-| `EmbedFitError`, `ConfigurationError`, `ImageInputError` | `embedfit.exceptions` | Error hierarchy; messages describe structure, never image or metadata content |
+| `EmbedFitError`, `ConfigurationError`, `ImageInputError`, `BackboneProviderError`, `HeadNotFittedError`, `UndefinedMetricError`, `TrainingDivergedError`, `DataLeakageError`, `IndexNotFittedError` | `embedfit.exceptions` | Error hierarchy; messages describe structure, never image or metadata content |
 | `DummyBackbone` | `embedfit.backbones` | Tiny trainable CNN with no checkpoint, for offline tests and examples |
 | `make_bar_images` | `embedfit.testing` | Deterministic synthetic image classes with learnable structure |
 
-The `triplet` training mode and augmentation profiles from [`SPEC.md`](SPEC.md) are not implemented yet; `Trainer` rejects an unavailable `training_mode` when it is created.
+The `triplet` training mode, augmentation profiles, and Hugging Face Dataset and pandas DataFrame adapters from [`SPEC.md`](SPEC.md) are not implemented; `Trainer` rejects an unavailable `training_mode` when it is created.
 
 ## Examples and guides
 
@@ -158,9 +163,9 @@ mypy
 python -m build
 ```
 
-Tests that download pretrained checkpoints are opt-in: `pytest -m network`. Without the `torchvision` extra, the torchvision adapter tests are skipped.
+Tests that download pretrained checkpoints are opt-in: `pytest -m network`. Each provider's adapter tests are skipped when its extra (`torchvision`, `timm`, `hf`) is missing; `pip install -e ".[dev,all]"` runs them all, including the preprocessing comparisons against `timm` and Transformers.
 
-Optional extras install backbone providers and dataset adapters: `torchvision`, `timm`, `hf`, `datasets`, `pandas`, or `all`. The core install depends only on `torch`, `numpy`, `scikit-learn`, and `pillow` ([ADR 0006](docs/adrs/0006-core-dependencies-and-testing-utilities.md)).
+Optional extras install backbone providers: `torchvision`, `timm`, and `hf`. The `datasets` and `pandas` extras are reserved for dataset adapters that are not implemented; `ImageDataset` accepts a sequence, or a map-style torch `Dataset`, of `{"image", "label", ...}` mappings. `all` installs every extra. The core install depends only on `torch`, `numpy`, `scikit-learn`, and `pillow` ([ADR 0006](docs/adrs/0006-core-dependencies-and-testing-utilities.md)).
 
 Branching, commit, and documentation conventions are in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 

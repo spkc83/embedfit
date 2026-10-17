@@ -22,11 +22,11 @@ pretrained encoder
 
 Starting from a converged probe (LP-FT, ADR 0012) keeps the baseline from being trained through a random classifier at a learning rate chosen for the backbone.
 
-Allow either full or explicitly configured partial unfreezing.
+The whole backbone is unfrozen for fine-tuning; partial unfreezing is not available.
 
 ## Baseline 3 — Nearest centroid
 
-Optional but useful as an embedding diagnostic.
+Optional but useful as an embedding diagnostic. It is not built in: a nearest-centroid classifier can be written as a `ClassificationHead` and registered with `register_head`, which makes it selectable through `TrainingArguments.head`.
 
 ## Interpretation rule
 

@@ -6,7 +6,7 @@ Status: Accepted. Amended by ADR 0012: `end_to_end` now starts from a linear pro
 
 After representation training, `Trainer` fits the classification head to convergence on the training embeddings of the final backbone in every mode, including `end_to_end`. In that mode the jointly trained linear classifier becomes a `LinearHead` and is then refitted (L-BFGS, starting from the trained weights); it is not used as it comes out of the training loop.
 
-Validation loss during representation training is the mean over validation samples on batches that are identical in every epoch.
+Validation loss during representation training is a mean per sample (per pair in `pair` mode) over a fixed set of validation batches, the same in every epoch. For `supcon` and `pair` those batches are a sample of the validation data: class-balanced batches and a bounded set of pairs.
 
 ## Context
 
@@ -27,7 +27,7 @@ The refit does not change what `end_to_end` learns: the backbone is still traine
 
 ## Consequences
 
-With converged heads, `end_to_end` matched or exceeded `supcon` on the synthetic benchmark (0.92 against 0.84 at 4 shots; both about 0.96 at 8 and 1.00 at 16). Synthetic bar images on an untrained backbone say nothing about real data, but they no longer suggest an advantage that was an artifact.
+With converged heads, `end_to_end` matched or exceeded `supcon` on the synthetic benchmark at a learning rate of 1e-2 (0.92 against 0.84 at 4 shots; both about 0.96 at 8 and 1.00 at 16). Synthetic bar images on an untrained backbone say nothing about real data, but they no longer suggest an advantage that was an artifact.
 
 `end_to_end` costs one extra encoding pass and one L-BFGS fit, like the other modes.
 

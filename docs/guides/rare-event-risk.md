@@ -33,7 +33,7 @@ The positive class is never inferred from label order. `risk_score` returns the 
 
 ## 4. Adapt the representation, then fit a class-weighted head
 
-Contrastive training samples classes evenly, so rare positives are seen in every batch. The head is fitted on the natural class distribution, where `LogisticRegressionHead(class_weight="balanced")` keeps the rare class from being ignored. Pass validation data as `eval_dataset` so that the best epoch is chosen on it; never pass test data there.
+`supcon` training samples classes evenly, so with two classes the rare positives are in every batch. `pair` training shuffles its pairs instead; on imbalanced data rare-class samples still take part in many more pairs than others ([losses and sampling](../design/LOSSES_AND_SAMPLING.md)). The head is fitted on the natural class distribution, where `LogisticRegressionHead(class_weight="balanced")` keeps the rare class from being ignored. Pass validation data as `eval_dataset` so that the best epoch is chosen on it; never pass test data there.
 
 Few positives make everything noisy. With a handful of positive examples, compare against the frozen baseline over several seeds before trusting an improvement ([benchmarking guide](benchmarking.md)).
 
@@ -67,4 +67,4 @@ The same embeddings support retrieval: index past items with `RetrievalIndex` an
 
 ## 8. Handle sensitive data deliberately
 
-Images and metadata may contain personal and financial information. EmbedFit does not log image content, metadata, labels, or identifiers, keeps them out of exception messages, and never writes training samples into saved models ([security and privacy requirements](../../SECURITY_PRIVACY.md)). What is done with the scores and embeddings afterwards is the caller's responsibility: embeddings of sensitive images are themselves sensitive.
+Images and metadata may contain personal and financial information. EmbedFit keeps image content, metadata, and sample identifiers out of its logs and exception messages, and saved models contain no training samples ([security and privacy requirements](../../SECURITY_PRIVACY.md)). Class label names and the ids of retrieval results do appear in messages, reprs, and saved models, so do not encode sensitive values in them. What is done with the scores and embeddings afterwards is the caller's responsibility: embeddings of sensitive images are themselves sensitive.

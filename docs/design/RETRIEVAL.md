@@ -6,9 +6,7 @@ Use the same learned embedding space for classification and similarity search.
 
 ## v0.1 backend
 
-Brute-force cosine similarity using NumPy or PyTorch.
-
-This is intentionally simple and testable.
+`BruteForceCosineBackend`: exhaustive cosine similarity in NumPy. It is simple and testable.
 
 ## Interface
 
@@ -23,7 +21,7 @@ hits = index.search(query, k=10, exclude_ids=None)
 ```python
 @dataclass(frozen=True)
 class RetrievalResult:
-    id: str
+    id: Hashable  # row position when no ids are given
     score: float
     rank: int
     metadata: Mapping[str, Any] | None = None
@@ -31,25 +29,20 @@ class RetrievalResult:
 
 ## Safety against evaluation leakage
 
-Evaluation utilities should optionally exclude:
+`RetrievalIndex.search` can exclude:
 
-- same sample ID
-- same physical-item group
-- custom forbidden groups
+- the query's own item (`exclude_self`);
+- every item of the query's physical-item group (`exclude_same_group`);
+- named groups (`exclude_groups`);
+- listed ids (`exclude_ids`).
+
+[Exclusions](#exclusions) describes each option.
 
 A near-duplicate of the same original item should not count as evidence that the representation generalizes.
 
-## Future backends
+## Other backends
 
-Design an internal backend protocol compatible later with:
-
-- FAISS
-- pgvector
-- Qdrant
-- Milvus
-- OpenSearch
-
-Do not add these dependencies in v0.1.
+`RetrievalBackend` is the extension point: an abstract base class for storage and top-k search over row positions. A backend for FAISS, pgvector, Qdrant, Milvus, or OpenSearch implements it and is added to the metric table in `retrieval/index.py`; `RetrievalIndex` and its callers do not change. None of these libraries is a dependency in v0.1.
 
 ## Implemented semantics
 
@@ -103,7 +96,7 @@ Every exclusion is applied before the top `k` is cut, so `k` results still come 
 
 ### Metrics
 
-`embedfit.retrieval.metrics` scores an already-retrieved ranked list against the identifiers known to be relevant for that query; nothing there calls a model or an index. A list must not contain the same id twice, and is read positionally — its first element is rank 1 — and a list whose scores are not descending is rejected. `k` defaults to the number of results supplied.
+`embedfit.retrieval.metrics` scores an already-retrieved ranked list against the identifiers known to be relevant for that query; nothing there calls a model or an index. Ids are compared by Python set membership, so ids that are equal in Python, such as `1` and `True`, count as the same id here although the index keeps them apart. A list must not contain the same id twice, and is read positionally — its first element is rank 1 — and a list whose scores are not descending is rejected. `k` defaults to the number of results supplied.
 
 | Function | Definition |
 | --- | --- |

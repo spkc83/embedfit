@@ -13,9 +13,9 @@ Prioritize:
 
 ## Recall at fixed FPR
 
-Given risk scores and binary truth, select the score threshold that meets the target false-positive rate according to a documented interpolation/tie policy, then compute recall.
+Given risk scores and binary truth, `recall_at_fpr` takes the lowest observed score threshold whose false-positive rate is within the target, without interpolation, and reports recall at it.
 
-Tie behavior must be deterministic and tested.
+Tied scores are handled deterministically; see [Conventions](#conventions-implemented-in-embedfitevaluation).
 
 ## Review-rate metrics
 
@@ -27,7 +27,7 @@ take top ceil(N * 0.01)
 compute precision / recall
 ```
 
-Define rounding policy centrally.
+The rounding is defined once, in `review_count`, which every review-rate metric and `select_threshold` use; see [Conventions](#conventions-implemented-in-embedfitevaluation).
 
 ## Dollar recall
 
@@ -37,7 +37,7 @@ captured fraud amount / total fraud amount
 
 Only fraudulent examples contribute to numerator/denominator.
 
-Reject negative amounts unless explicitly supported.
+Negative amounts are rejected with `ConfigurationError`.
 
 ## Conventions implemented in `embedfit.evaluation`
 

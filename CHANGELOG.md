@@ -23,3 +23,4 @@ All notable changes to EmbedFit are recorded here, following [Keep a Changelog](
 ### Not yet available
 
 - The `triplet` training mode and augmentation profiles.
+- Hugging Face Dataset and pandas DataFrame adapters.

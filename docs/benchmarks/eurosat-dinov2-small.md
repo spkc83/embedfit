@@ -38,7 +38,7 @@ Every method trains on the same few-shot sample for a given shot count and seed.
 
 ### Learning rates
 
-Each trained method's learning rate was chosen on the validation split, at 8 shots with seed 0, before that method's test-split run. `end_to_end` was run last: it was changed to start from a linear probe (ADR 0012) and tuned again after `frozen`, `supcon`, and `pair` had been run on the test split. No test result was used to choose any rate.
+Each trained method's learning rate was chosen on the validation split, at 8 shots with seed 0, before that method's test-split run. `end_to_end` starts from a linear probe (ADR 0012), and its rate was chosen with that start. Its test-split run was made after those of `frozen`, `supcon`, and `pair`, and the results file records it as a separate run. No test result was used to choose any rate.
 
 | Method | 2.5e-6 | 1e-5 | 5e-5 | 2.5e-4 | Chosen |
 |---|---|---|---|---|---|
@@ -48,7 +48,7 @@ Each trained method's learning rate was chosen on the validation split, at 8 sho
 
 Validation accuracy of the frozen baseline in the same setting: 0.786. The chosen rate is inside the tested range for every method. Tuning used one seed at one shot count, so the chosen rates are not necessarily best at 4 or 16 shots.
 
-The `end_to_end` sweep was run after the change in ADR 0012. Before it, the baseline's classifier started from random weights at the backbone's learning rate and scored 0.766, 0.719, and 0.343 at 1e-5, 5e-5, and 2.5e-4, below the frozen baseline at every rate.
+Without the linear-probe start, with a classifier initialised at random and trained at the backbone's learning rate, `end_to_end` scored 0.766, 0.719, and 0.343 in the same validation setting at 1e-5, 5e-5, and 2.5e-4, below the frozen baseline at every rate (ADR 0012).
 
 ## Limits
 
