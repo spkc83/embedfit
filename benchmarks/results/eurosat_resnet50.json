@@ -1,0 +1,1797 @@
+{
+ "description": "EuroSAT RGB few-shot test-split results, torchvision/resnet50 (ImageNet weights) at 112 px with batch-norm statistics fixed (freeze_batch_norm=True, ADR 0013); see docs/benchmarks/eurosat-resnet50.md. embedfit_commit is the code the run used.",
+ "runs": [
+  {
+   "methods": [
+    "frozen",
+    "end_to_end",
+    "supcon",
+    "pair"
+   ],
+   "config": {
+    "dataset": "eurosat",
+    "backbone": "torchvision/resnet50",
+    "image_size": 112,
+    "methods": [
+     "frozen",
+     "end_to_end",
+     "supcon",
+     "pair"
+    ],
+    "shots": [
+     4,
+     8,
+     16
+    ],
+    "seeds": [
+     0,
+     1,
+     2
+    ],
+    "epochs": 10,
+    "batch_size": 32,
+    "gradient_accumulation_steps": 1,
+    "learning_rate": [
+     "end_to_end=2.5e-4",
+     "supcon=2.5e-4",
+     "pair=5e-5"
+    ],
+    "default_learning_rate": 2e-05,
+    "pairs_per_example": 1,
+    "train_mode_batch_norm": false,
+    "evaluate_on": "test",
+    "pool_per_class": 100,
+    "eval_per_class": 100,
+    "split_seed": 0,
+    "learning_rates": {
+     "end_to_end": 0.00025,
+     "supcon": 0.00025,
+     "pair": 5e-05
+    },
+    "freeze_batch_norm": true,
+    "dataset_revision": null,
+    "evaluation_duplicates_dropped": 0,
+    "evaluation_size": 1000
+   },
+   "environment": {
+    "embedfit": "0.1.0.dev0",
+    "torch": "2.12.1+cu126",
+    "device": "cpu",
+    "threads": 4,
+    "processor": "x86_64",
+    "elapsed_seconds": 17751.7,
+    "embedfit_commit": "720321c"
+   }
+  }
+ ],
+ "records": [
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.684
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.6839999999999999
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.6979183987363256
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.6839999999999999
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.6770259242985298
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.6770259242985296
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.667
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.667
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.684772659955914
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.667
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.6545245621079071
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.6545245621079071
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.692
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.692
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.6887922753496524
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.692
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.6739309580059405
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.6739309580059405
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.69
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.6900000000000001
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.681763140907626
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.6900000000000001
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.6766577826135902
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.6766577826135901
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.687
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.687
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.7025811615475905
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.687
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.6785789874972216
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.6785789874972215
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.786
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.786
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.7942307223455378
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.786
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.7811817085237307
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.7811817085237306
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.711
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.7110000000000001
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.7464029209459071
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.7110000000000001
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.6978014469348357
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.6978014469348357
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.746
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.746
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.7464377261507915
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.746
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.7384804829043516
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.7384804829043518
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.689
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.689
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.6979310635398606
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.689
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.6800315988871917
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.6800315988871916
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.764
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.764
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.7662830539384661
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.764
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.7544103575816846
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.7544103575816846
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.729
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.7289999999999999
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.7373264856494247
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.7289999999999999
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.721354839083667
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.7213548390836672
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.726
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.726
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.736765423476649
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.726
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.7213911219042684
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 4,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.7213911219042682
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.731
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.7310000000000001
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.7531305468876288
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.7310000000000001
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.7256697840030194
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.7256697840030193
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.856
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.8560000000000001
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.8583855132101561
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.8560000000000001
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8532858283023964
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.8532858283023964
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.815
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.8150000000000001
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.817776148737787
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.8150000000000001
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8108318965133969
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.8108318965133969
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.782
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.782
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.7978572291747006
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.782
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.7801736207195114
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.7801736207195112
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.779
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.7789999999999999
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.7904318156156982
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.7789999999999999
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.7730691829858454
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.7730691829858454
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.837
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.8370000000000001
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.8413776110401218
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.8370000000000001
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.8353707762164213
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.8353707762164212
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.8
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.8
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.7960797031500447
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.8
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.7945467346171814
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.7945467346171815
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.805
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.805
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.8082041249061984
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.805
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.8027109443155969
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.8027109443155966
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.745
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.745
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.7557923858643777
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.745
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.7398128585282431
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.7398128585282432
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.851
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.851
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.8543601730622857
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.851
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.8485492416562279
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.8485492416562279
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.787
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.787
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.795401452634472
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.787
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.7830418978007194
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.7830418978007195
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.781
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.7809999999999999
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.7822033743505042
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.7809999999999999
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.7767748361032829
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 8,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.7767748361032829
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.798
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.798
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.8072237136387619
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.798
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.7959182403618819
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.7959182403618817
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.878
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.8779999999999999
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.8845898349842527
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.8779999999999999
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.877721139835384
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.877721139835384
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.84
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.8400000000000001
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.852293732734218
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.8400000000000001
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8409259949385884
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.8409259949385884
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.851
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.8510000000000002
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.8584239501084798
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.8510000000000002
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8498744197271512
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.849874419727151
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.812
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.8119999999999999
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.819630750428422
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.8119999999999999
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.8083066943493666
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.8083066943493666
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.875
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.875
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.8769608834684022
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.875
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.8740172506752295
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.8740172506752296
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.837
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.8370000000000001
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.8496046489595962
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.8370000000000001
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.8350755848212424
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.8350755848212426
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.806
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.806
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.8084784022216805
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.806
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.8025849425219136
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.8025849425219135
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.826
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.826
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.8329085143287687
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.826
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.8237003354998389
+  },
+  {
+   "method": "frozen",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.823700335499839
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.882
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.882
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.8864356330706812
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.882
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.8814515950251716
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.8814515950251716
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.815
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.8150000000000001
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.8286757779511751
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.8150000000000001
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.8165356343699088
+  },
+  {
+   "method": "supcon",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.8165356343699087
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.865
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.865
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.8730757503188871
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.865
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.8656603940494915
+  },
+  {
+   "method": "pair",
+   "backbone": "torchvision/resnet50",
+   "shots": 16,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.8656603940494915
+  }
+ ]
+}
