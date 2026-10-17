@@ -81,7 +81,7 @@ Required providers:
 - timm
 - Hugging Face Transformers vision encoders
 
-Examples that should eventually work:
+Examples:
 
 ```python
 EmbedFitModel.from_pretrained("torchvision/resnet50")
@@ -279,7 +279,7 @@ Required:
 - random pair sampling
 - balanced positive/negative pair sampling
 
-Hard-negative mining is v0.1 stretch / v0.2 required.
+Hard-negative mining is implemented for `pair` mode: `hard_negative_fraction` sets the share of each sample's negative partners drawn from its most similar different-class training samples, and `hard_negative_refresh_epochs` sets how often the training embeddings are re-encoded. Only training data is mined.
 
 Do not generate all O(N²) pairs by default.
 
@@ -358,7 +358,9 @@ Validation-only utility:
 select_threshold(
     y_true,
     scores,
+    positive_label="fraud",
     objective="target_fpr",
+    target=0.01,
 )
 ```
 

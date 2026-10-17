@@ -25,4 +25,4 @@ Write the subject in the imperative mood and describe the behaviour added or cha
 
 ## Documentation
 
-Documentation describes what the software does and why it is designed that way. Progress tracking lives only in [`TASKS.md`](TASKS.md); design decisions that change architecture or public API get an ADR in `docs/adrs/`.
+Documentation describes what the software does and why it is designed that way. Progress tracking lives in [`TASKS.md`](TASKS.md) and [`CHANGELOG.md`](CHANGELOG.md), and release planning in [`plans/`](plans/); design decisions that change architecture or public API get an ADR in `docs/adrs/`.

@@ -142,7 +142,7 @@ Deliver:
 
 - N-per-class sampling
 - repeated seeds
-- frozen / CE / SupCon benchmark protocols
+- frozen / CE (linear probe then fine-tune, ADR 0012) / SupCon benchmark protocols
 - tidy results
 - aggregate mean/std
 
@@ -169,9 +169,12 @@ Deliver:
 - error-message audit
 - privacy/logging audit
 
+## Required in v0.2
+
+- triplet learning (`SPEC.md` §3: optional for v0.1, required by v0.2 if deferred)
+
 ## Optional v0.2 items
 
-- triplet learning
 - calibration methods
 - prototype head
 - FAISS backend

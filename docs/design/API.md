@@ -41,7 +41,7 @@ EmbedFitModel.from_pretrained("torchvision/resnet50", weights="IMAGENET1K_V2", i
 EmbedFitModel.from_pretrained("torchvision/resnet18", weights=None)  # random init, no download
 ```
 
-Three providers are built in, each installed by the extra of the same name:
+Three checkpoint providers are built in, each installed by the extra of the same name. A fourth, `dummy/tiny`, is a small untrained CNN for offline tests and needs no extra.
 
 | Identifier | Adapter | Options |
 | --- | --- | --- |
@@ -124,9 +124,9 @@ metrics = trainer.evaluate()
 
 - Each epoch, `PairSampler` draws for every training sample up to `positives_per_example` partners from its positive pool and up to `negatives_per_example` from its negative pool, without replacement. At most `N × (positives + negatives)` pairs exist per epoch, no sample is paired with itself, and an unordered pair occurs at most once per epoch. Pairs are a function of `args.seed` and the epoch.
 - Without rules, a positive pair always shares a class and a negative pair never does.
-- `Trainer(..., relationship_rules=[RelationshipRule(field, relation, pair_type, weight)])` overrides that where a rule matches. `field` names a sample field or a `metadata` key, `relation` is `"same"` or `"different"`, and matching pairs get the rule's `pair_type` and `weight`. The first matching rule decides; samples without a value for the field never match. Rules are rejected in every other mode.
+- `Trainer(..., relationship_rules=[RelationshipRule(field, relation, pair_type, weight)])` overrides that where a rule matches. `field` names a sample field or a `metadata` key, `relation` is `"same"` or `"different"`, and matching pairs get the rule's `pair_type` and `weight`. The first matching rule decides; samples without a value for the field never match. A rule whose field has no value on any sample of the training or validation set is rejected when the `Trainer` is created. Rules are rejected in every other mode.
 - A batch holds `batch_size` pairs. Both images of every pair go through the backbone in one forward pass, so the backbone sees `2 × batch_size` images and `pair` mode needs about twice the memory of `supcon` at the same `batch_size`; and `CosinePairLoss` regresses their cosine similarity onto 1 for positives and 0 for negatives (SetFit's objective), weighted by the pair weights.
-- The learning-rate schedule spans the exact number of optimizer steps. Epochs differ slightly in length because of pair de-duplication, so every epoch's pairs are drawn once up front and reused during training.
+- Without mining, an epoch's pairs depend only on the seed and the epoch, so every epoch's pairs are drawn once up front and reused during training, and the learning-rate schedule spans the exact number of optimizer steps although epochs differ slightly in length because of pair de-duplication. With `hard_negative_fraction > 0` each epoch's pairs are drawn when the epoch starts, from the current embeddings, so the schedule is planned on the largest possible epoch and the learning rate ends slightly above zero.
 - The loss's `negative_target` is fixed at 0 in `Trainer`; other values are available by using `CosinePairLoss` directly.
 - A training or validation set from which no positive pair or no negative pair can be formed is rejected when the `Trainer` is created.
 - `hard_negative_fraction` (default 0) fills that share of every sample's negative partners with its most similar different-class training samples under the current backbone, re-encoding the training set every `hard_negative_refresh_epochs` epochs without gradients. The share is rounded half up to a whole number of negatives, and a positive share that rounds to zero is rejected. Only training data is ever mined, validation pairs stay random, and a positive `hard_negative_fraction` is rejected outside `pair` mode when `TrainingArguments` is created.
@@ -136,14 +136,28 @@ metrics = trainer.evaluate()
 The comparison baseline of ADR 0002: a linear classifier on the model's embeddings is trained jointly with the backbone under cross-entropy, using the same loop as the other modes (optimiser, schedule, accumulation, mixed precision, best-epoch restore, which here covers backbone and classifier together).
 
 - Batches are uniformly shuffled from `train_dataset`, reshuffled every epoch from `args.seed`. There is no class balancing, which is part of what the baseline measures.
-- The classifier is a plain linear layer on the embeddings the model produces. It starts from a linear probe: a `LinearHead` fitted to convergence on the training embeddings of the untouched backbone, seeded with `args.seed` (ADR 0012). It is then trained with the same optimiser settings as the backbone (including weight decay and gradient clipping). Every class of the model needs at least one training sample. `temperature` is not used: a temperature-scaled (cosine) classifier was measured on the synthetic benchmark and lowered few-shot test accuracy, while coupling the baseline to a contrastive-loss hyperparameter.
+- The classifier is a plain linear layer on the embeddings the model produces. It starts from a linear probe: a `LinearHead` fitted to convergence on the training embeddings of the untouched backbone, seeded with `args.seed` (ADR 0012). It is then trained with the same optimiser settings as the backbone (including weight decay and gradient clipping). Every class of the model needs at least one training sample. `temperature` is not used, so the baseline shares no hyperparameter with the contrastive losses (ADR 0012).
 - After joint training the classifier becomes the model's head as a `LinearHead` (`head_name == "linear"`) and, like the head of every other mode, is fitted to convergence on the training embeddings of the final, frozen backbone (ADR 0011). All modes are therefore scored with a converged head, and they differ only in how the backbone was adapted. The model must have been created with a head name, and `args.head` must be the default or `"linear"`.
 - Validation loss is the mean cross-entropy over every validation sample, on the same batches every epoch.
 - `LinearHead` is also a standalone head (`head="linear"`): softmax regression fitted with full-batch L-BFGS from a seeded initialisation (or from the weights it already holds), saved without pickle like the logistic-regression head.
 
 ## Few-shot benchmark
 
-`FewShotEvaluator(shots, seeds).run(dataset, test_dataset=..., methods=[...], model_factory=...)` measures each method at each training-set size over repeated seeds.
+```python
+evaluator = FewShotEvaluator(
+    shots=[4, 8, 16, 32, 64],
+    seeds=[13, 42, 101],
+)
+
+results = evaluator.run(
+    dataset,
+    test_dataset=test_dataset,
+    methods=["frozen", "end_to_end", "supcon"],
+    model_factory=model_factory,
+)
+```
+
+`FewShotEvaluator` measures each method at each training-set size over repeated seeds.
 
 - For every `(shots, seed)`, `sample_few_shot(dataset, shots, seed)` draws the training sample once, and every method trains on that same sample, so methods differ only in how they learn.
 - Every run gets a new model from `model_factory` and `TrainingArguments` for its method (from `training_arguments`, or `TrainingArguments(training_mode=method)`) with `seed` set to the run's seed.
@@ -168,14 +182,15 @@ models/risk-v1/
 │                             normalisation policy, head type
 ├── labels.json               labels in class-index order, positive label
 ├── training_metadata.json    aggregate facts only (Trainer: arguments and TrainOutput)
-├── backbone/                 config.json + weights.pt, written by the backbone adapter
+├── backbone/                 config.json + weights.pt (hf: config.json + model/ as safetensors),
+│                             written by the backbone adapter
 └── head/                     config.json, plus parameters.npz once fitted; written by the head
 ```
 
 - A loaded model reproduces the saved model's embeddings, probabilities, predictions, label order, positive label, pooling, normalisation policy, and backbone dtype. Its backbone is rebuilt from the saved weights and preprocessing settings without downloading anything. It comes back in eval mode and unfrozen, whatever its state when saved.
 - Saving is atomic: the bundle is assembled in a temporary sibling directory and moved into place when complete, so a failed save leaves the target as it was. The target may be missing, empty, or an existing bundle (replaced as a whole); a file or a non-empty directory that is not a bundle is refused.
 - `from_pretrained` treats its argument as a saved model when the directory contains `embedfit_config.json`, and that takes precedence even if the path also reads as a `<provider>/<name>` identifier; any other directory is never mistaken for a model, and an existing path that is not a bundle gets a "not a saved model directory" error. With a saved model only `device` may be passed: labels, positive label, normalisation, head, and backbone options come from the bundle, and passing any of them raises, even with a value equal to the default.
-- Bundles never contain training samples, identifiers, or metadata, and nothing is pickled: JSON for configuration, `.npz` arrays (loaded with `allow_pickle=False`) for the logistic-regression coefficients, and a tensor-only state dict (loaded with `weights_only=True`) for the backbone. Loading a bundle therefore does not execute code from it.
+- Bundles never contain training samples, identifiers, or metadata, and nothing is pickled: JSON for configuration, `.npz` arrays (loaded with `allow_pickle=False`) for the parameters of the logistic-regression and linear heads, a tensor-only state dict (loaded with `weights_only=True`) for torchvision, `timm`, and dummy backbones, and Transformers' safetensors format (loaded with `use_safetensors=True`) for `hf` backbones. Loading a bundle therefore does not execute code from it.
 - The content of the backbone's `config.json` is fingerprinted (SHA-256 of its canonical JSON, so formatting does not matter) at save time. Loading rejects a bundle whose backbone configuration was edited afterwards; whose recorded backbone identifier, pooling, or embedding dimension, or head type, disagrees with what was loaded; whose label count disagrees with the recorded count or with the fitted head's classes; or whose `format_version` is not one the library reads. The fingerprint guards against accidental edits to preprocessing settings; it is not a signature, and weight files are not hashed.
 - Corrupt files raise `ConfigurationError`: a weights file that is not a tensor-only state dict matching the architecture, or head parameters that are pickled or mis-shaped.
 - A head given to the model as an instance is still treated as an instance after loading, so `Trainer` keeps it rather than replacing it by name.
@@ -191,23 +206,8 @@ index.fit(embeddings, ids=sample_ids)
 hits = index.search(query_embedding, k=20)
 ```
 
-## Few-shot benchmark
-
-```python
-evaluator = FewShotEvaluator(
-    shots=[4, 8, 16, 32, 64],
-    seeds=[13, 42, 101],
-)
-
-results = evaluator.run(
-    dataset=dataset,
-    methods=["frozen", "end_to_end", "supcon"],
-    model_factory=model_factory,
-)
-```
-
 ## API stability
 
-Before v1.0, mark experimental APIs explicitly.
+Every public API is pre-1.0 and may change between minor versions.
 
-Avoid exporting low-level helpers from the package root.
+The package root exports only `EmbedFitModel`, `Trainer`, `TrainingArguments`, `ImageDataset`, `FewShotEvaluator`, `RetrievalIndex`, `EmbedFitError`, and `__version__`; everything else is imported from its subpackage.

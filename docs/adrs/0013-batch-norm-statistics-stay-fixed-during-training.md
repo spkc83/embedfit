@@ -21,7 +21,7 @@ Measured on EuroSAT with ImageNet ResNet-50 (`torchvision/resnet50`) at 8 shots 
 | 2.5e-4 | `end_to_end` | 0.804 | 0.866 |
 | 2.5e-4 | `supcon` | 0.750 | 0.835 |
 
-At 1e-5 the weights barely change, yet with train-mode batch norm every trained method fell well below the frozen baseline: the loss came from the statistics, not from learning. With `end_to_end` the effect is also visible directly. Its linear probe (ADR 0012) had a training cross-entropy of 0.037, but the first epoch's loss was 1.44 in train mode and 0.038 with fixed statistics.
+At 1e-5 the weights barely change, yet with train-mode batch norm both measured methods fell well below the frozen baseline: the loss came from the statistics, not from learning. With `end_to_end` the effect is also visible directly. Its linear probe (ADR 0012) had a training cross-entropy of 0.037, but the first epoch's loss was 1.44 in train mode and 0.038 with fixed statistics.
 
 DINOv2 and other transformer encoders use layer normalisation and were not affected.
 
@@ -34,5 +34,5 @@ DINOv2 and other transformer encoders use layer normalisation and were not affec
 ## Consequences
 
 - Results for batch-norm backbones differ from those obtained before this change.
-- Training and evaluation now normalise features the same way, so the features that `end_to_end`'s linear probe is fitted on match those at the start of fine-tuning.
+- Training and evaluation normalise features the same way, so the features that `end_to_end`'s linear probe is fitted on match those at the start of fine-tuning.
 - `freeze_batch_norm=False` gives standard train-mode behaviour, including the sensitivity to small batches described in the benchmarking guide.

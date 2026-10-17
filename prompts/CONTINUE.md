@@ -2,7 +2,7 @@
 
 Read `AGENTS.md`, `TASKS.md`, and the current implementation state.
 
-Identify the earliest incomplete milestone in `IMPLEMENTATION_PLAN.md`.
+Identify the earliest incomplete item in `TASKS.md` (milestones are defined in `IMPLEMENTATION_PLAN.md`).
 
 Implement only the coherent next slice of that milestone.
 

@@ -124,8 +124,9 @@ def retrieval_precision_at_k(
         A value in [0, 1].
 
     Raises:
-        ConfigurationError: If ``results`` is not an ordered sequence of ``RetrievalResult``,
-            ``relevant_ids`` is empty, or ``k`` is not a positive int.
+        ConfigurationError: If ``results`` is not an ordered sequence of ``RetrievalResult``
+            or ``k`` is not a positive int.
+        UndefinedMetricError: If ``relevant_ids`` is empty.
     """
     known = _relevant(relevant_ids, name="relevant_ids")
     cutoff, retrieved = _scored(results, k)
@@ -152,8 +153,9 @@ def retrieval_recall_at_k(
         A value in [0, 1].
 
     Raises:
-        ConfigurationError: If ``results`` is not an ordered sequence of ``RetrievalResult``,
-            ``relevant_ids`` is empty, or ``k`` is not a positive int.
+        ConfigurationError: If ``results`` is not an ordered sequence of ``RetrievalResult``
+            or ``k`` is not a positive int.
+        UndefinedMetricError: If ``relevant_ids`` is empty.
     """
     known = _relevant(relevant_ids, name="relevant_ids")
     retrieved = set(_scored(results, k)[1])
@@ -181,7 +183,8 @@ def mean_reciprocal_rank(
 
     Raises:
         ConfigurationError: If the two batches differ in length, either is empty, a result list
-            is not ordered, a query has no relevant ids, or ``k`` is not a positive int.
+            is not ordered, or ``k`` is not a positive int.
+        UndefinedMetricError: If a query has no relevant ids.
     """
     count = _batch(batch_results, batch_relevant_ids)
     total = 0.0
@@ -221,7 +224,8 @@ def mean_average_precision(
 
     Raises:
         ConfigurationError: If the two batches differ in length, either is empty, a result list
-            is not ordered, a query has no relevant ids, or ``k`` is not a positive int.
+            is not ordered, or ``k`` is not a positive int.
+        UndefinedMetricError: If a query has no relevant ids.
     """
     count = _batch(batch_results, batch_relevant_ids)
     total = 0.0

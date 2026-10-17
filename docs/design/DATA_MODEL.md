@@ -3,7 +3,7 @@
 ## Canonical sample
 
 ```python
-@dataclass
+@dataclass(frozen=True, eq=False, repr=False)
 class ImageSample:
     image: ImageLike
     label: Hashable
@@ -24,15 +24,13 @@ Records are read once when the dataset is created. A source that decodes images 
 
 ## Label handling
 
-Internally maintain a stable mapping:
+`embedfit.data.LabelMapping` maps external labels to class indices:
 
 ```text
 external label ↔ class index
 ```
 
-Serialize the mapping.
-
-Never derive positive-class semantics from sort order.
+The labels keep the order in which they are given and are never sorted, so the position of a label is its class index. A saved model stores them in `labels.json`, in class-index order, together with the positive label. The positive class is always named explicitly with `positive_label`; it is never derived from label order.
 
 ## Image handling
 
@@ -40,21 +38,16 @@ Convert only at data/preprocessing boundary: `embedfit.data.to_rgb_tensor` maps 
 
 Avoid loading every file into memory when dataset stores paths.
 
-## Corrupt image policy
+## Missing and corrupt files
 
-Configurable:
+A path that names a missing or undecodable file raises `ImageInputError` when the image is encoded, not when the dataset is created. The message names neither the file nor its path, and the error has no chained cause, because file names can carry identifiers.
 
-- `raise` default
-- `skip`
-
-Skipping must increment/report a count.
+A `skip` policy that drops such files and reports how many were dropped is specified for v0.1 but not built ([release plan](../../plans/V0_1_RELEASE.md)).
 
 ## Grayscale
 
-RGB-trained backbones may convert grayscale to RGB by channel replication.
-
-This behavior must be explicit in the provider adapter/docs.
+`to_rgb_tensor` replicates single-channel input (grayscale PIL images, `[H, W]` and one-channel arrays and tensors) to three RGB channels, so every backbone receives RGB.
 
 ## Multi-frame files
 
-v0.1 should reject or clearly warn on ambiguous multi-frame inputs rather than silently selecting arbitrary pages.
+A multi-frame image, such as a multi-page TIFF or an animated GIF, raises `ImageInputError` rather than having one frame selected silently. Select a single frame before passing it in.
