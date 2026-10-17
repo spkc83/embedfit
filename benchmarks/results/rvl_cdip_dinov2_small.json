@@ -1,0 +1,1992 @@
+{
+ "description": "RVL-CDIP few-shot results, hf/facebook/dinov2-small at 224 px on grayscale document pages; see docs/benchmarks/rvl-cdip-dinov2-small.md. runs holds the test-split run (embedfit_commit is the code it used); tuning holds the validation-split runs that chose the learning rates, made with the same training code.",
+ "runs": [
+  {
+   "methods": [
+    "frozen",
+    "end_to_end",
+    "supcon"
+   ],
+   "config": {
+    "dataset": "rvl-cdip",
+    "backbone": "hf/facebook/dinov2-small",
+    "image_size": 224,
+    "methods": [
+     "frozen",
+     "end_to_end",
+     "supcon"
+    ],
+    "shots": [
+     4,
+     8,
+     16
+    ],
+    "seeds": [
+     0,
+     1,
+     2
+    ],
+    "epochs": 10,
+    "batch_size": 16,
+    "gradient_accumulation_steps": 2,
+    "learning_rate": [
+     "end_to_end=1e-5",
+     "supcon=2e-6"
+    ],
+    "default_learning_rate": 2e-05,
+    "pairs_per_example": 1,
+    "train_mode_batch_norm": false,
+    "evaluate_on": "test",
+    "pool_per_class": 100,
+    "eval_per_class": 100,
+    "split_seed": 0,
+    "learning_rates": {
+     "end_to_end": 1e-05,
+     "supcon": 2e-06
+    },
+    "freeze_batch_norm": true,
+    "dataset_revision": "13462a42e3375e80a9bd46a64c58e1bcaba77874",
+    "evaluation_duplicates_dropped": 1,
+    "evaluation_size": 1599
+   },
+   "environment": {
+    "embedfit": "0.1.0.dev0",
+    "torch": "2.12.1+cu126",
+    "device": "cpu",
+    "threads": 4,
+    "processor": "x86_64",
+    "elapsed_seconds": 38538.3,
+    "embedfit_commit": "322e3b9"
+   }
+  }
+ ],
+ "tuning": [
+  {
+   "config": {
+    "dataset": "rvl-cdip",
+    "backbone": "hf/facebook/dinov2-small",
+    "image_size": 224,
+    "methods": [
+     "frozen",
+     "end_to_end",
+     "supcon"
+    ],
+    "shots": [
+     8
+    ],
+    "seeds": [
+     0
+    ],
+    "epochs": 10,
+    "batch_size": 16,
+    "gradient_accumulation_steps": 2,
+    "learning_rate": [
+     "end_to_end=1e-5",
+     "supcon=1e-5"
+    ],
+    "default_learning_rate": 2e-05,
+    "pairs_per_example": 1,
+    "train_mode_batch_norm": false,
+    "evaluate_on": "validation",
+    "pool_per_class": 100,
+    "eval_per_class": 100,
+    "split_seed": 0,
+    "learning_rates": {
+     "end_to_end": 1e-05,
+     "supcon": 1e-05
+    },
+    "freeze_batch_norm": true,
+    "dataset_revision": "13462a42e3375e80a9bd46a64c58e1bcaba77874",
+    "evaluation_duplicates_dropped": 1,
+    "evaluation_size": 1599
+   },
+   "environment": {
+    "embedfit": "0.1.0.dev0",
+    "torch": "2.12.1+cu126",
+    "device": "cpu",
+    "threads": 4,
+    "processor": "x86_64",
+    "elapsed_seconds": 6604.9
+   },
+   "records": [
+    {
+     "method": "frozen",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "accuracy",
+     "value": 0.44152595372107567
+    },
+    {
+     "method": "frozen",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "balanced_accuracy",
+     "value": 0.4412941919191919
+    },
+    {
+     "method": "frozen",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_precision",
+     "value": 0.389365994959965
+    },
+    {
+     "method": "frozen",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_recall",
+     "value": 0.4412941919191919
+    },
+    {
+     "method": "frozen",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_f1",
+     "value": 0.3840662795376477
+    },
+    {
+     "method": "frozen",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "weighted_f1",
+     "value": 0.3842347049167452
+    },
+    {
+     "method": "end_to_end",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "accuracy",
+     "value": 0.48467792370231394
+    },
+    {
+     "method": "end_to_end",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "balanced_accuracy",
+     "value": 0.4845265151515151
+    },
+    {
+     "method": "end_to_end",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_precision",
+     "value": 0.46526568656176026
+    },
+    {
+     "method": "end_to_end",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_recall",
+     "value": 0.4845265151515151
+    },
+    {
+     "method": "end_to_end",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_f1",
+     "value": 0.4699308421157604
+    },
+    {
+     "method": "end_to_end",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "weighted_f1",
+     "value": 0.47008828365668226
+    },
+    {
+     "method": "supcon",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "accuracy",
+     "value": 0.4446529080675422
+    },
+    {
+     "method": "supcon",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "balanced_accuracy",
+     "value": 0.44448232323232323
+    },
+    {
+     "method": "supcon",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_precision",
+     "value": 0.425039328601565
+    },
+    {
+     "method": "supcon",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_recall",
+     "value": 0.44448232323232323
+    },
+    {
+     "method": "supcon",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_f1",
+     "value": 0.4164680914419818
+    },
+    {
+     "method": "supcon",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "weighted_f1",
+     "value": 0.4166090901008229
+    }
+   ]
+  },
+  {
+   "config": {
+    "dataset": "rvl-cdip",
+    "backbone": "hf/facebook/dinov2-small",
+    "image_size": 224,
+    "methods": [
+     "end_to_end",
+     "supcon"
+    ],
+    "shots": [
+     8
+    ],
+    "seeds": [
+     0
+    ],
+    "epochs": 10,
+    "batch_size": 16,
+    "gradient_accumulation_steps": 2,
+    "learning_rate": [
+     "end_to_end=5e-5",
+     "supcon=5e-5"
+    ],
+    "default_learning_rate": 2e-05,
+    "pairs_per_example": 1,
+    "train_mode_batch_norm": false,
+    "evaluate_on": "validation",
+    "pool_per_class": 100,
+    "eval_per_class": 100,
+    "split_seed": 0,
+    "learning_rates": {
+     "end_to_end": 5e-05,
+     "supcon": 5e-05
+    },
+    "freeze_batch_norm": true,
+    "dataset_revision": "13462a42e3375e80a9bd46a64c58e1bcaba77874",
+    "evaluation_duplicates_dropped": 1,
+    "evaluation_size": 1599
+   },
+   "environment": {
+    "embedfit": "0.1.0.dev0",
+    "torch": "2.12.1+cu126",
+    "device": "cpu",
+    "threads": 4,
+    "processor": "x86_64",
+    "elapsed_seconds": 4436.1
+   },
+   "records": [
+    {
+     "method": "end_to_end",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "accuracy",
+     "value": 0.26641651031894936
+    },
+    {
+     "method": "end_to_end",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "balanced_accuracy",
+     "value": 0.2663699494949495
+    },
+    {
+     "method": "end_to_end",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_precision",
+     "value": 0.2516131883226092
+    },
+    {
+     "method": "end_to_end",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_recall",
+     "value": 0.2663699494949495
+    },
+    {
+     "method": "end_to_end",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_f1",
+     "value": 0.2486188619460889
+    },
+    {
+     "method": "end_to_end",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "weighted_f1",
+     "value": 0.24866872434324783
+    },
+    {
+     "method": "supcon",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "accuracy",
+     "value": 0.16010006253908693
+    },
+    {
+     "method": "supcon",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "balanced_accuracy",
+     "value": 0.1600189393939394
+    },
+    {
+     "method": "supcon",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_precision",
+     "value": 0.12702168396920469
+    },
+    {
+     "method": "supcon",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_recall",
+     "value": 0.1600189393939394
+    },
+    {
+     "method": "supcon",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_f1",
+     "value": 0.09503226731607534
+    },
+    {
+     "method": "supcon",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "weighted_f1",
+     "value": 0.09506733375031863
+    }
+   ]
+  },
+  {
+   "config": {
+    "dataset": "rvl-cdip",
+    "backbone": "hf/facebook/dinov2-small",
+    "image_size": 224,
+    "methods": [
+     "end_to_end",
+     "supcon"
+    ],
+    "shots": [
+     8
+    ],
+    "seeds": [
+     0
+    ],
+    "epochs": 10,
+    "batch_size": 16,
+    "gradient_accumulation_steps": 2,
+    "learning_rate": [
+     "end_to_end=2.5e-4",
+     "supcon=2.5e-4"
+    ],
+    "default_learning_rate": 2e-05,
+    "pairs_per_example": 1,
+    "train_mode_batch_norm": false,
+    "evaluate_on": "validation",
+    "pool_per_class": 100,
+    "eval_per_class": 100,
+    "split_seed": 0,
+    "learning_rates": {
+     "end_to_end": 0.00025,
+     "supcon": 0.00025
+    },
+    "freeze_batch_norm": true,
+    "dataset_revision": "13462a42e3375e80a9bd46a64c58e1bcaba77874",
+    "evaluation_duplicates_dropped": 1,
+    "evaluation_size": 1599
+   },
+   "environment": {
+    "embedfit": "0.1.0.dev0",
+    "torch": "2.12.1+cu126",
+    "device": "cpu",
+    "threads": 4,
+    "processor": "x86_64",
+    "elapsed_seconds": 4137.4
+   },
+   "records": [
+    {
+     "method": "end_to_end",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "accuracy",
+     "value": 0.13008130081300814
+    },
+    {
+     "method": "end_to_end",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "balanced_accuracy",
+     "value": 0.13003156565656565
+    },
+    {
+     "method": "end_to_end",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_precision",
+     "value": 0.16143953188150917
+    },
+    {
+     "method": "end_to_end",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_recall",
+     "value": 0.13003156565656565
+    },
+    {
+     "method": "end_to_end",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_f1",
+     "value": 0.09938400711428566
+    },
+    {
+     "method": "end_to_end",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "weighted_f1",
+     "value": 0.0994021193543751
+    },
+    {
+     "method": "supcon",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "accuracy",
+     "value": 0.1207004377736085
+    },
+    {
+     "method": "supcon",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "balanced_accuracy",
+     "value": 0.12065656565656566
+    },
+    {
+     "method": "supcon",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_precision",
+     "value": 0.07260635446732988
+    },
+    {
+     "method": "supcon",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_recall",
+     "value": 0.12065656565656566
+    },
+    {
+     "method": "supcon",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_f1",
+     "value": 0.05907876818128505
+    },
+    {
+     "method": "supcon",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "weighted_f1",
+     "value": 0.05908297252602482
+    }
+   ]
+  },
+  {
+   "config": {
+    "dataset": "rvl-cdip",
+    "backbone": "hf/facebook/dinov2-small",
+    "image_size": 224,
+    "methods": [
+     "end_to_end",
+     "supcon"
+    ],
+    "shots": [
+     8
+    ],
+    "seeds": [
+     0
+    ],
+    "epochs": 10,
+    "batch_size": 16,
+    "gradient_accumulation_steps": 2,
+    "learning_rate": [
+     "end_to_end=2e-6",
+     "supcon=2e-6"
+    ],
+    "default_learning_rate": 2e-05,
+    "pairs_per_example": 1,
+    "train_mode_batch_norm": false,
+    "evaluate_on": "validation",
+    "pool_per_class": 100,
+    "eval_per_class": 100,
+    "split_seed": 0,
+    "learning_rates": {
+     "end_to_end": 2e-06,
+     "supcon": 2e-06
+    },
+    "freeze_batch_norm": true,
+    "dataset_revision": "13462a42e3375e80a9bd46a64c58e1bcaba77874",
+    "evaluation_duplicates_dropped": 1,
+    "evaluation_size": 1599
+   },
+   "environment": {
+    "embedfit": "0.1.0.dev0",
+    "torch": "2.12.1+cu126",
+    "device": "cpu",
+    "threads": 4,
+    "processor": "x86_64",
+    "elapsed_seconds": 3355.4
+   },
+   "records": [
+    {
+     "method": "end_to_end",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "accuracy",
+     "value": 0.46091307066916826
+    },
+    {
+     "method": "end_to_end",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "balanced_accuracy",
+     "value": 0.4607828282828283
+    },
+    {
+     "method": "end_to_end",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_precision",
+     "value": 0.4460290101722606
+    },
+    {
+     "method": "end_to_end",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_recall",
+     "value": 0.4607828282828283
+    },
+    {
+     "method": "end_to_end",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_f1",
+     "value": 0.45005058871749004
+    },
+    {
+     "method": "end_to_end",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "weighted_f1",
+     "value": 0.45018660650934905
+    },
+    {
+     "method": "supcon",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "accuracy",
+     "value": 0.450281425891182
+    },
+    {
+     "method": "supcon",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "balanced_accuracy",
+     "value": 0.4500126262626263
+    },
+    {
+     "method": "supcon",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_precision",
+     "value": 0.40806999091445123
+    },
+    {
+     "method": "supcon",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_recall",
+     "value": 0.4500126262626263
+    },
+    {
+     "method": "supcon",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "macro_f1",
+     "value": 0.39925813348971334
+    },
+    {
+     "method": "supcon",
+     "backbone": "hf/facebook/dinov2-small",
+     "shots": 8,
+     "seed": 0,
+     "metric": "weighted_f1",
+     "value": 0.3994858823416155
+    }
+   ]
+  }
+ ],
+ "records": [
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.4058786741713571
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.4060479797979798
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.367726363265931
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.4060479797979798
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.34834354936373857
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.3481905932632892
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.42464040025015637
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.42477904040404046
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.41760982360591814
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.42477904040404046
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.40998868715738146
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.40985649795403967
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.39274546591619763
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.3929419191919192
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.36164723542788074
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.3929419191919192
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.3481576615288555
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.3480412178243469
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.399624765478424
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.39981060606060603
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.3905553948832703
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.39981060606060603
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.3546307743853589
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.3544166787489709
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.42464040025015637
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.4247222222222222
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.42661564516143463
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.4247222222222222
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.40434939908610823
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.40424210275635186
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.4133833646028768
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.4135921717171717
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.4130751027195463
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.4135921717171717
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.36793694306875235
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.36771554577266524
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.3908692933083177
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.39109848484848486
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.37024904853389295
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.39109848484848486
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.3383166475642337
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.33806838147912877
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.4152595372107567
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.4153914141414142
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.424149961432264
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.4153914141414142
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.40612986281458546
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.4059481871731417
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.38524077548467794
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.3854671717171717
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.34413495977115
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.3854671717171717
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.3410102286103084
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.34076300648438596
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.4202626641651032
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.4203977272727273
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.37042219409780003
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.4203977272727273
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.3624383329558223
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.3622367417890056
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.45590994371482174
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.4560542929292929
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.43903803255723267
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.4560542929292929
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.44261735324073326
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.4424852526775028
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.42338961851156975
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.4235479797979798
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.38658486435080375
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.4235479797979798
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.3741990577638796
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.37403591077683546
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.41838649155722324
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.4186300505050505
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.3709264246750205
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.4186300505050505
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.36140805782175
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.36118130745112415
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.44152595372107567
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.44164141414141417
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.427381278185671
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.44164141414141417
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.42564954507777064
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.4255200869688609
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.43964978111319575
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.43987373737373736
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.3932892474379608
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.43987373737373736
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.38544626542854177
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.3852595634782265
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.43089430894308944
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.43109217171717173
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.38825669650636374
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.43109217171717173
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.3705985809189568
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.37038103994270744
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.4809255784865541
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.48108585858585856
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.4698093610561357
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.48108585858585856
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.46996783386300367
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.46980060065255297
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.4352720450281426
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.4354482323232324
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.39084422639699756
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.4354482323232324
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.38851740692717285
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.3883185637409537
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.47654784240150094
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.47676136363636357
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.43812117346355695
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.47676136363636357
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.43636262092720723
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.4361872290958346
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.5071919949968731
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.5073863636363636
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.4981766603714723
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.5073863636363636
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.49824978153410393
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.4981050160880779
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.5040650406504065
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.5042613636363636
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.4783420157240066
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.5042613636363636
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.47381491900890105
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.47364862062967134
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.45590994371482174
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.4561300505050505
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.41820158495710213
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.4561300505050505
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.40723704380778125
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.4070368964134943
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.5228267667292058
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.5229987373737374
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.5049046722312722
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.5229987373737374
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.5118527962382691
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.5117068111084194
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.4984365228267667
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.4986237373737374
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.4855704606135416
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.4986237373737374
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.4676899535228276
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.4675270888289217
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.4459036898061288
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.4460858585858586
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.40242470129045915
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.4460858585858586
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.4009944619683973
+  },
+  {
+   "method": "frozen",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.4008125053292517
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.5121951219512195
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.5123484848484848
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.49279347726336153
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.5123484848484848
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.4993463695940542
+  },
+  {
+   "method": "end_to_end",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.4992119484904322
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.48655409631019386
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.4866919191919192
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.46293094579202815
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.4866919191919192
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.4611702129813835
+  },
+  {
+   "method": "supcon",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.4610397025083699
+  }
+ ]
+}
