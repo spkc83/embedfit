@@ -55,7 +55,8 @@ include = ["src", "tests", "README.md", "LICENSE", "pyproject.toml"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 # Default runs are offline and CPU-only (ADR 0004): provider tests are opt-in via `-m network`.
-addopts = "-ra --strict-markers --strict-config -m 'not network and not slow'"
+# Test temporary files stay in the repository, in the git-ignored .pytest_tmp/ folder.
+addopts = "-ra --strict-markers --strict-config -m 'not network and not slow' --basetemp=.pytest_tmp"
 markers = [
     "network: requires internet access or pretrained checkpoint downloads (excluded by default)",
     "slow: long-running test (excluded by default)",

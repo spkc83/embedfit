@@ -25,6 +25,9 @@ embedfit-output/
 *.onnx
 *.parquet
 *.arrow
+*.partial
+*.log
 
 # Every other dot-directory (tool and editor state). Tracked dotfiles are files, not directories.
 .*/
+!.github/

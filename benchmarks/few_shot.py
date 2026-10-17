@@ -3,8 +3,11 @@
 Compares training modes with ``FewShotEvaluator``. Two datasets are supported, both downloaded
 on first use. Everything the run downloads or derives (datasets, pretrained weights, the page
 cache) goes under ``--data-root``, by default the git-ignored ``.cache/`` folder of the
-repository; the ``datasets`` library, Hugging Face Hub, and torch hub caches are pointed there
-unless ``HF_HOME`` or ``TORCH_HOME`` is already set. Nothing from the data is committed:
+repository; the ``datasets`` library, Hugging Face Hub, and torch hub caches and the temporary
+folder are pointed there unless ``HF_HOME``, ``TORCH_HOME`` or ``TMPDIR`` is already set. (This
+applies to this script only; the library itself uses the usual caches.) A Hugging Face login
+saved in the usual cache is therefore not found: set ``HF_TOKEN`` for gated or private models.
+Nothing from the data is committed:
 
 - ``eurosat``: EuroSAT RGB land cover (10 classes, 64x64 Sentinel-2 tiles), via torchvision into
   ``--data-root``. It has no official split, so disjoint per-class pool, validation, and test
@@ -24,7 +27,8 @@ whose pixels exactly match a pool image is dropped, and the count is recorded.
     python benchmarks/few_shot.py --dataset eurosat --evaluate-on validation --shots 8 \\
         --seeds 0 --methods supcon --learning-rate supcon=1e-5 --output .runs/tune.json
 
-Keep run output in the git-ignored ``.runs/`` folder until it is ready to commit.
+Run it from the repository root, and keep run output in the git-ignored ``.runs/`` folder
+until it is ready to commit.
 """
 
 import argparse
@@ -293,6 +297,9 @@ def main(argv: list[str] | None = None) -> None:
     # Before any download library is imported: they read these when imported.
     os.environ.setdefault("HF_HOME", str(args.data_root / "huggingface"))
     os.environ.setdefault("TORCH_HOME", str(args.data_root / "torch"))
+    os.environ.setdefault("TMPDIR", str(args.data_root / "tmp"))
+    Path(os.environ["TMPDIR"]).mkdir(parents=True, exist_ok=True)
+    tempfile.tempdir = None  # Re-read TMPDIR on the next use.
     torch.set_num_threads(args.threads)
     if args.image_size is None:
         args.image_size = DEFAULT_IMAGE_SIZE[args.dataset]
