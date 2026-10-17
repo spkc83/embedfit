@@ -13,3 +13,18 @@ htmlcov/
 embedfit-output/
 .DS_Store
 .omc/
+
+# Downloads, caches, and intermediate run output stay local.
+.cache/
+.runs/
+/data/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+*.parquet
+*.arrow
+
+# Every other dot-directory (tool and editor state). Tracked dotfiles are files, not directories.
+.*/

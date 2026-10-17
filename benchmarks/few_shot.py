@@ -1,15 +1,18 @@
 """Few-shot benchmark on a public image dataset with a pretrained backbone.
 
 Compares training modes with ``FewShotEvaluator``. Two datasets are supported, both downloaded
-on first use into a cache outside the repository; nothing from them is written into it:
+on first use. Everything the run downloads or derives (datasets, pretrained weights, the page
+cache) goes under ``--data-root``, by default the git-ignored ``.cache/`` folder of the
+repository; the ``datasets`` library, Hugging Face Hub, and torch hub caches are pointed there
+unless ``HF_HOME`` or ``TORCH_HOME`` is already set. Nothing from the data is committed:
 
 - ``eurosat``: EuroSAT RGB land cover (10 classes, 64x64 Sentinel-2 tiles), via torchvision into
   ``--data-root``. It has no official split, so disjoint per-class pool, validation, and test
   sets are drawn with ``--split-seed``.
 - ``rvl-cdip``: document images from RVL-CDIP (16 classes), the Hugging Face dataset
   ``jinhybr/rvl_cdip_400_train_val_test`` (400 training, 100 validation, and 100 test images
-  per class; ``pip install -e ".[hf,datasets]"``), downloaded by the ``datasets`` library into
-  its own cache. Its own splits are kept: the pool is drawn from the training split. Pages are
+  per class; ``pip install -e ".[hf,datasets]"``), downloaded by the ``datasets`` library.
+  Its own splits are kept: the pool is drawn from the training split. Pages are
   converted to grayscale, shrunk to a shorter side of 512 px (still larger than the model
   input) and written once as PNG files under ``--data-root``; the run reads them from disk, so
   memory holds only the model and the current batch.
@@ -19,7 +22,9 @@ Few-shot samples come from the pool. Tune with ``--evaluate-on validation`` and 
 whose pixels exactly match a pool image is dropped, and the count is recorded.
 
     python benchmarks/few_shot.py --dataset eurosat --evaluate-on validation --shots 8 \\
-        --seeds 0 --methods supcon --learning-rate supcon=1e-5 --output tune.json
+        --seeds 0 --methods supcon --learning-rate supcon=1e-5 --output .runs/tune.json
+
+Keep run output in the git-ignored ``.runs/`` folder until it is ready to commit.
 """
 
 import argparse
@@ -50,6 +55,7 @@ RVL_CDIP_REVISION = (
     "13462a42e3375e80a9bd46a64c58e1bcaba77874"  # Pinned: the page cache is keyed on it.
 )
 DEFAULT_IMAGE_SIZE = {"eurosat": 112, "rvl-cdip": 224}
+DEFAULT_DATA_ROOT = Path(__file__).resolve().parents[1] / ".cache"  # Git-ignored.
 
 Split = list[tuple[Image.Image | Path, str]]
 
@@ -227,7 +233,10 @@ def parse_learning_rates(values: list[str], default: float) -> dict[str, float]:
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
-        "--data-root", type=lambda value: Path(value).expanduser(), default="~/.cache/embedfit"
+        "--data-root",
+        type=lambda value: Path(value).expanduser().resolve(),
+        default=DEFAULT_DATA_ROOT,
+        help="downloads and derived data (default: the repository's git-ignored .cache/)",
     )
     parser.add_argument("--dataset", choices=sorted(LOADERS), required=True)
     parser.add_argument("--backbone", default="hf/facebook/dinov2-small")
@@ -281,6 +290,9 @@ def main(argv: list[str] | None = None) -> None:
     except ValueError:
         parser.error("--learning-rate expects METHOD=RATE with a number as RATE")
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
+    # Before any download library is imported: they read these when imported.
+    os.environ.setdefault("HF_HOME", str(args.data_root / "huggingface"))
+    os.environ.setdefault("TORCH_HOME", str(args.data_root / "torch"))
     torch.set_num_threads(args.threads)
     if args.image_size is None:
         args.image_size = DEFAULT_IMAGE_SIZE[args.dataset]
@@ -320,6 +332,7 @@ def main(argv: list[str] | None = None) -> None:
     config["freeze_batch_norm"] = not args.train_mode_batch_norm
     config["dataset_revision"] = RVL_CDIP_REVISION if args.dataset == "rvl-cdip" else None
     previous = read_previous(args.output, config)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
     records: list[dict] = previous["records"] if previous else []
     sessions: list[dict] = previous["environment"]["sessions"] if previous else []
     done = {(r["shots"], r["seed"]) for r in records}
