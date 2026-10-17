@@ -17,7 +17,7 @@ Test accuracy, mean ± sample standard deviation over three seeds. The classes a
 - Both contrastive modes improve on the frozen baseline: by 0.02 to 0.05 on average in each column, and on 16 of their 18 seed-by-seed comparisons with `frozen`. The two exceptions are at 16 shots (−0.011 for `supcon`, −0.006 for `pair`).
 - `supcon` and `pair` are level with each other: neither is ahead in every column, and their differences (at most 0.012) are smaller than their spreads across seeds.
 
-The frozen ResNet-50 is below the frozen DINOv2-small in every column (0.687, 0.752, and 0.812 against 0.722, 0.770, and 0.836), and fine-tuning closes most of that gap. With DINOv2-small, contrastive adaptation did not separate from the frozen encoder; with ResNet-50 it improved on it. The two backbones differ in architecture, size, and pretraining, so this comparison does not say which of these causes the difference.
+The frozen ResNet-50 is below the frozen DINOv2-small in every column (0.687, 0.752, and 0.812 against 0.722, 0.770, and 0.836), and fine-tuned, the two are close: `end_to_end` with ResNet-50 is within 0.02 of `end_to_end` with DINOv2-small at 4 and 8 shots (0.739 against 0.757, 0.848 against 0.847) and 0.024 behind at 16 (0.878 against 0.902). With DINOv2-small, contrastive adaptation did not separate from the frozen encoder; with ResNet-50 it improved on it. The two backbones differ in architecture, size, and pretraining, so this comparison does not say which of these causes the difference.
 
 ## Setup
 
@@ -25,7 +25,7 @@ The frozen ResNet-50 is below the frozen DINOv2-small in every column (0.687, 0.
 |---|---|
 | Dataset | EuroSAT RGB: 27,000 Sentinel-2 land-cover tiles of 64×64 px, 10 classes |
 | Splits | Disjoint and drawn per class with seed 0: a training pool of 100, a validation set of 100, and a test set of 100 images per class (1,000 test images); the same images as the DINOv2-small benchmark |
-| Backbone | `torchvision/resnet50` (ImageNet weights, 25M parameters, 2048-dimensional embedding), input 112×112 |
+| Backbone | `torchvision/resnet50` (torchvision's default `IMAGENET1K_V2` weights, 23.5M parameters without the classifier, 2048-dimensional embedding), input 112×112 |
 | Batch norm | Running statistics fixed during representation training (`freeze_batch_norm=True`, the default; ADR 0013) |
 | Shots | 4, 8, and 16 per class, drawn from the pool; seeds 0, 1, 2 |
 | Budget | 10 epochs, batch size 32, AdamW, linear decay, no warm-up, weight decay 0.01, gradient clipping at 1.0 |
@@ -49,7 +49,7 @@ Validation accuracy of the frozen baseline in the same setting: 0.770. The chose
 
 The best rates are about 5 to 25 times those for DINOv2-small (1e-5 for `end_to_end` and `pair`, 5e-5 for `supcon`).
 
-With train-mode batch norm, every trained method was below the frozen baseline at low rates; ADR 0013 gives the measurements.
+With train-mode batch norm, `end_to_end` and `supcon` scored 0.694 and 0.668 at 1e-5, below the frozen baseline of 0.770 in the same validation setting (ADR 0013); `pair` was not measured that way.
 
 ## Limits
 
