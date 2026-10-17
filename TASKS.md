@@ -138,7 +138,7 @@ Legend:
 - [x] domain-risk guide
 - [x] privacy/logging review
 - [x] changelog
-- [~] v0.1 release checklist (`plans/V0_1_RELEASE.md`: built items are verified; the version number, the package-name check, a runnable README quickstart, the benchmarks beyond the first real-image one, and the unbuilt spec items remain open)
+- [~] v0.1 release checklist (`plans/V0_1_RELEASE.md`: built items are verified; the version number, the package-name check, a runnable README quickstart, the benchmarks not yet run, and the unbuilt spec items remain open)
 
 ## After M12: baselines and real-image benchmarks
 
@@ -146,5 +146,5 @@ Legend:
 - [x] batch-norm statistics fixed during representation training, `freeze_batch_norm` (ADR 0013)
 - [x] EuroSAT few-shot benchmark with DINOv2-small (`benchmarks/few_shot.py`, `docs/benchmarks/eurosat-dinov2-small.md`)
 - [x] EuroSAT few-shot benchmark with ResNet-50 (`docs/benchmarks/eurosat-resnet50.md`)
-- [ ] RVL-CDIP document-image benchmark
+- [x] RVL-CDIP document-image benchmark with DINOv2-small (`docs/benchmarks/rvl-cdip-dinov2-small.md`)
 - [ ] further real-image benchmarks (`docs/research/EXPERIMENT_MATRIX.md`)
