@@ -65,13 +65,13 @@ On this machine, `frozen`, `supcon`, and `pair` together took 131 minutes for al
 
 ```bash
 pip install -e ".[hf,torchvision]"
-# Choose learning rates on the validation split, one command per candidate rate:
-python benchmarks/eurosat_few_shot.py --evaluate-on validation --shots 8 --seeds 0 \
+# From the repository root. Choose learning rates on the validation split, one command per candidate rate:
+python benchmarks/few_shot.py --dataset eurosat --evaluate-on validation --shots 8 --seeds 0 \
     --methods frozen end_to_end supcon pair \
-    --learning-rate end_to_end=1e-5 supcon=1e-5 pair=1e-5 --output tune_1e-5.json
+    --learning-rate end_to_end=1e-5 supcon=1e-5 pair=1e-5 --output .runs/tune_1e-5.json
 # Then run the test split once with the chosen rates:
-python benchmarks/eurosat_few_shot.py --evaluate-on test \
-    --learning-rate end_to_end=1e-5 supcon=5e-5 pair=1e-5 --output results.json
+python benchmarks/few_shot.py --dataset eurosat --evaluate-on test \
+    --learning-rate end_to_end=1e-5 supcon=5e-5 pair=1e-5 --output .runs/results.json
 ```
 
 The script downloads EuroSAT (about 90 MB) through torchvision on first use. The records behind the table are in [`benchmarks/results/eurosat_dinov2_small.json`](../../benchmarks/results/eurosat_dinov2_small.json). They merge two runs: `frozen`, `supcon`, and `pair` in one, and `end_to_end` in the other; each run's configuration and code commit are recorded with it.

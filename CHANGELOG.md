@@ -17,7 +17,7 @@ All notable changes to EmbedFit are recorded here, following [Keep a Changelog](
 - `RetrievalIndex` with a brute-force cosine backend, exclusion by id, by the query's own id, and by group, and ranking metrics.
 - `FewShotEvaluator` for methods × shots × seeds benchmarks with tidy records.
 - Pickle-free model bundles with atomic saving and consistency checks on load.
-- `benchmarks/eurosat_few_shot.py` and results on EuroSAT with DINOv2-small, the first benchmark on real images.
+- `benchmarks/few_shot.py`, a few-shot benchmark on public datasets (EuroSAT, RVL-CDIP documents), with results in `docs/benchmarks/`.
 - Runnable examples on synthetic data, and guides on data leakage, benchmarking, and rare-event risk workflows.
 
 ### Not yet available

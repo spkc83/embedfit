@@ -146,7 +146,8 @@ The `triplet` training mode, augmentation profiles, and Hugging Face Dataset and
 - [Avoiding data leakage](docs/guides/leakage.md): choosing splits and checking them.
 - [Benchmarking few-shot methods](docs/guides/benchmarking.md): what makes a comparison fair.
 - [Rare-event risk workflows](docs/guides/rare-event-risk.md): splits, positive class, metrics, thresholds, and retrieval for rare, costly classes.
-- [EuroSAT with DINOv2-small](docs/benchmarks/eurosat-dinov2-small.md): a few-shot benchmark on real images, with the script to reproduce it in [`benchmarks/`](benchmarks/eurosat_few_shot.py).
+- [EuroSAT with DINOv2-small](docs/benchmarks/eurosat-dinov2-small.md): a few-shot benchmark on real images, with the script to reproduce it in [`benchmarks/`](benchmarks/few_shot.py).
+- [EuroSAT with ResNet-50](docs/benchmarks/eurosat-resnet50.md): the same protocol with a batch-norm convolutional backbone.
 - [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Development
