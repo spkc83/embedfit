@@ -1,4 +1,4 @@
-"""Classification, risk, and calibration metrics, and threshold selection.
+"""Classification, risk, and calibration metrics, threshold selection, and a metric registry.
 
 Every function takes arrays of labels and scores; none of them calls a model.
 """
@@ -15,6 +15,7 @@ from embedfit.evaluation.classification import (
     pr_auc,
     roc_auc,
 )
+from embedfit.evaluation.registry import available_metrics, get_metric, register_metric
 from embedfit.evaluation.risk import (
     dollar_recall,
     dollar_recall_at_review_rate,
@@ -29,6 +30,7 @@ from embedfit.evaluation.thresholds import ThresholdResult, select_threshold
 __all__ = [
     "CalibrationBins",
     "ThresholdResult",
+    "available_metrics",
     "brier_score",
     "calibration_bins",
     "classification_metrics",
@@ -36,12 +38,14 @@ __all__ = [
     "dollar_recall",
     "dollar_recall_at_review_rate",
     "expected_calibration_error",
+    "get_metric",
     "pr_auc",
     "precision_at_k",
     "precision_at_review_rate",
     "recall_at_fpr",
     "recall_at_k",
     "recall_at_review_rate",
+    "register_metric",
     "roc_auc",
     "select_threshold",
 ]

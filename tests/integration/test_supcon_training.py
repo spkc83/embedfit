@@ -8,7 +8,7 @@ import torch
 
 from embedfit import EmbedFitModel, ImageDataset, Trainer, TrainingArguments
 from embedfit.exceptions import ConfigurationError
-from embedfit.representation import batch_shape
+from embedfit.sampling import batch_shape
 from embedfit.testing import BAR_CLASSES, make_bar_images
 
 LABELS = list(BAR_CLASSES[:3])

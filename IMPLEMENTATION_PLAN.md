@@ -171,13 +171,13 @@ Deliver:
 
 ## Required in v0.2
 
-- triplet learning (`SPEC.md` §3: optional for v0.1, required by v0.2 if deferred)
+- triplet learning (`SPEC.md` §3: deferred from v0.1, required by v0.2)
 
 ## Optional v0.2 items
 
 - calibration methods
 - prototype head
 - FAISS backend
-- multi-label improvements
+- multilabel classification
 - ROI/multi-crop representation
 - self-supervised domain adaptation

@@ -159,7 +159,7 @@ def test_training_batches_are_reshuffled_every_epoch():
     orders = []
     for epoch in (0, 1, 0):
         objective.set_epoch(epoch)
-        orders.append(list(iter(objective.loader.sampler)))
+        orders.append([i for batch in objective.loader.batch_sampler for i in batch])
     assert orders[0] != orders[1] and orders[0] == orders[2]
     assert sorted(orders[0]) == list(range(18))
 

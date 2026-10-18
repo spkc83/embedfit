@@ -26,7 +26,7 @@ Status legend: `[x]` verified on `main`, `[ ]` open.
 - [x] package build green — wheel and sdist, Apache-2.0 metadata, `py.typed`
 - [x] examples execute — six scripts run by `tests/integration/test_examples.py`
 - [x] no sensitive-data logging paths — structural audit of log calls and exception messages, no chained file-path causes; mechanisms listed in `SECURITY_PRIVACY.md`
-- [ ] README quickstart verified — the snippets use placeholder variables (`train_images`, `test_images`); the runnable equivalents are the examples
+- [x] README quickstart verified — every Python block in `README.md` runs in order, offline on the `dummy/tiny` backbone, in `tests/integration/test_readme.py`
 - [x] public API documented with types and docstrings; behaviour pinned by regression tests
 
 ## Research readiness
@@ -45,7 +45,6 @@ Real-image results: EuroSAT with DINOv2-small at 4, 8, and 16 shots ([results](.
 - [ ] version set to 0.1.0 — currently `0.1.0.dev0` in `src/embedfit/_version.py`
 - [x] changelog — `CHANGELOG.md`
 - [x] license decision — Apache-2.0
-- [ ] final package-name availability check — `embedfit` has not been checked against PyPI (ADR 0001 keeps the name provisional)
 
 ## Specified for v0.1 but not built
 
@@ -54,9 +53,17 @@ These are specified for v0.1 in `SPEC.md` or the design and research docs, but a
 - [ ] Augmentation profiles `none` / `natural` / `document` (§13). Training currently applies no task augmentation.
 - [ ] Dataset adapters for Hugging Face `datasets` and pandas DataFrames (§6). `ImageDataset` accepts sequences of records and map-style torch datasets.
 - [ ] Corrupt-image policy `skip` with a reported count (`docs/design/DATA_MODEL.md`). A corrupt image always raises.
-- [ ] `triplet` training mode (§3: optional for v0.1, required by v0.2). `TrainingArguments` accepts the mode and `Trainer` rejects it as unavailable.
-- [ ] Multilabel classification (§2, stretch).
 - [x] Partial unfreezing for the end-to-end baseline (`docs/research/BASELINES.md`) — `TrainingArguments.unfreeze_last_blocks`, for every mode that trains the backbone, with provider-defined blocks (ADR 0015); `tests/unit/test_backbone_blocks.py`, `tests/integration/test_partial_unfreezing.py`, and block tests per provider.
 - [x] Representation checkpoints on disk — `TrainingArguments.checkpoint_dir` writes the best and the last epoch as model bundles (ADR 0016); `tests/integration/test_representation_checkpoints.py`.
-- [ ] Registries for samplers, metrics, and augmentation pipelines (§26). Backbones, heads, and losses have registries; custom samplers and metrics are used by calling them directly.
-- [ ] Prototype / nearest-centroid head (§9, optional).
+- [x] Sampler registry (§26): `register_sampler` and `TrainingArguments.sampler` for `supcon` and `end_to_end` batches, checked for every epoch before training. Evidence: `tests/unit/test_sampler_registry.py`, `tests/integration/test_registries.py`.
+- [x] Metric registry (§26): `register_metric`, `Trainer.evaluate(metrics=...)`, and `FewShotEvaluator.run(metrics=...)`. Evidence: `tests/unit/evaluation/test_metric_registry.py`, `tests/integration/test_registries.py`.
+- [ ] Augmentation pipeline registry (§26).
+
+## Deferred beyond v0.1
+
+Recorded as deferred in `SPEC.md` or ADR 0001; not part of the v0.1 release.
+
+- `triplet` training mode — required by v0.2 (§3). `TrainingArguments` accepts the mode and `Trainer` rejects it as unavailable.
+- Multilabel classification — optional for v0.2 (§2). v0.1 is single-label.
+- Prototype / nearest-centroid head — optional for v0.2 (§9). A custom head can be registered with `register_head` (`docs/research/BASELINES.md`).
+- PyPI package-name check — not needed for v0.1; the first publication is planned on Hugging Face, with a blog post. `embedfit` has not been checked against PyPI; that check comes before any PyPI upload (ADR 0001).

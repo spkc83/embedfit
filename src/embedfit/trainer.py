@@ -9,8 +9,8 @@ import numpy as np
 
 from embedfit.checkpoints import checkpoint_model
 from embedfit.data.dataset import ImageDataset
-from embedfit.evaluation.calibration import brier_score
-from embedfit.evaluation.classification import classification_metrics, pr_auc, roc_auc
+from embedfit.evaluation.classification import classification_metrics
+from embedfit.evaluation.registry import get_metric, requested_metrics
 from embedfit.exceptions import ConfigurationError, UndefinedMetricError
 from embedfit.heads.linear import LinearHead
 from embedfit.heads.registry import create_head
@@ -26,6 +26,7 @@ from embedfit.utils.device import resolve_device
 from embedfit.utils.seed import set_seed
 
 logger = logging.getLogger(__name__)
+
 
 _IMPLEMENTED_MODES = ("frozen", "supcon", "pair", "end_to_end")
 
@@ -256,7 +257,9 @@ class Trainer:
             labels=target.labels,
         )
 
-    def evaluate(self, dataset: ImageDataset | None = None) -> dict[str, float]:
+    def evaluate(
+        self, dataset: ImageDataset | None = None, *, metrics: Sequence[str] = ()
+    ) -> dict[str, float]:
         """Compute aggregate metrics on held-out data.
 
         ``eval_dataset`` is the default, and in every mode that trains the backbone it also
@@ -265,20 +268,26 @@ class Trainer:
 
         Args:
             dataset: Samples to evaluate. Defaults to ``eval_dataset``.
+            metrics: Names of registered metrics (``embedfit.evaluation.register_metric``) to
+                compute in addition to the defaults, from the positive class's predicted
+                probability. Requires a model with a ``positive_label``.
 
         Returns:
             The metrics of ``embedfit.evaluation.classification_metrics``. When the model has
             a ``positive_label``, also ``roc_auc``, ``pr_auc``, and ``brier_score`` computed
-            from the positive class's predicted probability; one that is undefined for the
-            data (for example, no positive samples) is reported as NaN and logged as a
-            warning. Accuracy alone is misleading
+            from the positive class's predicted probability, and each requested metric under
+            its registered name; one that is undefined for the data (for example, no positive
+            samples) is reported as NaN and logged as a warning. Accuracy alone is misleading
             for rare events, so prefer ``pr_auc`` and the ranking metrics in
             ``embedfit.evaluation`` there.
 
         Raises:
-            ConfigurationError: If no dataset is available or it is empty.
+            ConfigurationError: If no dataset is available or it is empty, or ``metrics`` holds
+                an unknown, duplicate, or default name, or is given without a
+                ``positive_label``. Metric names are checked before predicting.
             HeadNotFittedError: If ``train`` has not run.
         """
+        names = requested_metrics(metrics, self.model.positive_label)
         output = self.predict(dataset)
         if len(output.labels) == 0:
             raise ConfigurationError("Cannot evaluate an empty dataset.")
@@ -292,13 +301,9 @@ class Trainer:
         if positive is not None:
             assert self.model.label_mapping is not None
             scores = output.probabilities[:, self.model.label_mapping.index_of(positive)]
-            for name, metric in (
-                ("roc_auc", roc_auc),
-                ("pr_auc", pr_auc),
-                ("brier_score", brier_score),
-            ):
+            for name in ("roc_auc", "pr_auc", "brier_score", *names):
                 try:
-                    results[name] = metric(output.labels, scores, positive_label=positive)
+                    results[name] = get_metric(name)(output.labels, scores, positive_label=positive)
                 except UndefinedMetricError as exc:
                     logger.warning("%s reported as NaN: %s", name, exc)
                     results[name] = float("nan")

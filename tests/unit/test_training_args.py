@@ -56,6 +56,9 @@ def test_defaults_match_the_specification():
         ({"output_dir": "run", "checkpoint_dir": "run"}, "checkpoint_dir"),
         ({"output_dir": "run", "checkpoint_dir": "run/checkpoints"}, "checkpoint_dir"),
         ({"output_dir": "run/model", "checkpoint_dir": "run"}, "checkpoint_dir"),
+        ({"sampler": "magic"}, "sampler must be one of"),
+        ({"training_mode": "frozen", "sampler": "balanced"}, "sampler only applies"),
+        ({"training_mode": "pair", "sampler": "random"}, "sampler only applies"),
     ],
 )
 def test_invalid_values_fail_at_construction(kwargs, match):
@@ -74,6 +77,16 @@ def test_new_options_default_to_off():
     assert (configured.unfreeze_last_blocks, configured.checkpoint_dir) == (2, "checkpoints")
 
 
-def test_arguments_are_json_serialisable():
+@pytest.mark.parametrize("mode", ["frozen", "supcon", "pair", "end_to_end"])
+def test_the_default_sampler_is_chosen_by_the_mode(mode):
+    assert TrainingArguments(training_mode=mode).sampler is None
+
+
+def test_a_registered_sampler_is_accepted_for_batch_based_modes():
+    assert TrainingArguments(training_mode="supcon", sampler="random").sampler == "random"
+    assert TrainingArguments(training_mode="end_to_end", sampler="balanced").sampler == "balanced"
+
+
+def test_every_argument_is_json_serialisable():
     json.dumps(asdict(TrainingArguments()))
     json.dumps(asdict(TrainingArguments(unfreeze_last_blocks=1, checkpoint_dir="checkpoints")))

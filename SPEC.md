@@ -22,9 +22,11 @@ Required for v0.1:
 - binary single-label classification
 - multiclass single-label classification
 
-Stretch:
+Deferred beyond v0.1 (optional for v0.2):
 
 - multilabel classification
+
+v0.1 handles single-label tasks only.
 
 ## 3. Required training modes
 
@@ -65,7 +67,7 @@ image A + image B
 
 ### `triplet`
 
-Optional for v0.1; required by v0.2 if deferred.
+Deferred from v0.1; required by v0.2. `TrainingArguments` accepts `training_mode="triplet"` and `triplet_margin`, and `Trainer` rejects the mode as unavailable when it is created.
 
 ### `end_to_end`
 
@@ -148,7 +150,7 @@ learning_rate: float = 2e-5
 weight_decay: float = 0.01
 warmup_ratio: float = 0.0
 temperature: float = 0.07
-triplet_margin: float = 0.2
+triplet_margin: float = 0.2   # triplet mode (§3), deferred to v0.2
 gradient_accumulation_steps: int = 1
 mixed_precision: str | None = None
 max_grad_norm: float | None = 1.0
@@ -164,6 +166,7 @@ negatives_per_example: int = 4   # pair mode (§11)
 hard_negative_fraction: float = 0.0       # pair mode: share of mined negatives (§11)
 hard_negative_refresh_epochs: int = 1     # how often training embeddings are re-encoded
 freeze_batch_norm: bool = True   # batch-norm running statistics fixed during training (ADR 0013)
+sampler: str | None = None   # supcon / end_to_end batch sampler; None = mode default (§26)
 unfreeze_last_blocks: int | None = None   # train only the backbone's last N blocks (ADR 0015)
 checkpoint_dir: str | None = None         # best and last epoch written as bundles (ADR 0016)
 ```
@@ -254,7 +257,7 @@ Required:
 - scikit-learn logistic regression
 - PyTorch linear head
 
-Optional:
+Deferred beyond v0.1 (optional for v0.2):
 
 - nearest-centroid/prototype head
 
@@ -269,7 +272,7 @@ Required:
 - supervised contrastive
 - cosine pair loss
 
-Optional/deferred:
+Deferred to v0.2, with the `triplet` mode:
 
 - triplet margin
 
@@ -535,6 +538,8 @@ Allow custom:
 - augmentation pipeline
 
 Simple registries are sufficient in v0.1.
+
+Implemented: backbones (`register_backbone_provider`, by `<provider>/<name>` identifier), heads (`register_head`, `TrainingArguments.head`), losses (`register_loss`), batch samplers for `supcon` and `end_to_end` (`register_sampler`, `TrainingArguments.sampler`), and positive-class score metrics (`register_metric`, `Trainer.evaluate(metrics=...)`). Pair samplers and multiclass metrics are not pluggable in v0.1.
 
 ## 27. Version boundary
 
