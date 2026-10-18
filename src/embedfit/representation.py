@@ -6,7 +6,7 @@ they change from epoch to epoch) and turns one batch into a loss.
 
 import logging
 import math
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -15,7 +15,10 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
+from embedfit.augmentation.pipeline import Augmentation, augment_image, probe_augmentation
+from embedfit.augmentation.registry import create_augmentation
 from embedfit.data.dataset import ImageDataset
+from embedfit.data.image import to_rgb_tensor
 from embedfit.exceptions import ConfigurationError, TrainingDivergedError
 from embedfit.heads.linear import LinearHead
 from embedfit.losses.registry import create_loss
@@ -67,6 +70,67 @@ class _PixelDataset(Dataset[tuple[torch.Tensor, int]]):
         return self._backbone.preprocess(self._images[position]), self._targets[position]
 
 
+class _AugmentedPixelDataset(Dataset[tuple[torch.Tensor, int]]):
+    """Like ``_PixelDataset``, but each image is augmented before preprocessing.
+
+    Indexed by the ``(epoch, draw, position)`` keys of ``_DrawKeys``, so every draw gets its
+    own seed, whichever worker process loads it.
+    """
+
+    def __init__(
+        self,
+        model: EmbedFitModel,
+        dataset: ImageDataset,
+        targets: np.ndarray,
+        augmentation: Augmentation,
+        seed: int,
+    ) -> None:
+        self._backbone = model.backbone
+        self._images = dataset.images
+        self._targets = targets.tolist()
+        self._augmentation = augmentation
+        self._seed = seed
+
+    def __len__(self) -> int:
+        return len(self._images)
+
+    def __getitem__(self, key: tuple[int, int, int]) -> tuple[torch.Tensor, int]:
+        epoch, draw, position = key
+        image = augment_image(
+            self._augmentation,
+            to_rgb_tensor(self._images[position]),
+            seed=self._seed,
+            epoch=epoch,
+            draw=draw,
+        )
+        return self._backbone.preprocess(image), self._targets[position]
+
+
+class _DrawKeys:
+    """Turn a batch sampler's positions into ``(epoch, draw, position)`` keys.
+
+    ``draw`` counts the images drawn so far in the epoch, so a sample drawn twice gets two
+    different augmentation seeds. Length and ``set_epoch`` are forwarded to the wrapped sampler.
+    """
+
+    def __init__(self, batches: BatchSampler) -> None:
+        self._batches = batches
+        self._epoch = 0
+
+    def set_epoch(self, epoch: int) -> None:
+        self._epoch = epoch
+        self._batches.set_epoch(epoch)
+
+    def __len__(self) -> int:
+        return len(self._batches)
+
+    def __iter__(self) -> Iterator[list[tuple[int, int, int]]]:
+        draw = 0
+        for batch in self._batches:
+            yield [(self._epoch, draw + offset, position) for offset, position in enumerate(batch)]
+            draw += len(batch)
+
+
 def _batch_sampler(args: TrainingArguments, targets: np.ndarray, seed: int) -> BatchSampler:
     """The batch sampler of ``supcon`` and ``end_to_end`` training: ``args.sampler``, or the
     mode's default. ``targets`` are the class indices of the samples, in dataset order."""
@@ -75,17 +139,30 @@ def _batch_sampler(args: TrainingArguments, targets: np.ndarray, seed: int) -> B
 
 
 def _loader(
-    model: EmbedFitModel, dataset: ImageDataset, args: TrainingArguments, seed: int
-) -> tuple[DataLoader[tuple[torch.Tensor, int]], BatchSampler]:
+    model: EmbedFitModel,
+    dataset: ImageDataset,
+    args: TrainingArguments,
+    seed: int,
+    augmentation: Augmentation | None = None,
+) -> tuple[DataLoader[tuple[torch.Tensor, int]], BatchSampler | _DrawKeys]:
+    """A loader of preprocessed images and class indices, and the sampler to set epochs on."""
     assert model.label_mapping is not None
     targets = model.label_mapping.encode(dataset.labels)
     sampler = _batch_sampler(args, targets, seed)
-    loader = DataLoader(
-        _PixelDataset(model, dataset, targets),
-        batch_sampler=sampler,
+    if augmentation is None:
+        loader = DataLoader(
+            _PixelDataset(model, dataset, targets),
+            batch_sampler=sampler,
+            num_workers=args.num_workers,
+        )
+        return loader, sampler
+    keys = _DrawKeys(sampler)
+    augmented = DataLoader(
+        _AugmentedPixelDataset(model, dataset, targets, augmentation, seed),
+        batch_sampler=keys,
         num_workers=args.num_workers,
     )
-    return loader, sampler
+    return augmented, keys
 
 
 def _check_batches(
@@ -156,6 +233,8 @@ class _PairDataset(Dataset[tuple[torch.Tensor, torch.Tensor, int, float]]):
         hard_negative_fraction: float = 0.0,
         refresh_epochs: int = 1,
         encode_batch_size: int = 64,
+        augmentation: Augmentation | None = None,
+        seed: int = 0,
     ) -> None:
         self._model = model
         self._backbone = model.backbone
@@ -164,6 +243,9 @@ class _PairDataset(Dataset[tuple[torch.Tensor, torch.Tensor, int, float]]):
         self._fraction = hard_negative_fraction
         self._refresh_epochs = refresh_epochs
         self._encode_batch_size = encode_batch_size
+        self._augmentation = augmentation
+        self._seed = seed
+        self._epoch = 0
         self._embeddings: np.ndarray | None = None
         self._cache: dict[int, list[ImagePair]] = {}
         self.pairs: list[ImagePair] = [] if self.mines else self.pairs_for(0)
@@ -178,6 +260,7 @@ class _PairDataset(Dataset[tuple[torch.Tensor, torch.Tensor, int, float]]):
         return self._cache[epoch]
 
     def set_epoch(self, epoch: int) -> None:
+        self._epoch = epoch
         if not self.mines:
             self.pairs = self.pairs_for(epoch)
             return
@@ -196,13 +279,24 @@ class _PairDataset(Dataset[tuple[torch.Tensor, torch.Tensor, int, float]]):
 
     def __getitem__(self, position: int) -> tuple[torch.Tensor, torch.Tensor, int, float]:
         pair = self.pairs[position]
-        preprocess = self._backbone.preprocess
         return (
-            preprocess(self._images[pair.left]),
-            preprocess(self._images[pair.right]),
+            self._pixels(pair.left, 2 * position),
+            self._pixels(pair.right, 2 * position + 1),
             pair.target,
             pair.weight,
         )
+
+    def _pixels(self, index: int, draw: int) -> torch.Tensor:
+        if self._augmentation is None:
+            return self._backbone.preprocess(self._images[index])
+        image = augment_image(
+            self._augmentation,
+            to_rgb_tensor(self._images[index]),
+            seed=self._seed,
+            epoch=self._epoch,
+            draw=draw,
+        )
+        return self._backbone.preprocess(image)
 
 
 @dataclass
@@ -223,19 +317,21 @@ def _objective(
     seed: int,
     classifier: nn.Linear | None = None,
     mine: bool = False,
+    augmentation: Augmentation | None = None,
 ) -> _Objective:
     """Build the objective selected by ``args.training_mode`` for one dataset.
 
     ``classifier`` is the jointly trained linear layer of ``end_to_end`` mode; without one the
     objective can check the data but not compute a loss.
     ``mine`` enables hard-negative mining (``pair`` mode, training data only).
+    ``augmentation`` is applied to every image drawn (training data only).
     """
     parameter = next(model.backbone.parameters(), None)
     device = model.device
     dtype = parameter.dtype if parameter is not None else torch.float32
 
     if args.training_mode == "supcon":
-        loader, sampler = _loader(model, dataset, args, seed=seed)
+        loader, sampler = _loader(model, dataset, args, seed=seed, augmentation=augmentation)
         supcon = create_loss("supcon", temperature=args.temperature)
 
         def supcon_loss(batch: Any) -> torch.Tensor:
@@ -249,7 +345,7 @@ def _objective(
 
     assert model.label_mapping is not None
     if args.training_mode == "end_to_end":
-        loader, sampler = _loader(model, dataset, args, seed=seed)
+        loader, sampler = _loader(model, dataset, args, seed=seed, augmentation=augmentation)
 
         def cross_entropy(batch: Any) -> torch.Tensor:
             if classifier is None:
@@ -277,6 +373,8 @@ def _objective(
         hard_negative_fraction=args.hard_negative_fraction if mine else 0.0,
         refresh_epochs=args.hard_negative_refresh_epochs,
         encode_batch_size=args.eval_batch_size,
+        augmentation=augmentation,
+        seed=seed,
     )
     pair_loader: DataLoader[Any] = DataLoader(
         pairs, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers
@@ -320,8 +418,9 @@ def validate_representation_setup(
             no two samples of one class, or such a sampler that yields no batches, or whose
             length differs from its batch count or between epochs),
             relationship rules are given for a mode other than ``pair``, the backbone
-            has no trainable parameters, or the mixed-precision mode is not supported on the
-            device.
+            has no trainable parameters, the mixed-precision mode is not supported on the
+            device, or ``args.augmentation`` is not registered or its pipeline returns a
+            malformed image when probed with a synthetic one.
     """
     rules = tuple(rules)
     if rules and args.training_mode != "pair":
@@ -348,6 +447,9 @@ def validate_representation_setup(
                     epochs,
                     need_positive=args.training_mode == "supcon",
                 )
+    augmentation = create_augmentation(args.augmentation)
+    if augmentation is not None:
+        probe_augmentation(augmentation, seed=args.seed)
     if args.training_mode == "end_to_end":
         require_every_class(model, train_dataset)  # The starting linear probe needs them all.
     if not any(True for _ in model.backbone.parameters()):
@@ -456,6 +558,11 @@ def train_representation(
     otherwise the last epoch is kept. ``eval_dataset`` must be validation data: selecting a
     checkpoint on test data leaks it.
 
+    ``args.augmentation`` names a task augmentation applied to every image drawn from
+    ``train_dataset``, before the backbone's preprocessing, with a seed derived from ``args.seed``,
+    the epoch, and the draw's position in the epoch (ADR 0014). Validation batches, hard-negative
+    mining, and the ``end_to_end`` linear probe use the original images.
+
     Images are preprocessed on the fly each epoch; nothing is cached. With ``num_workers > 0``
     each worker process receives a copy of the backbone (its ``preprocess`` method does the
     work), which costs start-up time that only pays off on larger datasets.
@@ -472,8 +579,8 @@ def train_representation(
         args: Hyperparameters: ``num_epochs``, ``batch_size``, ``learning_rate``,
             ``weight_decay``, ``warmup_ratio``, ``temperature``,
             ``gradient_accumulation_steps``, ``max_grad_norm``, ``mixed_precision``,
-            ``num_workers``, ``seed``, and for pairs ``positives_per_example`` and
-            ``negatives_per_example``.
+            ``num_workers``, ``seed``, ``augmentation``, and for pairs
+            ``positives_per_example`` and ``negatives_per_example``.
         rules: Relationship rules for ``"pair"`` mode.
         validate: Run ``validate_representation_setup`` first. ``Trainer`` has already done so
             when it was created and passes ``False``.
@@ -496,8 +603,18 @@ def train_representation(
         classifier = _linear_probe(model, train_dataset, args)
         first = next(model.backbone.parameters(), None)
         classifier.to(device=device, dtype=first.dtype if first is not None else torch.float32)
+    augmentation = create_augmentation(args.augmentation)
+    if augmentation is not None:
+        logger.info("Augmenting training images with '%s'", args.augmentation)
     objective = _objective(
-        model, train_dataset, args, rules, seed=args.seed, classifier=classifier, mine=True
+        model,
+        train_dataset,
+        args,
+        rules,
+        seed=args.seed,
+        classifier=classifier,
+        mine=True,
+        augmentation=augmentation,
     )
     loader = objective.loader
     validation = None
