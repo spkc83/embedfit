@@ -4,13 +4,14 @@ import logging
 import math
 import weakref
 from collections import defaultdict
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import replace
 from typing import Any
 
 import numpy as np
 
 from embedfit.data.dataset import ImageDataset
+from embedfit.evaluation.registry import requested_metrics
 from embedfit.exceptions import ConfigurationError
 from embedfit.model import EmbedFitModel
 from embedfit.sampling.few_shot import sample_few_shot
@@ -66,6 +67,7 @@ class FewShotEvaluator:
         methods: Sequence[str],
         model_factory: Callable[[], EmbedFitModel],
         training_arguments: Mapping[str, TrainingArguments] | None = None,
+        metrics: Sequence[str] = (),
     ) -> list[Record]:
         """Run the benchmark.
 
@@ -81,20 +83,25 @@ class FewShotEvaluator:
             training_arguments: Optional ``TrainingArguments`` per method. A method without an
                 entry uses ``TrainingArguments(training_mode=method)``. The ``seed`` of each
                 run replaces the one in the arguments.
+            metrics: Registered metrics to record in addition to the defaults; see
+                ``Trainer.evaluate``. The models need a ``positive_label``.
 
         Returns:
             Tidy records, one per method × shots × seed × metric, with the keys ``method``,
             ``backbone``, ``shots``, ``seed``, ``metric``, and ``value``. The metrics are those
-            of ``Trainer.evaluate``.
+            of ``Trainer.evaluate(metrics=metrics)``.
 
         Raises:
             ConfigurationError: If a method is unknown or duplicated, the arguments given for
                 a method name a different ``training_mode``, a dataset has the wrong type, the
                 factory returns something other than a new ``EmbedFitModel`` with a new
                 backbone, a class in the pool has fewer samples than the largest shot count, or
-                a method cannot train at the smallest shot count. All of these are raised
+                a method cannot train at the smallest shot count, or ``metrics`` is invalid for
+                the factory's models. All of these are raised
                 before any model is trained.
         """
+        if not isinstance(metrics, str) and isinstance(metrics, Iterable):
+            metrics = tuple(metrics)  # Checked per model below, then used by every evaluate.
         if isinstance(methods, str) or not isinstance(methods, Sequence) or not methods:
             raise ConfigurationError("methods must be a non-empty sequence of training modes.")
         unknown = [method for method in methods if method not in TRAINING_MODES]
@@ -149,7 +156,9 @@ class FewShotEvaluator:
         sample_few_shot(dataset, shots=max(self.shots), seed=self.seeds[0])
         smallest = sample_few_shot(dataset, shots=min(self.shots), seed=self.seeds[0])
         for method in methods:
-            Trainer(fresh_model(), replace(arguments[method], seed=self.seeds[0]), smallest)
+            model = fresh_model()
+            requested_metrics(metrics, model.positive_label)
+            Trainer(model, replace(arguments[method], seed=self.seeds[0]), smallest)
 
         records: list[Record] = []
         for shots in self.shots:
@@ -159,7 +168,7 @@ class FewShotEvaluator:
                     model = fresh_model()
                     trainer = Trainer(model, replace(arguments[method], seed=seed), few_shot)
                     trainer.train()
-                    for metric, value in trainer.evaluate(test_dataset).items():
+                    for metric, value in trainer.evaluate(test_dataset, metrics=metrics).items():
                         records.append(
                             {
                                 "method": method,

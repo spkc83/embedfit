@@ -1,3 +1,6 @@
+import json
+from dataclasses import asdict
+
 import pytest
 
 from embedfit import TrainingArguments
@@ -42,6 +45,9 @@ def test_defaults_match_the_specification():
         ({"device": 0}, "device"),
         ({"deterministic": "yes"}, "deterministic"),
         ({"output_dir": ""}, "output_dir"),
+        ({"sampler": "magic"}, "sampler must be one of"),
+        ({"training_mode": "frozen", "sampler": "balanced"}, "sampler only applies"),
+        ({"training_mode": "pair", "sampler": "random"}, "sampler only applies"),
     ],
 )
 def test_invalid_values_fail_at_construction(kwargs, match):
@@ -51,3 +57,17 @@ def test_invalid_values_fail_at_construction(kwargs, match):
 
 def test_none_disables_gradient_clipping():
     assert TrainingArguments(max_grad_norm=None).max_grad_norm is None
+
+
+@pytest.mark.parametrize("mode", ["frozen", "supcon", "pair", "end_to_end"])
+def test_the_default_sampler_is_chosen_by_the_mode(mode):
+    assert TrainingArguments(training_mode=mode).sampler is None
+
+
+def test_a_registered_sampler_is_accepted_for_batch_based_modes():
+    assert TrainingArguments(training_mode="supcon", sampler="random").sampler == "random"
+    assert TrainingArguments(training_mode="end_to_end", sampler="balanced").sampler == "balanced"
+
+
+def test_every_argument_is_json_serialisable():
+    json.dumps(asdict(TrainingArguments()))

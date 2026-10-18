@@ -166,6 +166,7 @@ negatives_per_example: int = 4   # pair mode (§11)
 hard_negative_fraction: float = 0.0       # pair mode: share of mined negatives (§11)
 hard_negative_refresh_epochs: int = 1     # how often training embeddings are re-encoded
 freeze_batch_norm: bool = True   # batch-norm running statistics fixed during training (ADR 0013)
+sampler: str | None = None   # supcon / end_to_end batch sampler; None = mode default (§26)
 ```
 
 ## 6. Input data
@@ -532,6 +533,8 @@ Allow custom:
 - augmentation pipeline
 
 Simple registries are sufficient in v0.1.
+
+Implemented: backbones (`register_backbone_provider`, by `<provider>/<name>` identifier), heads (`register_head`, `TrainingArguments.head`), losses (`register_loss`), batch samplers for `supcon` and `end_to_end` (`register_sampler`, `TrainingArguments.sampler`), and positive-class score metrics (`register_metric`, `Trainer.evaluate(metrics=...)`). Pair samplers and multiclass metrics are not pluggable in v0.1.
 
 ## 27. Version boundary
 

@@ -13,20 +13,22 @@ from typing import Any
 import numpy as np
 import torch
 from torch import nn
-from torch.utils.data import DataLoader, Dataset, RandomSampler
+from torch.utils.data import DataLoader, Dataset
 
 from embedfit.data.dataset import ImageDataset
 from embedfit.exceptions import ConfigurationError, TrainingDivergedError
 from embedfit.heads.linear import LinearHead
 from embedfit.losses.registry import create_loss
 from embedfit.model import EmbedFitModel
-from embedfit.sampling.balanced import BalancedClassBatchSampler
+from embedfit.sampling.balanced import batch_shape as batch_shape  # Kept importable from here.
 from embedfit.sampling.pairs import ImagePair, PairSampler, RelationshipRule
+from embedfit.sampling.registry import BatchSampler, create_sampler, needs_batch_check
 from embedfit.training_args import TrainingArguments
 
 logger = logging.getLogger(__name__)
 
 _EVAL_SEED_OFFSET = 1_000_003  # Keeps validation batches independent of training batches.
+_DEFAULT_SAMPLERS = {"supcon": "balanced", "end_to_end": "random"}
 
 
 @dataclass(frozen=True)
@@ -65,46 +67,75 @@ class _PixelDataset(Dataset[tuple[torch.Tensor, int]]):
         return self._backbone.preprocess(self._images[position]), self._targets[position]
 
 
-def batch_shape(batch_size: int, num_classes: int) -> tuple[int, int]:
-    """Split ``batch_size`` into ``(classes_per_batch, samples_per_class)``.
-
-    As many classes as fit with at least two samples each are used, and the batch is divided
-    evenly between them, so the realised batch size can be slightly below ``batch_size``.
-
-    Raises:
-        ConfigurationError: If there are fewer than 2 classes, or ``batch_size`` is below 4,
-            the minimum for two classes with a positive pair each.
-    """
-    if num_classes < 2:
-        raise ConfigurationError(
-            f"Contrastive training needs at least 2 classes in the data, got {num_classes}."
-        )
-    if batch_size < 4:
-        raise ConfigurationError(
-            f"Contrastive training needs batch_size >= 4 (2 classes x 2 samples), got {batch_size}."
-        )
-    classes_per_batch = min(num_classes, batch_size // 2)
-    return classes_per_batch, batch_size // classes_per_batch
+def _batch_sampler(args: TrainingArguments, targets: np.ndarray, seed: int) -> BatchSampler:
+    """The batch sampler of ``supcon`` and ``end_to_end`` training: ``args.sampler``, or the
+    mode's default. ``targets`` are the class indices of the samples, in dataset order."""
+    name = args.sampler or _DEFAULT_SAMPLERS[args.training_mode]
+    return create_sampler(name, targets, batch_size=args.batch_size, seed=seed)
 
 
 def _loader(
     model: EmbedFitModel, dataset: ImageDataset, args: TrainingArguments, seed: int
-) -> tuple[DataLoader[tuple[torch.Tensor, int]], BalancedClassBatchSampler]:
+) -> tuple[DataLoader[tuple[torch.Tensor, int]], BatchSampler]:
     assert model.label_mapping is not None
     targets = model.label_mapping.encode(dataset.labels)
-    classes_per_batch, samples_per_class = batch_shape(args.batch_size, len(np.unique(targets)))
-    sampler = BalancedClassBatchSampler(
-        targets,
-        classes_per_batch=classes_per_batch,
-        samples_per_class=samples_per_class,
-        seed=seed,
-    )
+    sampler = _batch_sampler(args, targets, seed)
     loader = DataLoader(
         _PixelDataset(model, dataset, targets),
         batch_sampler=sampler,
         num_workers=args.num_workers,
     )
     return loader, sampler
+
+
+def _check_batches(
+    sampler: BatchSampler, targets: np.ndarray, epochs: range, *, need_positive: bool
+) -> None:
+    """Iterate every epoch's batches, positions only, so that a malformed batch from a custom
+    sampler fails before training instead of part-way through it.
+
+    Raises:
+        ConfigurationError: If an epoch yields no batches, a batch is empty, not a flat list of
+            integer positions, holds a position outside the dataset, or (``need_positive``)
+            holds no two samples of the same class; or if ``len(sampler)`` differs from the
+            number of batches yielded or between epochs (the learning-rate schedule is sized
+            from it once).
+    """
+    first_length = None
+    for epoch in epochs:
+        sampler.set_epoch(epoch)
+        count = 0
+        for batch in sampler:
+            count += 1
+            positions = np.asarray(batch)
+            where = f"Sampler batch {count} of epoch {epoch + 1}"
+            if positions.size == 0:
+                raise ConfigurationError(f"{where} is an empty batch.")
+            if positions.ndim != 1 or not np.issubdtype(positions.dtype, np.integer):
+                raise ConfigurationError(f"{where} must be a flat list of integer positions.")
+            if positions.min() < 0 or positions.max() >= len(targets):
+                raise ConfigurationError(
+                    f"{where} holds a position outside the {len(targets)} samples."
+                )
+            if need_positive and len(np.unique(targets[positions])) == len(positions):
+                raise ConfigurationError(
+                    f"{where} holds no two samples of the same class, which the contrastive "
+                    "loss needs."
+                )
+        if count == 0:
+            raise ConfigurationError(f"The sampler yielded no batches in epoch {epoch + 1}.")
+        if count != len(sampler):
+            raise ConfigurationError(
+                f"The sampler reports {len(sampler)} batches but yielded {count} in epoch "
+                f"{epoch + 1}."
+            )
+        if first_length is None:
+            first_length = count
+        elif count != first_length:
+            raise ConfigurationError(
+                "The sampler must yield the same number of batches in every epoch, got "
+                f"{first_length} in epoch 1 and {count} in epoch {epoch + 1}."
+            )
 
 
 class _PairDataset(Dataset[tuple[torch.Tensor, torch.Tensor, int, float]]):
@@ -218,18 +249,7 @@ def _objective(
 
     assert model.label_mapping is not None
     if args.training_mode == "end_to_end":
-        targets = model.label_mapping.encode(dataset.labels)
-        generator = torch.Generator()
-        pixels_dataset = _PixelDataset(model, dataset, targets)
-        uniform: DataLoader[Any] = DataLoader(
-            pixels_dataset,
-            batch_size=args.batch_size,
-            sampler=RandomSampler(pixels_dataset, generator=generator),
-            num_workers=args.num_workers,
-        )
-
-        def reseed(epoch: int) -> None:
-            generator.manual_seed(seed * 100_003 + epoch)
+        loader, sampler = _loader(model, dataset, args, seed=seed)
 
         def cross_entropy(batch: Any) -> torch.Tensor:
             if classifier is None:
@@ -239,8 +259,7 @@ def _objective(
             loss: torch.Tensor = nn.functional.cross_entropy(logits.float(), labels.to(device))
             return loss
 
-        reseed(0)
-        return _Objective(uniform, reseed, lambda epoch: len(uniform), cross_entropy)
+        return _Objective(loader, sampler.set_epoch, lambda epoch: len(sampler), cross_entropy)
 
     model.label_mapping.encode(dataset.labels)  # Unknown labels are an error in every mode.
     pair_sampler = PairSampler(
@@ -295,7 +314,11 @@ def validate_representation_setup(
         ConfigurationError: If the training (or validation) data is empty or cannot supply
             the objective (``supcon``: batch size below 4, fewer than 2 classes, or a class
             with fewer than 2 samples; ``pair``: no positive or no negative pair can be
-            formed; ``end_to_end``: a class of the model without training samples),
+            formed; ``end_to_end``: a class of the model without training samples; ``supcon``
+            and ``end_to_end``: a batch of a sampler other than the built-in ``balanced``, in
+            any epoch, that is empty, holds a position outside the data, or (``supcon``) holds
+            no two samples of one class, or such a sampler that yields no batches, or whose
+            length differs from its batch count or between epochs),
             relationship rules are given for a mode other than ``pair``, the backbone
             has no trainable parameters, or the mixed-precision mode is not supported on the
             device.
@@ -305,11 +328,26 @@ def validate_representation_setup(
         raise ConfigurationError(
             f"relationship_rules only apply to training_mode='pair', not '{args.training_mode}'."
         )
-    for name, dataset in (("train_dataset", train_dataset), ("eval_dataset", eval_dataset)):
+    checks = (
+        ("train_dataset", train_dataset, args.seed, range(args.num_epochs)),
+        # Validation batches are those of epoch 0 after every epoch.
+        ("eval_dataset", eval_dataset, args.seed + _EVAL_SEED_OFFSET, range(1)),
+    )
+    for name, dataset, seed, epochs in checks:
         if dataset is not None:
             if len(dataset) == 0:
                 raise ConfigurationError(f"{name} is empty.")
-            _objective(model, dataset, args, rules, seed=args.seed)
+            _objective(model, dataset, args, rules, seed=seed)
+            sampler = args.sampler or _DEFAULT_SAMPLERS.get(args.training_mode)
+            if sampler is not None and needs_batch_check(sampler):
+                assert model.label_mapping is not None
+                targets = model.label_mapping.encode(dataset.labels)
+                _check_batches(
+                    _batch_sampler(args, targets, seed),
+                    targets,
+                    epochs,
+                    need_positive=args.training_mode == "supcon",
+                )
     if args.training_mode == "end_to_end":
         require_every_class(model, train_dataset)  # The starting linear probe needs them all.
     if not any(True for _ in model.backbone.parameters()):
@@ -399,12 +437,14 @@ def train_representation(
     """Adapt the backbone with the objective named by ``args.training_mode``.
 
     ``"supcon"`` draws class-balanced batches and applies the supervised contrastive loss.
+    ``args.sampler`` replaces the batches of ``"supcon"`` and ``"end_to_end"`` with those of a
+    registered sampler, for training and validation alike.
     ``"pair"`` draws a bounded set of positive and negative pairs each epoch (``PairSampler``)
     and applies the cosine pair loss; ``rules`` optionally decide pair targets and weights
     from fields other than the class label. ``"end_to_end"`` is the comparison baseline:
     linear-probe-then-fine-tune (ADR 0012). A ``LinearHead`` is first fitted to convergence on
     the embeddings of the untouched backbone; that linear classifier is then trained jointly
-    with the backbone under cross-entropy on uniformly shuffled batches, and returned in
+    with the backbone under cross-entropy on uniformly shuffled batches by default, and returned in
     ``classifier``. The classifier sees exactly the embeddings the model produces (normalised
     or not) and ``temperature`` plays no part, so the baseline shares no hyperparameter with
     the contrastive losses.
