@@ -3,6 +3,7 @@
 import difflib
 import json
 import math
+import re
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -199,6 +200,32 @@ class TimmBackbone(ImageBackbone):
                 "patch tokens cannot be told apart; use pooling='provider_default'."
             )
         return pool_tokens(tokens, self._pooling, prefix_tokens=int(prefix or 0))
+
+    def parameter_blocks(self) -> list[list[str]]:
+        """The blocks of timm's own coarse parameter grouping (``group_matcher(coarse=True)``).
+
+        Each parameter is matched as timm matches it (``re.match`` on its name inside the timm
+        model, the ``stem`` pattern first, then the ``blocks`` patterns in order), and the
+        first number a matching pattern captures is its block. Parameters in the stem, or
+        matched by a pattern that captures no number (timm attaches a final norm to the
+        previous group this way), are in no block. Models without such a grouping define no
+        blocks.
+        """
+        matcher = getattr(self.model, "group_matcher", None)
+        groups = matcher(coarse=True) if callable(matcher) else None
+        if not isinstance(groups, dict):
+            return []
+        rules = groups.get("blocks", [])
+        patterns = [rules] if isinstance(rules, str) else [rule[0] for rule in rules]
+        stem = groups.get("stem")
+        blocks: dict[int, list[str]] = {}
+        for name, _ in self.model.named_parameters():
+            if isinstance(stem, str) and re.match(stem, name):
+                continue
+            match = next((m for p in patterns if (m := re.match(p, name))), None)
+            if match is not None and match.groups() and match.group(1) is not None:
+                blocks.setdefault(int(match.group(1)), []).append(f"model.{name}")
+        return [blocks[number] for number in sorted(blocks)]
 
     def save_pretrained(self, path: str | Path) -> None:
         """Write ``config.json`` (name, pooling, preprocessing, dtype) and ``weights.pt``.

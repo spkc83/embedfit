@@ -22,7 +22,7 @@ pretrained encoder
 
 Starting from a converged probe (LP-FT, ADR 0012) keeps the baseline from being trained through a random classifier at a learning rate chosen for the backbone.
 
-The whole backbone is unfrozen for fine-tuning; partial unfreezing is not available.
+The whole backbone is unfrozen for fine-tuning by default. `unfreeze_last_blocks=N` fine-tunes only its last N blocks (ADR 0015); the same option applies to the contrastive modes, so every arm of a comparison can train the same parameters.
 
 ## Baseline 3 — Nearest centroid
 

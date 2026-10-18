@@ -1,3 +1,6 @@
+import json
+from dataclasses import asdict
+
 import pytest
 
 from embedfit import TrainingArguments
@@ -42,6 +45,17 @@ def test_defaults_match_the_specification():
         ({"device": 0}, "device"),
         ({"deterministic": "yes"}, "deterministic"),
         ({"output_dir": ""}, "output_dir"),
+        ({"unfreeze_last_blocks": 0}, "unfreeze_last_blocks"),
+        ({"unfreeze_last_blocks": -1}, "unfreeze_last_blocks"),
+        ({"unfreeze_last_blocks": True}, "unfreeze_last_blocks"),
+        ({"unfreeze_last_blocks": 1.5}, "unfreeze_last_blocks"),
+        ({"training_mode": "frozen", "unfreeze_last_blocks": 1}, "unfreeze_last_blocks"),
+        ({"checkpoint_dir": ""}, "checkpoint_dir"),
+        ({"checkpoint_dir": 3}, "checkpoint_dir"),
+        ({"training_mode": "frozen", "checkpoint_dir": "ckpt"}, "checkpoint_dir"),
+        ({"output_dir": "run", "checkpoint_dir": "run"}, "checkpoint_dir"),
+        ({"output_dir": "run", "checkpoint_dir": "run/checkpoints"}, "checkpoint_dir"),
+        ({"output_dir": "run/model", "checkpoint_dir": "run"}, "checkpoint_dir"),
     ],
 )
 def test_invalid_values_fail_at_construction(kwargs, match):
@@ -51,3 +65,15 @@ def test_invalid_values_fail_at_construction(kwargs, match):
 
 def test_none_disables_gradient_clipping():
     assert TrainingArguments(max_grad_norm=None).max_grad_norm is None
+
+
+def test_new_options_default_to_off():
+    args = TrainingArguments()
+    assert (args.unfreeze_last_blocks, args.checkpoint_dir) == (None, None)
+    configured = TrainingArguments(unfreeze_last_blocks=2, checkpoint_dir="checkpoints")
+    assert (configured.unfreeze_last_blocks, configured.checkpoint_dir) == (2, "checkpoints")
+
+
+def test_arguments_are_json_serialisable():
+    json.dumps(asdict(TrainingArguments()))
+    json.dumps(asdict(TrainingArguments(unfreeze_last_blocks=1, checkpoint_dir="checkpoints")))

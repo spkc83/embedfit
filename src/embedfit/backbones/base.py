@@ -8,7 +8,25 @@ import torch
 from torch import nn
 
 from embedfit.data.image import ImageLike
-from embedfit.exceptions import ImageInputError
+from embedfit.exceptions import ConfigurationError, ImageInputError
+
+
+def check_last_blocks(last_blocks: object, num_blocks: int, identifier: str) -> None:
+    """Raise ``ConfigurationError`` unless ``last_blocks`` is an int in ``[1, num_blocks]``."""
+    if num_blocks == 0:
+        raise ConfigurationError(
+            f"Backbone '{identifier}' defines no blocks, so partial unfreezing is not "
+            "available for it; leave unfreeze_last_blocks at None."
+        )
+    if (
+        isinstance(last_blocks, bool)
+        or not isinstance(last_blocks, int)
+        or not 1 <= last_blocks <= num_blocks
+    ):
+        raise ConfigurationError(
+            f"last_blocks must be an int in [1, {num_blocks}] for backbone '{identifier}', "
+            f"got {last_blocks!r}."
+        )
 
 
 class ImageBackbone(nn.Module, ABC):
@@ -19,10 +37,12 @@ class ImageBackbone(nn.Module, ABC):
     needed to rebuild it (ADR 0003). Code outside the adapter assumes none of these.
 
     Subclasses implement ``identifier``, ``embedding_dim``, ``preprocess``,
-    ``forward_features``, and ``save_pretrained``.
+    ``forward_features``, and ``save_pretrained``, and may implement ``parameter_blocks`` to
+    support partial unfreezing.
     """
 
     _frozen: bool = False
+    _partial: bool = False
 
     @property
     @abstractmethod
@@ -96,6 +116,47 @@ class ImageBackbone(nn.Module, ABC):
         """Whether ``freeze`` is in effect."""
         return self._frozen
 
+    def parameter_blocks(self) -> list[list[str]]:
+        """Names of the parameters in each block of this backbone, input side first.
+
+        A block is a stage or layer that partial unfreezing counts (``unfreeze(last_blocks=...)``).
+        Names are as returned by ``named_parameters()``. A parameter in no block is placed by
+        registration order: before the first block it belongs to the stem, which never trains
+        under partial unfreezing; between two blocks it joins the block after it; after the
+        last block it belongs to the tail (a final norm, for example), which trains with the
+        last block. The default returns no blocks, so partial unfreezing is unavailable.
+        """
+        return []
+
+    @property
+    def num_blocks(self) -> int:
+        """Number of blocks partial unfreezing can count (0 if the backbone defines none)."""
+        return len(self.parameter_blocks())
+
+    def _names_of(self, *modules: nn.Module) -> list[str]:
+        """Names, under this backbone, of the parameters of ``modules``, in registration order."""
+        wanted = {id(parameter) for module in modules for parameter in module.parameters()}
+        return [name for name, parameter in self.named_parameters() if id(parameter) in wanted]
+
+    def _block_positions(self) -> tuple[dict[str, int], int]:
+        """Each parameter's block index (-1 for the stem, the block count for the tail)."""
+        blocks = self.parameter_blocks()
+        owner = {name: index for index, names in enumerate(blocks) for name in names}
+        positions: dict[str, int] = {}
+        pending: list[str] = []
+        for name, _ in self.named_parameters():
+            if name not in owner:
+                pending.append(name)
+                continue
+            # Unowned parameters before the first block form the stem; later ones join the
+            # block that follows them.
+            stem = not positions
+            positions.update((waiting, -1 if stem else owner[name]) for waiting in pending)
+            pending.clear()
+            positions[name] = owner[name]
+        positions.update((waiting, len(blocks)) for waiting in pending)
+        return positions, len(blocks)
+
     def freeze(self) -> None:
         """Disable gradients for every current parameter and hold the module in eval mode.
 
@@ -103,16 +164,49 @@ class ImageBackbone(nn.Module, ABC):
         training cannot update batch-norm statistics or re-enable dropout here.
         """
         self._frozen = True
+        self._partial = False
         for parameter in self.parameters():
             parameter.requires_grad_(False)
         self.eval()
 
-    def unfreeze(self) -> None:
-        """Re-enable gradients for every parameter. The train/eval mode is left unchanged."""
-        self._frozen = False
-        for parameter in self.parameters():
-            parameter.requires_grad_(True)
+    def unfreeze(self, last_blocks: int | None = None) -> None:
+        """Re-enable gradients for every parameter, or only for the last blocks.
+
+        Args:
+            last_blocks: ``None`` makes every parameter trainable. A count in
+                ``[1, num_blocks]`` makes the last that many blocks and the tail trainable
+                and freezes the rest (see ``parameter_blocks``). While only part of the
+                backbone trains, ``train()`` keeps every batch-norm layer without a trainable
+                parameter in eval mode, so the frozen part's running statistics do not change.
+
+        Raises:
+            ConfigurationError: If ``last_blocks`` is out of range or the backbone defines no
+                blocks. Nothing changes in that case.
+        """
+        if last_blocks is None:
+            self._frozen = self._partial = False
+            for parameter in self.parameters():
+                parameter.requires_grad_(True)
+            return
+        positions, num_blocks = self._block_positions()
+        check_last_blocks(last_blocks, num_blocks, self.identifier)
+        self._frozen, self._partial = False, True
+        for name, parameter in self.named_parameters():
+            parameter.requires_grad_(positions[name] >= num_blocks - last_blocks)
+        self.train(self.training)
 
     def train(self, mode: bool = True) -> Self:
-        """Set training mode; a frozen backbone stays in eval mode regardless of ``mode``."""
-        return super().train(mode and not self._frozen)
+        """Set training mode; a frozen backbone stays in eval mode regardless of ``mode``.
+
+        Under partial unfreezing, batch-norm layers without a trainable parameter stay in eval
+        mode too, however this method is reached (a parent module, or ``encode`` restoring
+        the previous mode).
+        """
+        super().train(mode and not self._frozen)
+        if mode and self._partial:
+            for module in self.modules():
+                if isinstance(module, nn.modules.batchnorm._BatchNorm) and not any(
+                    parameter.requires_grad for parameter in module.parameters()
+                ):
+                    module.eval()
+        return self

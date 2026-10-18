@@ -303,3 +303,50 @@ def test_unknown_names_and_tags_are_provider_errors():
         TimmBackbone("resnet10tt", pretrained=False)
     with pytest.raises(BackboneProviderError, match="pretrained tag"):
         TimmBackbone("resnet10t.no_such_tag", pretrained=False)
+
+
+def _trainable(backbone):
+    return {name for name, p in backbone.named_parameters() if p.requires_grad}
+
+
+@pytest.mark.parametrize(
+    "name, count",
+    [
+        ("resnet18", 4),
+        (VIT, 12),
+        ("convnext_atto", 4),
+        ("efficientnet_b0", 7),
+        ("swin_tiny_patch4_window7_224", 4),
+    ],
+)
+def test_blocks_follow_timm_group_matcher(name, count):
+    backbone = TimmBackbone(name, pretrained=False)
+    assert backbone.num_blocks == count
+    names = {n for n, _ in backbone.named_parameters()}
+    assert all(n in names for block in backbone.parameter_blocks() for n in block)
+
+
+def test_resnet_last_block_is_layer4_including_its_batch_norm():
+    backbone = TimmBackbone("resnet18", pretrained=False)
+    backbone.unfreeze(last_blocks=1)
+    names = _trainable(backbone)
+    assert "model.layer4.0.bn1.weight" in names and "model.layer4.1.bn1.bias" in names
+    assert {n.split(".")[1] for n in names} == {"layer4"}
+
+
+def test_vit_tail_norm_trains_with_the_last_block_and_the_stem_does_not():
+    backbone = TimmBackbone(VIT, pretrained=False)
+    backbone.unfreeze(last_blocks=1)
+    names = _trainable(backbone)
+    assert {"model.norm.weight", "model.norm.bias"} <= names
+    assert all(n.startswith(("model.blocks.11.", "model.norm.")) for n in names)
+    backbone.unfreeze(last_blocks=12)
+    assert not any(
+        n.startswith(("model.cls_token", "model.patch_embed.")) for n in _trainable(backbone)
+    )
+
+
+def test_a_model_without_group_matcher_has_no_blocks(monkeypatch):
+    backbone = TimmBackbone("resnet18", pretrained=False)
+    monkeypatch.setattr(backbone.model, "group_matcher", lambda coarse=False: None)
+    assert backbone.num_blocks == 0

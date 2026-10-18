@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import torch
+from torch import nn
 
 from embedfit.backbones._preprocess import (
     channel_stats,
@@ -274,6 +275,32 @@ class HFBackbone(ImageBackbone):
         registers = int(getattr(self.model.config, "num_register_tokens", 0) or 0)
         policy = "cls" if self._pooling == "provider_default" else self._pooling
         return pool_tokens(tokens, policy, prefix_tokens=int(has_class_token) + registers)
+
+    def parameter_blocks(self) -> list[list[str]]:
+        """The entries of the outermost layer list of the Transformers model.
+
+        That is the shallowest ``nn.ModuleList`` with at least two entries (the one with the
+        most parameters on a tie): ``layers`` or ``encoder.layer`` for ViT and DINOv2, and
+        ``encoder.stages`` or ``encoder.layers`` for hierarchical models. Entry i of every
+        sibling list of the same length joins block i, as PVT's per-stage patch embeddings
+        (``encoder.patch_embeddings`` beside ``encoder.block``). A model without such a list
+        defines no blocks.
+        """
+        candidates = [
+            (name.count("."), -sum(p.numel() for p in module.parameters()), name, module)
+            for name, module in self.model.named_modules()
+            if isinstance(module, nn.ModuleList) and len(module) >= 2
+        ]
+        if not candidates:
+            return []
+        _, _, chosen, layers = min(candidates, key=lambda candidate: candidate[:3])
+        parent = chosen.rpartition(".")[0]
+        parallel = [
+            module
+            for _, _, name, module in candidates
+            if name.rpartition(".")[0] == parent and len(module) == len(layers)
+        ]
+        return [self._names_of(*entries) for entries in zip(*parallel, strict=True)]
 
     def save_pretrained(self, path: str | Path) -> None:
         """Write ``config.json`` (pooling and preprocessing) and the model in ``model/``.

@@ -56,7 +56,7 @@ These are specified for v0.1 in `SPEC.md` or the design and research docs, but a
 - [ ] Corrupt-image policy `skip` with a reported count (`docs/design/DATA_MODEL.md`). A corrupt image always raises.
 - [ ] `triplet` training mode (§3: optional for v0.1, required by v0.2). `TrainingArguments` accepts the mode and `Trainer` rejects it as unavailable.
 - [ ] Multilabel classification (§2, stretch).
-- [ ] Partial unfreezing for the end-to-end baseline (`docs/research/BASELINES.md`). Training always unfreezes the whole backbone.
-- [ ] Representation checkpoints on disk. The best epoch is kept in memory and restored; nothing is written until `save_model`.
+- [x] Partial unfreezing for the end-to-end baseline (`docs/research/BASELINES.md`) — `TrainingArguments.unfreeze_last_blocks`, for every mode that trains the backbone, with provider-defined blocks (ADR 0015); `tests/unit/test_backbone_blocks.py`, `tests/integration/test_partial_unfreezing.py`, and block tests per provider.
+- [x] Representation checkpoints on disk — `TrainingArguments.checkpoint_dir` writes the best and the last epoch as model bundles (ADR 0016); `tests/integration/test_representation_checkpoints.py`.
 - [ ] Registries for samplers, metrics, and augmentation pipelines (§26). Backbones, heads, and losses have registries; custom samplers and metrics are used by calling them directly.
 - [ ] Prototype / nearest-centroid head (§9, optional).

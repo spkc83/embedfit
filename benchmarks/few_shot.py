@@ -206,6 +206,7 @@ def read_previous(output: Path, config: dict) -> dict | None:
         saved = previous["config"]
         saved.setdefault("gradient_accumulation_steps", 1)  # Files from before the option.
         saved.setdefault("dataset_revision", None)
+        saved.setdefault("unfreeze_last_blocks", None)
     except (json.JSONDecodeError, KeyError, TypeError, ValueError):
         raise SystemExit(f"{output} is not a results file written by this script.") from None
     measured = {"evaluation_duplicates_dropped", "evaluation_size"}  # Known after loading.
@@ -282,6 +283,12 @@ def main(argv: list[str] | None = None) -> None:
         action="store_true",
         help="update batch-norm statistics during training (freeze_batch_norm=False, ADR 0013)",
     )
+    parser.add_argument(
+        "--unfreeze-last-blocks",
+        type=positive_int,
+        default=None,
+        help="trained methods: train only the backbone's last N blocks (ADR 0015)",
+    )
     parser.add_argument("--evaluate-on", choices=["validation", "test"], required=True)
     parser.add_argument("--pool-per-class", type=int, default=100)
     parser.add_argument("--eval-per-class", type=int, default=100)
@@ -310,6 +317,7 @@ def main(argv: list[str] | None = None) -> None:
         "num_workers": 0,
         "gradient_accumulation_steps": args.gradient_accumulation_steps,
         "freeze_batch_norm": not args.train_mode_batch_norm,
+        "unfreeze_last_blocks": args.unfreeze_last_blocks,
     }
     arguments = {
         method: TrainingArguments(training_mode=method, learning_rate=rates[method], **budget)

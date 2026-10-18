@@ -15,6 +15,8 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, Dataset, RandomSampler
 
+from embedfit.backbones.base import check_last_blocks
+from embedfit.checkpoints import RepresentationCheckpoints, checkpoint_model
 from embedfit.data.dataset import ImageDataset
 from embedfit.exceptions import ConfigurationError, TrainingDivergedError
 from embedfit.heads.linear import LinearHead
@@ -297,8 +299,9 @@ def validate_representation_setup(
             with fewer than 2 samples; ``pair``: no positive or no negative pair can be
             formed; ``end_to_end``: a class of the model without training samples),
             relationship rules are given for a mode other than ``pair``, the backbone
-            has no trainable parameters, or the mixed-precision mode is not supported on the
-            device.
+            has no trainable parameters, ``unfreeze_last_blocks`` exceeds the backbone's
+            blocks, checkpoints cannot be written (see ``checkpoint_model``), or the
+            mixed-precision mode is not supported on the device.
     """
     rules = tuple(rules)
     if rules and args.training_mode != "pair":
@@ -314,6 +317,11 @@ def validate_representation_setup(
         require_every_class(model, train_dataset)  # The starting linear probe needs them all.
     if not any(True for _ in model.backbone.parameters()):
         raise ConfigurationError("The backbone has no parameters to train.")
+    if args.unfreeze_last_blocks is not None:
+        backbone = model.backbone
+        check_last_blocks(args.unfreeze_last_blocks, backbone.num_blocks, backbone.identifier)
+    if args.checkpoint_dir is not None:
+        checkpoint_model(model, args)
     if args.mixed_precision == "fp16" and device.type != "cuda":
         raise ConfigurationError(
             f"mixed_precision='fp16' requires a CUDA device, but training runs on '{device}'. "
@@ -420,6 +428,11 @@ def train_representation(
     each worker process receives a copy of the backbone (its ``preprocess`` method does the
     work), which costs start-up time that only pays off on larger datasets.
 
+    With ``args.unfreeze_last_blocks`` set, only those last blocks of the backbone (and the
+    parameters after them) are made trainable first, and the rest is frozen (ADR 0015);
+    otherwise the caller decides which parameters train. With ``args.checkpoint_dir`` set, the
+    best and the last epoch are written there as model bundles (ADR 0016).
+
     This function only updates backbone weights. Freezing the backbone and switching the
     model to eval mode afterwards is the caller's job. Without ``eval_dataset`` the model is
     returned in train mode, with its batch-norm layers in eval mode if
@@ -449,6 +462,11 @@ def train_representation(
     rules = tuple(rules)
     if validate:
         validate_representation_setup(model, train_dataset, eval_dataset, args, device, rules)
+    # Checks again that the directory is empty: a second run must not mix with the first.
+    # Before anything changes the model, so that a refused run leaves no trace.
+    checkpoints = RepresentationCheckpoints(model, args) if args.checkpoint_dir else None
+    if args.unfreeze_last_blocks is not None:
+        model.unfreeze_backbone(args.unfreeze_last_blocks)
     classifier = None
     if args.training_mode == "end_to_end":
         # Built before the objectives, the optimizer, and the best-epoch state, which must all
@@ -562,6 +580,14 @@ def train_representation(
             best_epoch = epoch + 1
             logger.info(
                 "Epoch %d/%d: train loss %.4f", epoch + 1, args.num_epochs, train_losses[-1]
+            )
+        if checkpoints is not None:
+            checkpoints.save(
+                epoch + 1,
+                best_epoch=best_epoch,
+                steps=steps,
+                train_losses=train_losses,
+                eval_losses=eval_losses,
             )
 
     if best_state is not None and best_epoch != args.num_epochs:
