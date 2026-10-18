@@ -19,6 +19,7 @@ Targets:
 - SupCon math
 - pair sampling
 - balanced sampling
+- augmentation profiles, per-draw seeding, and the augmentation registry
 - heads
 - metrics
 - retrieval

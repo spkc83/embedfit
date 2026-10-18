@@ -50,14 +50,14 @@ Real-image results: EuroSAT with DINOv2-small at 4, 8, and 16 shots ([results](.
 
 These are specified for v0.1 in `SPEC.md` or the design and research docs, but are not built. Each needs a decision: build it, or defer it in `SPEC.md`.
 
-- [ ] Augmentation profiles `none` / `natural` / `document` (§13). Training currently applies no task augmentation.
+- [x] Augmentation profiles `none` / `natural` / `document` (§13): `TrainingArguments.augmentation`, `embedfit.augmentation` (ADR 0014). Evidence: `tests/unit/test_augmentation.py` (profile contract, `document` never mirrors over 200 seeds, crop and rotation bounds), `tests/integration/test_augmented_training.py` (only training draws augmented in every trained mode, identity pipeline equals `none`, reproducible and independent of `num_workers`).
 - [ ] Dataset adapters for Hugging Face `datasets` and pandas DataFrames (§6). `ImageDataset` accepts sequences of records and map-style torch datasets.
 - [ ] Corrupt-image policy `skip` with a reported count (`docs/design/DATA_MODEL.md`). A corrupt image always raises.
 - [ ] Partial unfreezing for the end-to-end baseline (`docs/research/BASELINES.md`). Training always unfreezes the whole backbone.
 - [ ] Representation checkpoints on disk. The best epoch is kept in memory and restored; nothing is written until `save_model`.
 - [x] Sampler registry (§26): `register_sampler` and `TrainingArguments.sampler` for `supcon` and `end_to_end` batches, checked for every epoch before training. Evidence: `tests/unit/test_sampler_registry.py`, `tests/integration/test_registries.py`.
 - [x] Metric registry (§26): `register_metric`, `Trainer.evaluate(metrics=...)`, and `FewShotEvaluator.run(metrics=...)`. Evidence: `tests/unit/evaluation/test_metric_registry.py`, `tests/integration/test_registries.py`.
-- [ ] Augmentation pipeline registry (§26).
+- [x] Augmentation pipeline registry (§26): `register_augmentation` and `TrainingArguments.augmentation`, with `"none"` reserved. Evidence: `tests/unit/test_augmentation_registry.py`, `tests/integration/test_augmented_training.py` (a registered pipeline used in every trained mode and under a registered custom sampler).
 
 ## Deferred beyond v0.1
 

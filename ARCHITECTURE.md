@@ -26,7 +26,7 @@ EmbedFit is centered on an embedding model, not a classifier.
 ```text
 utils / data
     ↓
-backbones / heads / losses / sampling
+backbones / heads / losses / sampling / augmentation
     ↓
 model
     ↓
