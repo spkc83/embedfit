@@ -133,12 +133,12 @@ Legend:
 
 ## M12 Docs/release
 
-- [x] README quickstart written (its snippets use placeholder variables; a runnable quickstart is open)
+- [x] README quickstart, run offline by `tests/integration/test_readme.py`
 - [x] examples
 - [x] domain-risk guide
 - [x] privacy/logging review
 - [x] changelog
-- [~] v0.1 release checklist (`plans/V0_1_RELEASE.md`: built items are verified; the version number, the package-name check, a runnable README quickstart, the benchmarks not yet run, and the unbuilt spec items remain open)
+- [~] v0.1 release checklist (`plans/V0_1_RELEASE.md`: built items are verified; the version number, the benchmarks not yet run, and the unbuilt spec items not deferred remain open)
 
 ## After M12: baselines and real-image benchmarks
 

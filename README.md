@@ -21,21 +21,51 @@ lightweight classifier / retrieval / anomaly signals
 
 The initial financial-services use case is check deposit risk, including fraud and RDI/returned-item patterns, but **the core library must remain domain-neutral**.
 
+## Install
+
+EmbedFit is not on PyPI. Install it from source:
+
+```bash
+git clone https://github.com/spkc83/embedfit.git
+cd embedfit
+pip install -e .                  # core: torch, numpy, scikit-learn, pillow
+pip install -e ".[torchvision]"   # or another extra for pretrained backbones: timm, hf, all
+```
+
 ## What the package provides
 
 The design is specified in [`SPEC.md`](SPEC.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md), with decisions recorded in [`docs/adrs/`](docs/adrs/). Contributors, human or agent, start from [`AGENTS.md`](AGENTS.md); open work is listed in [`TASKS.md`](TASKS.md) and [`plans/V0_1_RELEASE.md`](plans/V0_1_RELEASE.md).
 
+The snippets below run in order, offline. The first one builds stand-in data from synthetic images; replace it with your own labelled images:
+
 ```python
 from embedfit import EmbedFitModel, ImageDataset, Trainer, TrainingArguments
+from embedfit.testing import make_bar_images
 
-model = EmbedFitModel.from_pretrained(          # downloads ImageNet weights
-    "torchvision/resnet18",
-    labels=["legitimate", "risk"],              # class order is as written, never sorted
+
+def stand_in_scans(per_class, seed):  # two classes of synthetic images
+    images, kinds = make_bar_images(per_class, num_classes=2, seed=seed)
+    return images, ["legitimate" if kind == "vertical" else "risk" for kind in kinds]
+
+
+train_images, train_labels = stand_in_scans(16, seed=0)
+val_images, val_labels = stand_in_scans(16, seed=1)
+test_images, test_labels = stand_in_scans(16, seed=2)
+train = ImageDataset.from_lists(train_images, train_labels)
+validation = ImageDataset.from_lists(val_images, val_labels)
+test = ImageDataset.from_lists(test_images, test_labels)
+```
+
+```python
+labels = ["legitimate", "risk"]
+model = EmbedFitModel.from_pretrained(
+    "dummy/tiny",                 # untrained offline CNN for this demo; for real images use e.g.
+                                  # "torchvision/resnet18" (needs the torchvision extra)
+    labels=labels,                # class order is as written, never sorted
     positive_label="risk",
 )
-embeddings = model.encode(["scan_001.png", "scan_002.png"])     # numpy array, shape [2, 512]
+embeddings = model.encode(test_images[:2])     # numpy array, shape [2, model.embedding_dim]
 
-train = ImageDataset.from_lists(train_images, train_labels)
 trainer = Trainer(model, TrainingArguments(training_mode="frozen"), train)
 trainer.train()
 
@@ -44,17 +74,19 @@ model.predict_proba(test_images)   # [N, 2]; columns follow model.labels
 model.risk_score(test_images)      # probability of positive_label
 ```
 
-`FewShotEvaluator` compares methods at several training-set sizes over repeated seeds, with every method trained on the same few-shot sample and scored on the same held-out test set:
+`FewShotEvaluator` compares methods at several training-set sizes over repeated seeds, with every method trained on the same few-shot sample and scored on the same held-out test set. On the stand-in data and the untrained `dummy/tiny` backbone the scores mean nothing; the block only shows the API:
 
 ```python
 from embedfit import FewShotEvaluator
 
-evaluator = FewShotEvaluator(shots=[4, 8, 16, 32], seeds=[13, 42, 101])
+methods = ["frozen", "end_to_end", "supcon"]
+evaluator = FewShotEvaluator(shots=[4, 8], seeds=[13, 42])   # e.g. shots=[4, 8, 16, 32]
 records = evaluator.run(
-    train_pool,
+    train,                                 # the pool few-shot samples are drawn from
     test_dataset=test,
-    methods=["frozen", "end_to_end", "supcon"],
-    model_factory=lambda: EmbedFitModel.from_pretrained("torchvision/resnet18", labels=labels),
+    methods=methods,
+    model_factory=lambda: EmbedFitModel.from_pretrained("dummy/tiny", labels=labels),
+    training_arguments={m: TrainingArguments(training_mode=m, num_workers=0) for m in methods},
 )                                      # tidy records: method, backbone, shots, seed, metric, value
 summary = evaluator.aggregate(records)   # mean and standard deviation over seeds
 ```
@@ -83,7 +115,10 @@ select_threshold(val_labels, scores, positive_label="risk", objective="target_fp
 `training_mode="supcon"` first adapts the backbone with a supervised contrastive loss on class-balanced batches, then freezes it and fits the same head:
 
 ```python
-args = TrainingArguments(training_mode="supcon", num_epochs=5, batch_size=32, learning_rate=2e-5)
+args = TrainingArguments(
+    training_mode="supcon", num_epochs=5, batch_size=32, learning_rate=2e-5,
+    num_workers=0,                  # load in the main process; faster on small datasets
+)
 trainer = Trainer(model, args, train, eval_dataset=validation)   # validation picks the best epoch
 output = trainer.train()            # output.train_losses, output.eval_losses, output.best_epoch
 trainer.evaluate(test)
@@ -95,12 +130,14 @@ trainer.evaluate(test)
 from embedfit.data import ImageSample
 from embedfit.sampling import RelationshipRule
 
+train_groups = [f"group-{i // 4}" for i in range(len(train_images))]   # e.g. a shared account
 train = ImageDataset([                     # from_lists cannot set group_id
     ImageSample(image, label, group_id=group)
     for image, label, group in zip(train_images, train_labels, train_groups)
 ])
 rule = RelationshipRule(field="group_id", relation="same", pair_type="positive", weight=2.0)
-Trainer(model, TrainingArguments(training_mode="pair"), train, relationship_rules=[rule]).train()
+args = TrainingArguments(training_mode="pair", num_workers=0)
+Trainer(model, args, train, relationship_rules=[rule]).train()
 ```
 
 `encode` accepts PIL images, numpy arrays, torch tensors, and file paths, and returns one L2-normalised row per image. Resolution, interpolation mode, and normalisation constants come from the selected checkpoint, never from a global default; pass `image_size=` to run a convolutional backbone at higher resolution.
@@ -138,7 +175,7 @@ Public components:
 | `DummyBackbone` | `embedfit.backbones` | Tiny trainable CNN with no checkpoint, for offline tests and examples |
 | `make_bar_images` | `embedfit.testing` | Deterministic synthetic image classes with learnable structure |
 
-The `triplet` training mode, augmentation profiles, and Hugging Face Dataset and pandas DataFrame adapters from [`SPEC.md`](SPEC.md) are not implemented; `Trainer` rejects an unavailable `training_mode` when it is created.
+Augmentation profiles and the Hugging Face Dataset and pandas DataFrame adapters from [`SPEC.md`](SPEC.md) are not implemented, and the `triplet` training mode is deferred to v0.2; `Trainer` rejects an unavailable `training_mode` when it is created. v0.1 handles single-label classification only; multilabel classification and a prototype / nearest-centroid head are deferred.
 
 ## Examples and guides
 
