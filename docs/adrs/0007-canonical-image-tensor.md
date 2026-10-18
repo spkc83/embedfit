@@ -27,4 +27,14 @@ High-bit-depth PIL modes are decoded explicitly (`I;16` scaled by 65535, `F` val
 
 Adapters resize the float tensor, whereas provider reference pipelines usually resize 8-bit pixels. The results differ by roughly 0.001 of the intensity range on average. The float path is kept because it does not quantise float and 16-bit input.
 
-`encode` always raises on a corrupt image. Dataset-level options such as skipping corrupt images belong in the data pipeline on top of `to_rgb_tensor`; that `skip` policy is not built.
+`encode` always raises on a corrupt image. Dataset-level options such as skipping corrupt images belong in the data pipeline on top of `to_rgb_tensor`; see the amendment below.
+
+## Amendment — encoded bytes and the `skip` policy
+
+Status: Accepted (data adapters, v0.1)
+
+1. Encoded image file bytes (`bytes`) are an accepted image form everywhere a path is: in `ImageSample.image`, `EmbedFitModel.encode`, `predict`, and the backbone `preprocess` methods. `to_rgb_tensor` decodes them exactly as it decodes a file (same EXIF, high-bit-depth, and multi-frame rules). Error messages for bytes describe them as "encoded image bytes" and never include their content; like file errors, they have no chained cause.
+2. An image with more than twice Pillow's decompression-bomb limit raises `ImageInputError` (no chained cause) instead of Pillow's own `DecompressionBombError`; between one and two times the limit Pillow only warns and the image is decoded. Other errors Pillow plugins raise on malformed data (`ValueError`, `SyntaxError`, `EOFError`, `struct.error`, `IndexError`) are also reported as `ImageInputError`.
+3. The `skip` policy lives in `ImageDataset` (`on_corrupt_image="skip"`), not in `encode`. It checks every file-path and bytes image once, when the dataset is built, and drops the records that are missing, undecodable, truncated, or over twice the decompression-bomb limit. A directory or a file without read permission still raises. `encode` still always raises.
+
+Rationale: the Hugging Face `datasets.Image` feature stores encoded bytes. Decoding them to PIL images up front would hold every decoded image in memory, and a lazily opened PIL image keeps its decoded pixels after the first use; a third input form that decodes like a file keeps one decode path and decodes per use. Skipping is decided at construction because samplers index a dataset by position: dropping records later would change its length during training and misalign `predict` outputs with labels.

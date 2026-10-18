@@ -67,6 +67,8 @@ Legend:
 - [x] Temporal split
 - [x] Split overlap checker
 - [x] Documentation for leakage
+- [x] Hugging Face `datasets` and pandas adapters (`ImageDataset.from_hf_dataset`, `ImageDataset.from_pandas`)
+- [x] Corrupt-image `skip` policy with a reported count (`on_corrupt_image`, `num_skipped`)
 
 ## M5 SupCon
 

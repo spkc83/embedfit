@@ -26,7 +26,7 @@ emb = model.encode(
 ### `encode` input and output semantics
 
 - A `list` or `tuple` is a batch; any other value is a single image. A 4-D array or tensor is rejected rather than interpreted as a batch, so batch-versus-image is never inferred from shape.
-- Each image may be a PIL image, a numpy array (`[H, W]` or `[H, W, C]`), a torch tensor (`[H, W]` or `[C, H, W]`), or a file path. Arrays and tensors must be `uint8` in [0, 255] or floating point in [0, 1]; out-of-range floats raise instead of being rescaled by guesswork. Single-channel input is replicated to RGB. 16-bit grayscale PIL images are scaled by 65535, and the EXIF orientation tag is applied.
+- Each image may be a PIL image, a numpy array (`[H, W]` or `[H, W, C]`), a torch tensor (`[H, W]` or `[C, H, W]`), a file path, or encoded image file bytes (`bytes`, decoded like a file). Arrays and tensors must be `uint8` in [0, 255] or floating point in [0, 1]; out-of-range floats raise instead of being rescaled by guesswork. Single-channel input is replicated to RGB. 16-bit grayscale PIL images are scaled by 65535, and the EXIF orientation tag is applied.
 - The result always has shape `[N, embedding_dim]` in input order (`N = 1` for a single image), as float32 numpy whatever the backbone's dtype, or a CPU tensor when `convert_to_numpy=False`.
 - `normalize=None` applies the model's `normalize_embeddings` policy; `True`/`False` overrides it for that call.
 - `encode` runs without gradients in eval mode and restores the previous mode. Training code uses `model(pixel_values)`, which is differentiable and applies the same normalisation policy.
@@ -82,6 +82,25 @@ proba = model.predict_proba(images)
 - Calling a prediction method before the head is fitted raises `HeadNotFittedError`.
 
 Heads are interchangeable: `EmbedFitModel(..., head=...)` accepts a registered name or a configured `ClassificationHead` instance such as `LogisticRegressionHead(class_weight="balanced")`, and `register_head` adds new names. An empty input yields zero rows.
+
+## Datasets
+
+```python
+train_ds = ImageDataset.from_lists(images, labels)
+train_ds = ImageDataset.from_pandas(
+    frame,
+    columns={"image": "path", "label": "class", "group_id": "customer"},
+    metadata_columns=["source"],
+    on_corrupt_image="skip",
+)
+train_ds = ImageDataset.from_hf_dataset(hf_dataset["train"], on_corrupt_image="skip")
+train_ds.num_skipped
+```
+
+- `ImageDataset(records)` takes a sequence, or a map-style torch `Dataset`, of `ImageSample` objects or mappings with the same keys. `from_pandas` (the `pandas` extra) and `from_hf_dataset` (the `datasets` extra) read a table; a missing extra raises `ConfigurationError` naming the extra to install.
+- `columns` maps the fields `image`, `label`, `sample_id`, `group_id`, `timestamp`, and `amount` to column names. `image` and `label` default to same-named columns; the other fields are read only when mapped. `metadata_columns` are copied into `metadata`. Missing values in optional fields become `None`; a missing label is an error.
+- A Hugging Face `datasets.Image` column is kept as encoded bytes, so all encoded images are held in memory; `ClassLabel` columns stay integers (`features[column].int2str` gives names). Details are in [`DATA_MODEL.md`](DATA_MODEL.md#adapters).
+- `on_corrupt_image="raise"` (default) reads no image when the dataset is built; an unreadable file raises `ImageInputError` when encoded. `"skip"` (on the constructor, `from_lists`, and both adapters) decodes every file-path and bytes image once when the dataset is built, drops those that are missing or cannot be decoded, and records the number in `num_skipped`.
 
 ## Trainer
 

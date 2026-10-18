@@ -1,9 +1,13 @@
+import io
+import struct
+
 import numpy as np
 import pytest
 import torch
 from PIL import Image
 
 from embedfit.data import to_rgb_tensor
+from embedfit.data.image import is_readable
 from embedfit.exceptions import ImageInputError
 
 
@@ -158,3 +162,137 @@ def test_exif_orientation_is_applied(tmp_path):
 def test_zero_channel_input_is_an_image_error(empty):
     with pytest.raises(ImageInputError, match="1 or 3 channels"):
         to_rgb_tensor(empty)
+
+
+def _encoded(image: Image.Image, fmt: str = "PNG") -> bytes:
+    buffer = io.BytesIO()
+    image.save(buffer, fmt)
+    return buffer.getvalue()
+
+
+def test_encoded_bytes_match_the_same_file(tmp_path):
+    image = Image.fromarray(np.arange(16 * 24 * 3, dtype=np.uint8).reshape(16, 24, 3) % 251)
+    image.save(tmp_path / "image.png")
+    assert torch.equal(to_rgb_tensor(_encoded(image)), to_rgb_tensor(tmp_path / "image.png"))
+
+
+def test_corrupt_bytes_raise_without_content_or_cause():
+    with pytest.raises(ImageInputError, match="bytes could not be decoded") as excinfo:
+        to_rgb_tensor(b"acct-99887766 is not an image")
+    assert "99887766" not in str(excinfo.value)
+    assert excinfo.value.__cause__ is None and excinfo.value.__suppress_context__
+
+
+def test_unreadable_location_is_not_reported_as_corrupt(tmp_path):
+    with pytest.raises(ImageInputError, match="could not be opened"):
+        to_rgb_tensor(tmp_path)  # A directory.
+
+
+def test_decompression_bomb_is_an_image_error(tmp_path, monkeypatch):
+    monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 10)
+    Image.new("RGB", (16, 16)).save(tmp_path / "large.png")
+    for source in (tmp_path / "large.png", _encoded(Image.new("RGB", (16, 16)))):
+        with pytest.raises(ImageInputError, match="pixel limit") as excinfo:
+            to_rgb_tensor(source)
+        assert excinfo.value.__cause__ is None and excinfo.value.__suppress_context__
+
+
+class TestIsReadable:
+    def test_readable_sources(self, tmp_path):
+        image = Image.new("RGB", (8, 8))
+        image.save(tmp_path / "ok.png")
+        frames = [Image.new("L", (8, 8), color) for color in (0, 255)]
+        frames[0].save(tmp_path / "pages.tiff", save_all=True, append_images=frames[1:])
+        # A multi-frame file decodes; rejecting it is a policy of to_rgb_tensor, not corruption.
+        for source in (tmp_path / "ok.png", str(tmp_path / "ok.png"), _encoded(image)):
+            assert is_readable(source)
+        assert is_readable(tmp_path / "pages.tiff")
+
+    @pytest.mark.parametrize("fmt", ["PNG", "JPEG"])
+    def test_missing_garbage_and_truncated_sources(self, tmp_path, fmt):
+        data = _encoded(Image.fromarray(np.full((32, 32, 3), 7, np.uint8)), fmt)
+        (tmp_path / "garbage.png").write_bytes(b"not an image")
+        (tmp_path / "truncated").write_bytes(data[: len(data) // 2])
+        for source in (
+            tmp_path / "missing.png",
+            tmp_path / "garbage.png",
+            tmp_path / "truncated",
+            b"not an image",
+            data[: len(data) // 2],
+        ):
+            assert not is_readable(source)
+
+    def test_decompression_bomb_is_unreadable(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 10)
+        Image.new("RGB", (16, 16)).save(tmp_path / "large.png")
+        assert not is_readable(tmp_path / "large.png")
+
+    def test_directories_and_permission_errors_still_raise(self, tmp_path, monkeypatch):
+        with pytest.raises(ImageInputError, match="could not be opened"):
+            is_readable(tmp_path)
+
+        def denied(*args, **kwargs):
+            raise PermissionError(13, "Permission denied", str(tmp_path / "acct-99887766.png"))
+
+        monkeypatch.setattr(Image, "open", denied)
+        with pytest.raises(ImageInputError, match="could not be opened") as excinfo:
+            is_readable(tmp_path / "acct-99887766.png")
+        assert "99887766" not in str(excinfo.value) and excinfo.value.__cause__ is None
+
+
+class _FailingImage:
+    """Stands in for a PIL image whose plugin fails while decoding malformed data."""
+
+    def __init__(self, error: Exception) -> None:
+        self.error = error
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc_info):
+        return False
+
+    def load(self):
+        raise self.error
+
+    def __getattr__(self, name):
+        raise self.error
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        ValueError("tile cannot extend outside image"),
+        SyntaxError("not a TIFF file"),
+        EOFError(),
+        struct.error("unpack requires a buffer of 4 bytes"),
+        IndexError("list index out of range"),
+    ],
+)
+def test_plugin_decode_errors_are_corruption(tmp_path, monkeypatch, error):
+    (tmp_path / "page.tiff").write_bytes(b"II*\x00")
+    monkeypatch.setattr(Image, "open", lambda *args, **kwargs: _FailingImage(error))
+    for source in (tmp_path / "page.tiff", b"II*\x00"):
+        assert not is_readable(source)
+        with pytest.raises(ImageInputError, match="could not be decoded") as excinfo:
+            to_rgb_tensor(source)
+        assert excinfo.value.__cause__ is None and excinfo.value.__suppress_context__
+
+
+def test_policy_errors_are_not_reported_as_corruption(tmp_path):
+    frames = [Image.new("L", (8, 8), color) for color in (0, 255)]
+    frames[0].save(tmp_path / "pages.tiff", save_all=True, append_images=frames[1:])
+    with pytest.raises(ImageInputError, match="Multi-frame"):
+        to_rgb_tensor(tmp_path / "pages.tiff")
+
+
+def test_between_one_and_two_times_the_pixel_limit_is_accepted_with_pillows_warning(
+    tmp_path, monkeypatch
+):
+    # Pillow warns above MAX_IMAGE_PIXELS and raises only above twice that.
+    monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 200)
+    Image.new("RGB", (16, 16)).save(tmp_path / "large.png")  # 256 pixels.
+    with pytest.warns(Image.DecompressionBombWarning):
+        assert is_readable(tmp_path / "large.png")
+    with pytest.warns(Image.DecompressionBombWarning):
+        assert to_rgb_tensor(tmp_path / "large.png").shape == (3, 16, 16)

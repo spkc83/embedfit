@@ -21,9 +21,11 @@ All notable changes to EmbedFit are recorded here, following [Keep a Changelog](
 - Pickle-free model bundles with atomic saving and consistency checks on load.
 - `benchmarks/few_shot.py`, a few-shot benchmark on public datasets (EuroSAT, RVL-CDIP documents), with results in `docs/benchmarks/`.
 - Runnable examples on synthetic data, and guides on data leakage, benchmarking, and rare-event risk workflows.
+- Dataset adapters `ImageDataset.from_pandas` and `ImageDataset.from_hf_dataset` (the `pandas` and `datasets` extras), with a column mapping and `metadata_columns`.
+- Encoded image file bytes as an accepted image form (ADR 0007 amendment).
+- Corrupt-image policy `on_corrupt_image="skip"`, which drops records whose image file or bytes cannot be read when the dataset is built and reports the count in `ImageDataset.num_skipped`.
 
 ### Not yet available
 
 - The `triplet` training mode (deferred to v0.2) and augmentation profiles.
 - Multilabel classification and a prototype / nearest-centroid head (deferred beyond v0.1).
-- Hugging Face Dataset and pandas DataFrame adapters.

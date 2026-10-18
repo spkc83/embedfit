@@ -51,8 +51,8 @@ Real-image results: EuroSAT with DINOv2-small at 4, 8, and 16 shots ([results](.
 These are specified for v0.1 in `SPEC.md` or the design and research docs, but are not built. Each needs a decision: build it, or defer it in `SPEC.md`.
 
 - [ ] Augmentation profiles `none` / `natural` / `document` (§13). Training currently applies no task augmentation.
-- [ ] Dataset adapters for Hugging Face `datasets` and pandas DataFrames (§6). `ImageDataset` accepts sequences of records and map-style torch datasets.
-- [ ] Corrupt-image policy `skip` with a reported count (`docs/design/DATA_MODEL.md`). A corrupt image always raises.
+- [x] Dataset adapters for Hugging Face `datasets` and pandas DataFrames (§6): `ImageDataset.from_hf_dataset` and `ImageDataset.from_pandas`. Evidence: `tests/unit/test_hf_dataset_adapter.py`, `tests/unit/test_pandas_adapter.py`.
+- [x] Corrupt-image policy `skip` with a reported count (`docs/design/DATA_MODEL.md`): `on_corrupt_image="skip"` and `ImageDataset.num_skipped`. Evidence: `tests/unit/test_dataset.py::TestSkipCorruptImages`, `tests/unit/test_image.py`, `tests/unit/test_privacy_audit.py`.
 - [ ] Partial unfreezing for the end-to-end baseline (`docs/research/BASELINES.md`). Training always unfreezes the whole backbone.
 - [ ] Representation checkpoints on disk. The best epoch is kept in memory and restored; nothing is written until `save_model`.
 - [x] Sampler registry (§26): `register_sampler` and `TrainingArguments.sampler` for `supcon` and `end_to_end` batches, checked for every epoch before training. Evidence: `tests/unit/test_sampler_registry.py`, `tests/integration/test_registries.py`.
