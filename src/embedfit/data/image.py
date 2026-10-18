@@ -20,7 +20,8 @@ ImageLike: TypeAlias = Image.Image | np.ndarray | torch.Tensor | str | Path | by
 """A PIL image, numpy array, torch tensor, path to an image file, or encoded image file bytes."""
 
 # What Pillow raises on malformed data: OSError covers missing files and truncated data, and
-# some plugins fail with these other types while parsing or decoding.
+# some plugins fail with these other types while parsing or decoding, or (TypeError) while
+# converting pixels of data that loaded.
 _DECODE_ERRORS = (
     UnidentifiedImageError,
     OSError,
@@ -29,6 +30,7 @@ _DECODE_ERRORS = (
     EOFError,
     struct.error,
     IndexError,
+    TypeError,
 )
 
 
@@ -95,9 +97,10 @@ def is_readable(image: str | Path | bytes) -> bool:
     Used by the ``skip`` corrupt-image policy. A missing file, data Pillow cannot identify,
     truncated data, data a Pillow plugin fails to parse, and an image with more than twice
     Pillow's decompression-bomb limit (``PIL.Image.MAX_IMAGE_PIXELS``) are unreadable. Between
-    one and two times the limit Pillow only warns, and the image is readable. Only
-    the first frame is decoded; a readable file that ``to_rgb_tensor`` rejects by policy (for
-    example a multi-frame file) counts as readable.
+    one and two times the limit Pillow only warns, and the image is readable. The image is
+    decoded and converted as ``to_rgb_tensor`` does it, so data that loads but fails in the
+    pixel conversion is unreadable too. A readable file that ``to_rgb_tensor`` rejects by
+    policy (for example a multi-frame file) counts as readable.
 
     Raises:
         ImageInputError: If the path names a directory or a file without read permission;
@@ -106,9 +109,11 @@ def is_readable(image: str | Path | bytes) -> bool:
     source = image if isinstance(image, bytes) else Path(image)
     try:
         with _open_image(source) as opened:
-            opened.load()
+            _pil_to_array(opened)
     except (PermissionError, IsADirectoryError):
         raise _unopenable() from None
+    except ImageInputError:
+        return True  # Decodable; rejected by policy when it is used.
     except (Image.DecompressionBombError, *_DECODE_ERRORS):
         return False
     return True

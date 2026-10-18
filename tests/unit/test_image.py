@@ -6,6 +6,7 @@ import pytest
 import torch
 from PIL import Image
 
+from embedfit.data import image as image_module
 from embedfit.data import to_rgb_tensor
 from embedfit.data.image import is_readable
 from embedfit.exceptions import ImageInputError
@@ -277,6 +278,20 @@ def test_plugin_decode_errors_are_corruption(tmp_path, monkeypatch, error):
         with pytest.raises(ImageInputError, match="could not be decoded") as excinfo:
             to_rgb_tensor(source)
         assert excinfo.value.__cause__ is None and excinfo.value.__suppress_context__
+
+
+def test_data_that_loads_but_fails_to_convert_is_corruption(tmp_path, monkeypatch):
+    # Some malformed TIFFs load, then fail in the pixel conversion with a TypeError.
+    Image.new("RGB", (8, 8)).save(tmp_path / "page.png")
+
+    def fail(image):
+        raise TypeError("Missing dimensions")
+
+    monkeypatch.setattr(image_module, "_pil_to_array", fail)
+    assert not is_readable(tmp_path / "page.png")
+    with pytest.raises(ImageInputError, match="could not be decoded") as excinfo:
+        to_rgb_tensor(tmp_path / "page.png")
+    assert excinfo.value.__cause__ is None and excinfo.value.__suppress_context__
 
 
 def test_policy_errors_are_not_reported_as_corruption(tmp_path):
