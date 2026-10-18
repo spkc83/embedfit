@@ -146,6 +146,7 @@ Legend:
 
 - [x] `end_to_end` as linear probe then fine-tune (LP-FT, ADR 0012)
 - [x] batch-norm statistics fixed during representation training, `freeze_batch_norm` (ADR 0013)
+- [x] augmentation profiles `none` / `natural` / `document` and the augmentation-pipeline registry (ADR 0014)
 - [x] EuroSAT few-shot benchmark with DINOv2-small (`benchmarks/few_shot.py`, `docs/benchmarks/eurosat-dinov2-small.md`)
 - [x] EuroSAT few-shot benchmark with ResNet-50 (`docs/benchmarks/eurosat-resnet50.md`)
 - [x] RVL-CDIP document-image benchmark with DINOv2-small (`docs/benchmarks/rvl-cdip-dinov2-small.md`)

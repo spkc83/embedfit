@@ -36,7 +36,14 @@ LOGGED_NAMES = {
     "fraction",
     "count",
 }
-LOGGED_ATTRIBUTES = {"identifier", "embedding_dim", "training_mode", "num_epochs", "_metric"}
+LOGGED_ATTRIBUTES = {
+    "identifier",
+    "embedding_dim",
+    "training_mode",
+    "num_epochs",
+    "_metric",
+    "augmentation",  # A registered pipeline name, like training_mode.
+}
 LOGGED_SEQUENCES = {"train_losses", "eval_losses"}  # Indexed for one aggregate value.
 STRUCTURAL_ATTRIBUTES = {"shape", "ndim", "dtype", "size", "mode"}
 

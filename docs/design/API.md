@@ -132,6 +132,7 @@ metrics = trainer.evaluate()
 - Optimisation is AdamW (`learning_rate`, `weight_decay` on all backbone parameters) with linear warm-up over `warmup_ratio` of the steps followed by linear decay to zero, gradient accumulation (each step averages over the batches it actually accumulated, including a short final group), optional gradient-norm clipping, and optional autocast (`bf16` on CPU or supporting GPUs, `fp16` on CUDA only).
 - `train()` unfreezes the whole backbone before representation training, discarding any partial freezing; `freeze_backbone_before_head` decides its state afterwards.
 - Images are preprocessed on the fly every epoch. `num_workers > 0` copies the backbone into each worker process, which only pays off on larger datasets.
+- With `augmentation` set, the training draws are augmented and the validation batches are not (see [Augmentation](#augmentation)).
 - With an `eval_dataset`, its contrastive loss is measured after every epoch on a fixed set of balanced batches (a class-balanced estimate, not the mean over every validation sample), and the backbone weights of the best epoch (earliest on ties) are restored in memory at the end. Without one, the last epoch is kept. `eval_dataset` must be validation data, never test data; because it selects the checkpoint, `evaluate()` on it is optimistically biased, so report final numbers on a separate test set.
 - `TrainOutput` reports `representation_steps`, per-epoch `train_losses` and `eval_losses`, and `best_epoch`.
 - Setups that cannot train fail when the `Trainer` is created: a model label without training samples, an empty validation set, or a mixed-precision mode the device does not support; with the default `balanced` sampler, `batch_size` below 4, or fewer than two classes or a class with fewer than two samples in the training or validation data; with any other sampler, the checks of the [batch-sampler registry](LOSSES_AND_SAMPLING.md#batch-sampler-registry), including a batch in any epoch without two samples of one class. A non-finite loss during training raises `TrainingDivergedError`.
@@ -159,6 +160,37 @@ The comparison baseline of ADR 0002: a linear classifier on the model's embeddin
 - After joint training the classifier becomes the model's head as a `LinearHead` (`head_name == "linear"`) and, like the head of every other mode, is fitted to convergence on the training embeddings of the final, frozen backbone (ADR 0011). All modes are therefore scored with a converged head, and they differ only in how the backbone was adapted. The model must have been created with a head name, and `args.head` must be the default or `"linear"`.
 - Validation loss is the mean cross-entropy over every validation sample, on the same batches every epoch.
 - `LinearHead` is also a standalone head (`head="linear"`): softmax regression fitted with full-batch L-BFGS from a seeded initialisation (or from the weights it already holds), saved without pickle like the logistic-regression head.
+
+## Augmentation
+
+```python
+args = TrainingArguments(training_mode="supcon", augmentation="document")
+```
+
+`augmentation` adds task augmentation to representation training (SPEC §13, ADR 0014). It is separate from the backbone's preprocessing: each image that training draws from `train_dataset` is converted to the canonical float RGB tensor in [0, 1] at its native resolution, augmented, and then resized and normalised by the backbone exactly as without augmentation.
+
+- `"none"` (default): no augmentation; training is unchanged.
+- `"natural"` (`NaturalAugmentation`): a random crop of 50–100% of the area with an aspect ratio in [3/4, 4/3], a horizontal flip with probability 0.5, and, with probability 0.8, brightness, contrast, and saturation jitter of ±20%.
+- `"document"` (`DocumentAugmentation`): a crop of 85–100% of the area that keeps the page's aspect ratio (at least about 92% of each side remains), a rotation of up to ±2° with the uncovered corners filled by repeating the border, and brightness and contrast jitter of ±10%. It never flips, changes saturation or hue, or erases part of the page.
+
+Only training draws are augmented, in `supcon`, `pair` (each side of a pair independently), and `end_to_end`. Validation batches, hard-negative re-encoding, the `end_to_end` linear probe, head fitting, `encode`, `predict`, and `evaluate` see the original images. Any value other than `"none"` is rejected in `frozen` mode. The name is recorded in the saved training metadata.
+
+Each augmented image has its own seed, derived from `seed`, the epoch, and the image's draw index in the epoch: a run is reproducible, does not depend on `num_workers`, and a sample drawn twice in an epoch gets two different views, also when a custom `sampler` repeats a position within a batch. The pipeline runs inside `torch.random.fork_rng` with only the CPU generator seeded, so the global random state is the same afterwards.
+
+Custom pipelines are registered by name:
+
+```python
+from embedfit.augmentation import DocumentAugmentation, register_augmentation
+
+register_augmentation("scans", lambda: DocumentAugmentation(max_rotation=1.0, crop_scale=(0.9, 1.0)))
+args = TrainingArguments(training_mode="supcon", augmentation="scans")
+```
+
+A pipeline (`embedfit.augmentation.Augmentation`) is any callable that takes a float32 `[3, H, W]` CPU tensor in [0, 1] (a private copy it may modify) and returns a floating-point `[3, H', W']` tensor in [0, 1]; the size may change. Its randomness must come from torch's global generator, as in `torchvision.transforms.v2` transforms, which therefore work unchanged; randomness from Python's `random` or NumPy is not seeded per image. `"none"` is reserved. The pipeline is run once on a synthetic 32×32 image when the `Trainer` is created, and every output is checked, so a malformed pipeline raises `ConfigurationError` before training. The probe is a smoke check on one small image: a pipeline that fails only on some sizes or contents raises the same error when it meets such an image during training. `available_augmentations()` lists the names and `create_augmentation(name, **options)` builds one.
+
+Augmentation runs per image on the CPU at native resolution: in the data-loader workers with `num_workers > 0`, and in the training process with `num_workers=0`, where it adds to every step. The `document` rotation is the most expensive operation: measured on one CPU thread, `document` took about three times as long as the backbone's own resize for a 512×396 page and about seven times as long for a 1000×760 page; `natural` took about as long as the resize at 512×396. Use `num_workers > 0` for document images.
+
+Memory also grows with the image size, because nothing is resized before the pipeline. A draw holds several full-resolution float32 copies of the image at once, each `12 × H × W` bytes (3 channels × 4 bytes): the canonical tensor, the pipeline's intermediate and output tensors, and the copy the backbone's preprocessing makes before it resizes. `document` also builds an `8 × H × W`-byte sampling grid for the rotation. For a 300 dpi A4 page (2480×3508 pixels) one such copy is about 104 MB. This cost applies per draw in every data-loader worker, and `pair` mode loads two images per item. Shrinking large pages before training bounds it; `benchmarks/few_shot.py` stores RVL-CDIP pages with a 512-pixel short side.
 
 ## Few-shot benchmark
 

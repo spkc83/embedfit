@@ -48,6 +48,7 @@ samples_per_class = batch_size // classes_per_batch
 - `samples_per_class` must be at least 2.
 - An epoch has `ceil(N / (classes_per_batch × samples_per_class))` batches unless `batches_per_epoch` is given: about `N` draws, which on imbalanced data is not one pass, since samples of rare classes recur and samples of frequent classes are skipped.
 - Batches are a function of `seed` and the epoch set with `set_epoch`; the global random state is not used.
+- With `TrainingArguments.augmentation`, each draw is augmented with a seed of its own, so a rare-class sample that recurs within an epoch gets a different view each time (ADR 0014).
 
 ## Batch-sampler registry
 
