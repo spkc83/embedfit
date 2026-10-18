@@ -14,6 +14,28 @@ def _positive_int(value: object, name: str) -> int:
     return int(value)
 
 
+def batch_shape(batch_size: int, num_classes: int) -> tuple[int, int]:
+    """Split ``batch_size`` into ``(classes_per_batch, samples_per_class)``.
+
+    As many classes as fit with at least two samples each are used, and the batch is divided
+    evenly between them, so the realised batch size can be slightly below ``batch_size``.
+
+    Raises:
+        ConfigurationError: If there are fewer than 2 classes, or ``batch_size`` is below 4,
+            the minimum for two classes with a positive pair each.
+    """
+    if num_classes < 2:
+        raise ConfigurationError(
+            f"Contrastive training needs at least 2 classes in the data, got {num_classes}."
+        )
+    if batch_size < 4:
+        raise ConfigurationError(
+            f"Contrastive training needs batch_size >= 4 (2 classes x 2 samples), got {batch_size}."
+        )
+    classes_per_batch = min(num_classes, batch_size // 2)
+    return classes_per_batch, batch_size // classes_per_batch
+
+
 class BalancedClassBatchSampler:
     """Yield batches holding ``samples_per_class`` items from each of ``classes_per_batch`` classes.
 

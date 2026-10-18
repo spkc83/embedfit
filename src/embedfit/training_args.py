@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from embedfit.exceptions import ConfigurationError
 from embedfit.heads.registry import available_heads
 from embedfit.sampling.pairs import hard_negative_quota
+from embedfit.sampling.registry import available_samplers
 
 TRAINING_MODES = ("frozen", "supcon", "pair", "triplet", "end_to_end")
 MIXED_PRECISION_MODES = (None, "fp16", "bf16")
@@ -67,6 +68,10 @@ class TrainingArguments:
             their scale and shift parameters still train (ADR 0013). Few-shot batches are too
             small for reliable batch statistics. No effect on backbones without batch norm, or on
             batch-norm layers built without running statistics.
+        sampler: Name of a registered batch sampler for ``supcon`` and ``end_to_end`` training,
+            used for both training and validation batches. ``None`` selects the mode's default:
+            ``"balanced"`` (``BalancedClassBatchSampler``) for ``supcon``, ``"random"`` for
+            ``end_to_end``. Rejected in other modes.
 
     Raises:
         ConfigurationError: If any value is invalid. Raised at construction, never mid-training.
@@ -96,6 +101,7 @@ class TrainingArguments:
     hard_negative_fraction: float = 0.0
     hard_negative_refresh_epochs: int = 1
     freeze_batch_norm: bool = True
+    sampler: str | None = None
 
     def __post_init__(self) -> None:
         _require(
@@ -165,6 +171,15 @@ class TrainingArguments:
         _require(
             self.head in available_heads(),
             f"head must be one of {available_heads()}, got {self.head!r}.",
+        )
+        _require(
+            self.sampler is None or self.sampler in available_samplers(),
+            f"sampler must be one of {available_samplers()} or None, got {self.sampler!r}.",
+        )
+        _require(
+            self.sampler is None or self.training_mode in ("supcon", "end_to_end"),
+            f"sampler only applies to training_mode 'supcon' or 'end_to_end', not "
+            f"'{self.training_mode}'.",
         )
         _require(
             self.device is None or isinstance(self.device, str),

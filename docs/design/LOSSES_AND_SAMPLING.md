@@ -49,6 +49,21 @@ samples_per_class = batch_size // classes_per_batch
 - An epoch has `ceil(N / (classes_per_batch × samples_per_class))` batches unless `batches_per_epoch` is given: about `N` draws, which on imbalanced data is not one pass, since samples of rare classes recur and samples of frequent classes are skipped.
 - Batches are a function of `seed` and the epoch set with `set_epoch`; the global random state is not used.
 
+## Batch-sampler registry
+
+`supcon` and `end_to_end` training draw their batches from a registered batch sampler, selected with `TrainingArguments.sampler`. `None` selects the mode's default: `"balanced"` (`BalancedClassBatchSampler` shaped by `batch_shape`) for `supcon`, `"random"` (uniform shuffling, reshuffled every epoch from the seed) for `end_to_end`. The option is rejected in `frozen` and `pair` mode; `pair` batches come from `PairSampler`, which is not pluggable.
+
+```python
+from embedfit.sampling import register_sampler
+
+register_sampler("my_sampler", lambda targets, *, batch_size, seed: MySampler(targets, batch_size, seed))
+args = TrainingArguments(training_mode="supcon", sampler="my_sampler")
+```
+
+The factory is called as `factory(targets, *, batch_size, seed)`, where `targets` is the integer class index of every sample in dataset order; it never sees images or metadata. It returns a `BatchSampler`: an object with `__iter__` yielding lists of dataset positions, `__len__` equal to the number of batches one iteration yields, and `set_epoch(epoch)`, which training calls before every epoch. Options of a custom sampler go in a closure or `functools.partial`.
+
+The same sampler, with a separate seed, serves the validation batches: validation always uses the batches of epoch 0. Batches must depend only on the seed and the epoch, because the `Trainer` checks them before training: it iterates a separate instance for every training epoch (and epoch 0 for validation) on positions only, and rejects an epoch with no batches, an empty batch, a position outside the data, a sampler whose length differs from its batch count or from one epoch to the next (the learning-rate schedule is sized from it once), and, for `supcon`, a batch without two samples of one class. A sampler therefore cannot fail part-way through training. The check costs one pass over the positions per epoch. The built-in `balanced` sampler is valid by construction (every class has at least two samples, and each batch draws at least two per class), so it is not iterated; a sampler registered over the name `balanced` is.
+
 ## Pairwise loss
 
 Represent pair:

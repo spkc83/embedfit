@@ -156,6 +156,8 @@ Public components:
 | `select_threshold` (returns `ThresholdResult`) | `embedfit.evaluation` | Threshold for max F1 or a target precision, recall, FPR, or review rate; for validation data only |
 | `stratified_split`, `grouped_split`, `temporal_split`, `find_split_overlap` | `embedfit.data` | Reproducible splits by class, group, or time, and a check that no `sample_id` or `group_id` spans splits ([leakage guide](docs/guides/leakage.md)) |
 | `sample_few_shot` | `embedfit.sampling` | N samples per class, without replacement |
+| `register_sampler`, `create_sampler`, `available_samplers`, `BatchSampler` | `embedfit.sampling` | Registry of the batch samplers selectable with `TrainingArguments.sampler` for `supcon` and `end_to_end` (built-ins `balanced` and `random`), checked for every epoch before training |
+| `register_metric`, `get_metric`, `available_metrics` | `embedfit.evaluation` | Registry of positive-class score metrics that `Trainer.evaluate(metrics=...)` and `FewShotEvaluator.run(metrics=...)` add to their results |
 | `LabelMapping` | `embedfit.data` | Ordered label ↔ class-index mapping that distinguishes `0` from `False` |
 | `SupConLoss`, `CosinePairLoss`, `create_loss`, `register_loss`, `available_losses` | `embedfit.losses` | Supervised contrastive loss over `[B, D]` or multi-view `[B, V, D]` embeddings, weighted cosine loss over embedding pairs, and a loss registry |
 | `PairSampler`, `ImagePair`, `RelationshipRule` | `embedfit.sampling` | Bounded, balanced positive/negative pairs per epoch; rules set pair targets and weights from arbitrary fields; optional hard-negative mining from training embeddings |

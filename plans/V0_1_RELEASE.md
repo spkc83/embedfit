@@ -55,8 +55,8 @@ These are specified for v0.1 in `SPEC.md` or the design and research docs, but a
 - [ ] Corrupt-image policy `skip` with a reported count (`docs/design/DATA_MODEL.md`). A corrupt image always raises.
 - [ ] Partial unfreezing for the end-to-end baseline (`docs/research/BASELINES.md`). Training always unfreezes the whole backbone.
 - [ ] Representation checkpoints on disk. The best epoch is kept in memory and restored; nothing is written until `save_model`.
-- [ ] Sampler registry (§26). Backbones, heads, and losses have registries; a custom sampler is used by calling it directly.
-- [ ] Metric registry (§26). Custom metrics are used by calling them directly.
+- [x] Sampler registry (§26): `register_sampler` and `TrainingArguments.sampler` for `supcon` and `end_to_end` batches, checked for every epoch before training. Evidence: `tests/unit/test_sampler_registry.py`, `tests/integration/test_registries.py`.
+- [x] Metric registry (§26): `register_metric`, `Trainer.evaluate(metrics=...)`, and `FewShotEvaluator.run(metrics=...)`. Evidence: `tests/unit/evaluation/test_metric_registry.py`, `tests/integration/test_registries.py`.
 - [ ] Augmentation pipeline registry (§26).
 
 ## Deferred beyond v0.1
