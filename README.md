@@ -160,6 +160,7 @@ Public components:
 | `register_metric`, `get_metric`, `available_metrics` | `embedfit.evaluation` | Registry of positive-class score metrics that `Trainer.evaluate(metrics=...)` and `FewShotEvaluator.run(metrics=...)` add to their results |
 | `LabelMapping` | `embedfit.data` | Ordered label ↔ class-index mapping that distinguishes `0` from `False` |
 | `SupConLoss`, `CosinePairLoss`, `create_loss`, `register_loss`, `available_losses` | `embedfit.losses` | Supervised contrastive loss over `[B, D]` or multi-view `[B, V, D]` embeddings, weighted cosine loss over embedding pairs, and a loss registry |
+| `NaturalAugmentation`, `DocumentAugmentation`, `create_augmentation`, `register_augmentation`, `available_augmentations` | `embedfit.augmentation` | Task augmentation of training images (`TrainingArguments.augmentation`: `"none"`, `"natural"`, `"document"`, or a registered pipeline), applied before the backbone's own preprocessing and only to representation-training draws ([design](docs/design/API.md#augmentation)) |
 | `PairSampler`, `ImagePair`, `RelationshipRule` | `embedfit.sampling` | Bounded, balanced positive/negative pairs per epoch; rules set pair targets and weights from arbitrary fields; optional hard-negative mining from training embeddings |
 | `BalancedClassBatchSampler` | `embedfit.sampling` | Batches of up to `samples_per_class` images from each of `classes_per_batch` classes, never a duplicate image, reproducible per seed and epoch |
 | `ClassificationHead`, `LogisticRegressionHead`, `LinearHead`, `create_head`, `load_head`, `register_head` | `embedfit.heads` | Classifiers over `[N, D]` embeddings and class indices, constructible by name |
@@ -177,7 +178,7 @@ Public components:
 | `DummyBackbone` | `embedfit.backbones` | Tiny trainable CNN with no checkpoint, for offline tests and examples |
 | `make_bar_images` | `embedfit.testing` | Deterministic synthetic image classes with learnable structure |
 
-Augmentation profiles and the Hugging Face Dataset and pandas DataFrame adapters from [`SPEC.md`](SPEC.md) are not implemented, and the `triplet` training mode is deferred to v0.2; `Trainer` rejects an unavailable `training_mode` when it is created. v0.1 handles single-label classification only; multilabel classification and a prototype / nearest-centroid head are deferred.
+The Hugging Face Dataset and pandas DataFrame adapters from [`SPEC.md`](SPEC.md) are not implemented, and the `triplet` training mode is deferred to v0.2; `Trainer` rejects an unavailable `training_mode` when it is created. v0.1 handles single-label classification only; multilabel classification and a prototype / nearest-centroid head are deferred.
 
 ## Examples and guides
 

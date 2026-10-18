@@ -4,6 +4,7 @@ from dataclasses import asdict
 import pytest
 
 from embedfit import TrainingArguments
+from embedfit.augmentation import registry as augmentation_registry
 from embedfit.exceptions import ConfigurationError
 
 
@@ -22,6 +23,7 @@ def test_defaults_match_the_specification():
         True,
         None,
     )
+    assert args.augmentation == "none"
 
 
 @pytest.mark.parametrize(
@@ -59,6 +61,9 @@ def test_defaults_match_the_specification():
         ({"sampler": "magic"}, "sampler must be one of"),
         ({"training_mode": "frozen", "sampler": "balanced"}, "sampler only applies"),
         ({"training_mode": "pair", "sampler": "random"}, "sampler only applies"),
+        ({"augmentation": "strong"}, "augmentation must be one of"),
+        ({"augmentation": None}, "augmentation must be one of"),
+        ({"training_mode": "frozen", "augmentation": "natural"}, "augmentation='natural'"),
     ],
 )
 def test_invalid_values_fail_at_construction(kwargs, match):
@@ -90,3 +95,13 @@ def test_a_registered_sampler_is_accepted_for_batch_based_modes():
 def test_every_argument_is_json_serialisable():
     json.dumps(asdict(TrainingArguments()))
     json.dumps(asdict(TrainingArguments(unfreeze_last_blocks=1, checkpoint_dir="checkpoints")))
+
+
+def test_augmentation_accepts_profiles_and_registered_pipelines(monkeypatch):
+    monkeypatch.setattr(
+        augmentation_registry, "_AUGMENTATIONS", dict(augmentation_registry._AUGMENTATIONS)
+    )
+    augmentation_registry.register_augmentation("scans", lambda: lambda image: image)
+    for name in ("none", "natural", "document", "scans"):
+        assert TrainingArguments(augmentation=name).augmentation == name
+    assert TrainingArguments(training_mode="frozen", augmentation="none").augmentation == "none"

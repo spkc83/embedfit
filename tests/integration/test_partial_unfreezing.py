@@ -127,3 +127,12 @@ def test_hard_negative_re_encoding_keeps_frozen_batch_norm_statistics():
     )
     for name, value in layer.state_dict().items():
         assert torch.equal(value, before[name]), name
+
+
+def test_augmented_training_changes_only_the_last_block():
+    model = make_model()
+    before = snapshot(model)
+    options = {"augmentation": "document", "unfreeze_last_blocks": 1}
+    Trainer(model, args("supcon", **options), dataset(6, 0)).train()
+    changed = {n for n, v in snapshot(model).items() if not torch.equal(v, before[n])}
+    assert changed == set(model.backbone.parameter_blocks()[-1])

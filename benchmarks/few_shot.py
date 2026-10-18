@@ -50,6 +50,7 @@ from PIL import Image
 
 import embedfit
 from embedfit import EmbedFitModel, FewShotEvaluator, ImageDataset, Trainer, TrainingArguments
+from embedfit.augmentation import available_augmentations
 from embedfit.sampling import sample_few_shot
 
 TRAINED_METHODS = ("end_to_end", "supcon", "pair")
@@ -206,6 +207,7 @@ def read_previous(output: Path, config: dict) -> dict | None:
         saved = previous["config"]
         saved.setdefault("gradient_accumulation_steps", 1)  # Files from before the option.
         saved.setdefault("dataset_revision", None)
+        saved.setdefault("augmentation", "none")
         saved.setdefault("unfreeze_last_blocks", None)
     except (json.JSONDecodeError, KeyError, TypeError, ValueError):
         raise SystemExit(f"{output} is not a results file written by this script.") from None
@@ -284,6 +286,12 @@ def main(argv: list[str] | None = None) -> None:
         help="update batch-norm statistics during training (freeze_batch_norm=False, ADR 0013)",
     )
     parser.add_argument(
+        "--augmentation",
+        choices=available_augmentations(),
+        default="none",
+        help="trained methods: task augmentation of the training images (ADR 0014)",
+    )
+    parser.add_argument(
         "--unfreeze-last-blocks",
         type=positive_int,
         default=None,
@@ -300,6 +308,10 @@ def main(argv: list[str] | None = None) -> None:
         rates = parse_learning_rates(args.learning_rate, args.default_learning_rate)
     except ValueError:
         parser.error("--learning-rate expects METHOD=RATE with a number as RATE")
+    if args.augmentation != "none" and not set(args.methods) & set(TRAINED_METHODS):
+        parser.error("--augmentation applies to trained methods only, and none is selected")
+    if args.unfreeze_last_blocks is not None and not set(args.methods) & set(TRAINED_METHODS):
+        parser.error("--unfreeze-last-blocks applies to trained methods only, and none is selected")
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
     # Before any download library is imported: they read these when imported.
     os.environ.setdefault("HF_HOME", str(args.data_root / "huggingface"))
@@ -317,6 +329,7 @@ def main(argv: list[str] | None = None) -> None:
         "num_workers": 0,
         "gradient_accumulation_steps": args.gradient_accumulation_steps,
         "freeze_batch_norm": not args.train_mode_batch_norm,
+        "augmentation": args.augmentation,
         "unfreeze_last_blocks": args.unfreeze_last_blocks,
     }
     arguments = {

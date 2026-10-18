@@ -3,6 +3,7 @@
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from embedfit.augmentation.registry import NO_AUGMENTATION, available_augmentations
 from embedfit.exceptions import ConfigurationError
 from embedfit.heads.registry import available_heads
 from embedfit.sampling.pairs import hard_negative_quota
@@ -79,6 +80,11 @@ class TrainingArguments:
             used for both training and validation batches. ``None`` selects the mode's default:
             ``"balanced"`` (``BalancedClassBatchSampler``) for ``supcon``, ``"random"`` for
             ``end_to_end``. Rejected in other modes.
+        augmentation: Task augmentation applied to the images that representation training
+            draws from the training set: ``"none"``, ``"natural"``, ``"document"``, or a name
+            given to ``embedfit.augmentation.register_augmentation``. It runs before the
+            backbone's own preprocessing; validation, mining, head fitting, and prediction
+            always see the original images (ADR 0014). Must be ``"none"`` in ``frozen`` mode.
         unfreeze_last_blocks: Train only the last this many blocks of the backbone (>= 1),
             plus the parameters after them (such as a final norm), in every mode that trains
             the backbone; the earlier blocks and the stem stay frozen, including their
@@ -117,6 +123,7 @@ class TrainingArguments:
     hard_negative_refresh_epochs: int = 1
     freeze_batch_norm: bool = True
     sampler: str | None = None
+    augmentation: str = NO_AUGMENTATION
     unfreeze_last_blocks: int | None = None
     checkpoint_dir: str | None = None
 
@@ -197,6 +204,15 @@ class TrainingArguments:
             self.sampler is None or self.training_mode in ("supcon", "end_to_end"),
             f"sampler only applies to training_mode 'supcon' or 'end_to_end', not "
             f"'{self.training_mode}'.",
+        )
+        _require(
+            isinstance(self.augmentation, str) and self.augmentation in available_augmentations(),
+            f"augmentation must be one of {available_augmentations()}, got {self.augmentation!r}.",
+        )
+        _require(
+            self.augmentation == NO_AUGMENTATION or self.training_mode != "frozen",
+            f"augmentation={self.augmentation!r} has no effect in training_mode='frozen', which "
+            "trains no representation; use 'none'.",
         )
         _require(
             self.device is None or isinstance(self.device, str),

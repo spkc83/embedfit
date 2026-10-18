@@ -224,15 +224,21 @@ def test_direct_training_into_a_used_directory_leaves_the_backbone_frozen(tmp_pa
     assert model.backbone.is_frozen
 
 
-def test_checkpoints_record_the_sampler_and_partial_unfreezing(tmp_path):
+def test_checkpoints_record_the_sampler_augmentation_and_partial_unfreezing(tmp_path):
     directory = tmp_path / "checkpoints"
     model = make_model()
     last = set(model.backbone.parameter_blocks()[-1])
     before = {n: v.detach().clone() for n, v in model.backbone.state_dict().items()}
-    options = {"sampler": "balanced", "unfreeze_last_blocks": 1, "num_epochs": 1}
+    options = {
+        "sampler": "balanced",
+        "augmentation": "natural",
+        "unfreeze_last_blocks": 1,
+        "num_epochs": 1,
+    }
     Trainer(model, args(directory, mode="end_to_end", **options), dataset(6, 0)).train()
     changed = {n for n, v in model.backbone.state_dict().items() if not torch.equal(v, before[n])}
     assert changed == last
     metadata = json.loads((directory / "epoch-0001" / "training_metadata.json").read_text())
     recorded = metadata["training_arguments"]
-    assert (recorded["sampler"], recorded["unfreeze_last_blocks"]) == ("balanced", 1)
+    assert recorded["sampler"] == "balanced" and recorded["augmentation"] == "natural"
+    assert recorded["unfreeze_last_blocks"] == 1

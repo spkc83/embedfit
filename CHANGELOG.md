@@ -11,6 +11,7 @@ All notable changes to EmbedFit are recorded here, following [Keep a Changelog](
 - `Trainer` with the training modes `frozen`, `supcon`, `pair`, and the `end_to_end` cross-entropy baseline (linear probe, then fine-tuning; ADR 0012), each ending with a head fitted to convergence; `TrainingArguments` validated on creation, with batch-norm running statistics kept fixed during representation training by default (`freeze_batch_norm`, ADR 0013); best-epoch selection on validation data; `evaluate` and `save_model`.
 - Partial unfreezing: `TrainingArguments.unfreeze_last_blocks` trains only the backbone's last N blocks in every mode that trains it, with blocks defined by each provider through `ImageBackbone.parameter_blocks()`; `unfreeze_backbone(last_blocks=N)` (ADR 0015).
 - Representation checkpoints: `TrainingArguments.checkpoint_dir` writes the best and the last epoch as model bundles with an unfitted head, atomically, with an index in `checkpoints.json` (ADR 0016).
+- Task augmentation for representation training: `TrainingArguments.augmentation` with the profiles `none`, `natural`, and `document`, and an augmentation-pipeline registry (`embedfit.augmentation`). It runs before the backbone's preprocessing, on training draws only, seeded per draw (ADR 0014); `benchmarks/few_shot.py --augmentation`.
 - Hard-negative mining for `pair` training (`hard_negative_fraction`, `hard_negative_refresh_epochs`), restricted to training data.
 - Losses `SupConLoss` and `CosinePairLoss`; samplers `BalancedClassBatchSampler`, `PairSampler` with `RelationshipRule`, and `sample_few_shot`.
 - Heads `LogisticRegressionHead` and `LinearHead` (with `from_module` and `to_module`), with a head registry.
@@ -26,6 +27,6 @@ All notable changes to EmbedFit are recorded here, following [Keep a Changelog](
 
 ### Not yet available
 
-- The `triplet` training mode (deferred to v0.2) and augmentation profiles.
+- The `triplet` training mode (deferred to v0.2).
 - Multilabel classification and a prototype / nearest-centroid head (deferred beyond v0.1).
 - Hugging Face Dataset and pandas DataFrame adapters.

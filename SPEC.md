@@ -167,6 +167,7 @@ hard_negative_fraction: float = 0.0       # pair mode: share of mined negatives 
 hard_negative_refresh_epochs: int = 1     # how often training embeddings are re-encoded
 freeze_batch_norm: bool = True   # batch-norm running statistics fixed during training (ADR 0013)
 sampler: str | None = None   # supcon / end_to_end batch sampler; None = mode default (§26)
+augmentation: str = "none"   # task augmentation of training draws (§13, ADR 0014)
 unfreeze_last_blocks: int | None = None   # train only the backbone's last N blocks (ADR 0015)
 checkpoint_dir: str | None = None         # best and last epoch written as bundles (ADR 0016)
 ```
@@ -320,6 +321,11 @@ Profiles:
 - `document`
 
 Document profile should avoid semantic-destroying defaults such as horizontal flips and extreme crops.
+
+`TrainingArguments.augmentation` selects the profile (default `none`) or a registered custom pipeline (§26). Augmentation acts on the canonical image tensor (float RGB `[3, H, W]` in [0, 1] at native resolution) before the backbone's own preprocessing, and only on the images that representation training (`supcon`, `pair`, `end_to_end`) draws from the training set. Validation batches, hard-negative mining, the `end_to_end` linear probe, head fitting, encoding, and prediction use the original images. A profile other than `none` is rejected in `frozen` mode. Each augmented image is seeded from the run's seed, the epoch, and its draw index in the epoch, so results do not depend on `num_workers` (ADR 0014).
+
+- `natural`: a random crop of 50–100% of the area with an aspect ratio in [3/4, 4/3], a horizontal flip with probability 0.5, and with probability 0.8 brightness, contrast, and saturation jitter of ±20%.
+- `document`: a crop of 85–100% of the area that keeps the page's aspect ratio, a rotation of up to ±2°, and brightness and contrast jitter of ±10%. No flips, no saturation or hue changes, no erasing.
 
 ## 14. High-resolution images
 
@@ -535,7 +541,7 @@ Allow custom:
 - loss
 - sampler
 - metric
-- augmentation pipeline
+- augmentation pipeline (`embedfit.augmentation.register_augmentation`)
 
 Simple registries are sufficient in v0.1.
 
