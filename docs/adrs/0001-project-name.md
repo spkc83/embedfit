@@ -24,4 +24,8 @@ The initial concept was called `ImageSetFit` because it extends the SetFit menta
 
 Vision is the only required v0.1 modality, but naming does not prevent future modality expansion.
 
-The name remains provisional until publication/package registration checks are completed.
+The first publication is planned on Hugging Face, with a blog post, and does not depend on a package-index name. The name has not been checked against PyPI; it remains provisional until that check, which comes before any PyPI upload. The fallbacks are in `PROJECT_NAMING.md`.
+
+## Amendment (v0.1 scope, 2026-10-18)
+
+The last paragraph of Consequence replaces "The name remains provisional until publication/package registration checks are completed." The PyPI name check is no longer a v0.1 release item: the first publication is planned on Hugging Face, and the check comes before any PyPI upload. The status stays "Accepted provisionally".

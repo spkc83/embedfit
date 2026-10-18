@@ -33,7 +33,7 @@ It is short enough for a Python package and does not encode the initial domain.
 
 ## Naming fallback options
 
-If `EmbedFit` is unavailable during final package publication, evaluate:
+The first publication is planned on Hugging Face, with a blog post. Before any PyPI upload, check `embedfit` on PyPI; if it is unavailable, evaluate:
 
 - `EmbeddingFit`
 - `FewFit`

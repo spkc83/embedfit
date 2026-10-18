@@ -22,9 +22,11 @@ Required for v0.1:
 - binary single-label classification
 - multiclass single-label classification
 
-Stretch:
+Deferred beyond v0.1 (optional for v0.2):
 
 - multilabel classification
+
+v0.1 handles single-label tasks only.
 
 ## 3. Required training modes
 
@@ -65,7 +67,7 @@ image A + image B
 
 ### `triplet`
 
-Optional for v0.1; required by v0.2 if deferred.
+Deferred from v0.1; required by v0.2. `TrainingArguments` accepts `training_mode="triplet"` and `triplet_margin`, and `Trainer` rejects the mode as unavailable when it is created.
 
 ### `end_to_end`
 
@@ -148,7 +150,7 @@ learning_rate: float = 2e-5
 weight_decay: float = 0.01
 warmup_ratio: float = 0.0
 temperature: float = 0.07
-triplet_margin: float = 0.2
+triplet_margin: float = 0.2   # triplet mode (§3), deferred to v0.2
 gradient_accumulation_steps: int = 1
 mixed_precision: str | None = None
 max_grad_norm: float | None = 1.0
@@ -249,7 +251,7 @@ Required:
 - scikit-learn logistic regression
 - PyTorch linear head
 
-Optional:
+Deferred beyond v0.1 (optional for v0.2):
 
 - nearest-centroid/prototype head
 
@@ -264,7 +266,7 @@ Required:
 - supervised contrastive
 - cosine pair loss
 
-Optional/deferred:
+Deferred to v0.2, with the `triplet` mode:
 
 - triplet margin
 

@@ -22,5 +22,6 @@ All notable changes to EmbedFit are recorded here, following [Keep a Changelog](
 
 ### Not yet available
 
-- The `triplet` training mode and augmentation profiles.
+- The `triplet` training mode (deferred to v0.2) and augmentation profiles.
+- Multilabel classification and a prototype / nearest-centroid head (deferred beyond v0.1).
 - Hugging Face Dataset and pandas DataFrame adapters.
