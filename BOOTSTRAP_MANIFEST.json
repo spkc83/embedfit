@@ -25,7 +25,9 @@
     "docs/adrs/0010-pooling-and-provider-preprocessing.md",
     "docs/adrs/0011-every-mode-ends-with-a-converged-head.md",
     "docs/adrs/0012-end-to-end-starts-from-a-linear-probe.md",
-    "docs/adrs/0013-batch-norm-statistics-stay-fixed-during-training.md"
+    "docs/adrs/0013-batch-norm-statistics-stay-fixed-during-training.md",
+    "docs/adrs/0015-partial-unfreezing-counts-provider-blocks.md",
+    "docs/adrs/0016-representation-checkpoints-are-model-bundles.md"
   ],
   "agent_entrypoints": [
     "AGENTS.md",

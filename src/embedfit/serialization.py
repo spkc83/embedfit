@@ -84,6 +84,49 @@ def _read_json(path: Path) -> dict[str, Any]:
     return content
 
 
+def write_json_atomic(path: Path, content: Mapping[str, Any]) -> None:
+    """Write ``content`` as JSON so that ``path`` holds either the old or the new file.
+
+    The JSON goes to a temporary file in the same directory, which is flushed to disk and then
+    renamed over ``path``; on POSIX the directory is flushed too, so the rename survives a power
+    loss. The file gets the permissions of an ordinary new file (``0o666`` minus the umask).
+    """
+    handle, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    try:
+        umask = os.umask(0)
+        os.umask(umask)
+        os.chmod(temporary, 0o666 & ~umask)
+        with os.fdopen(handle, "w") as stream:
+            stream.write(json.dumps(content, indent=2) + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    except BaseException:
+        Path(temporary).unlink(missing_ok=True)
+        raise
+    if hasattr(os, "O_DIRECTORY"):  # Directories cannot be opened for fsync on Windows.
+        directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+
+
+def check_saveable(model: "EmbedFitModel") -> None:
+    """Raise ``ConfigurationError`` if ``save_model`` cannot write ``model``'s labels or head."""
+    for label in list(model.labels or []) + [model.positive_label]:
+        if label is not None and type(label) not in _JSON_LABEL_TYPES:
+            raise ConfigurationError(
+                f"Labels of type {type(label).__name__} cannot be saved; "
+                "use str, int, float, or bool labels."
+            )
+    if model.head.registry_name is None:
+        raise ConfigurationError(
+            f"{type(model.head).__name__} cannot be saved: it has no registry_name. Register "
+            "the head class and set registry_name to the registered name."
+        )
+
+
 def save_model(
     model: "EmbedFitModel",
     path: str | Path,
@@ -116,18 +159,8 @@ def save_model(
         raise ConfigurationError(
             f"'{directory}' is not empty and is not a saved model; refusing to replace it."
         )
+    check_saveable(model)
     labels = list(model.labels) if model.labels is not None else None
-    for label in (labels or []) + [model.positive_label]:
-        if label is not None and type(label) not in _JSON_LABEL_TYPES:
-            raise ConfigurationError(
-                f"Labels of type {type(label).__name__} cannot be saved; "
-                "use str, int, float, or bool labels."
-            )
-    if model.head.registry_name is None:
-        raise ConfigurationError(
-            f"{type(model.head).__name__} cannot be saved: it has no registry_name. Register "
-            "the head class and set registry_name to the registered name."
-        )
     try:
         metadata_text = json.dumps(dict(training_metadata or {}), indent=2)
     except (TypeError, ValueError) as exc:

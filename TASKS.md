@@ -77,6 +77,7 @@ Legend:
 - [x] Training loop
 - [x] Validation loss
 - [x] Best checkpoint restore
+- [x] Representation checkpoints on disk, best and last epoch (`checkpoint_dir`, ADR 0016)
 - [x] Freeze + head fit transition
 - [x] Integration test demonstrating encoder weights change
 
@@ -144,6 +145,7 @@ Legend:
 
 - [x] `end_to_end` as linear probe then fine-tune (LP-FT, ADR 0012)
 - [x] batch-norm statistics fixed during representation training, `freeze_batch_norm` (ADR 0013)
+- [x] partial unfreezing of the last backbone blocks, `unfreeze_last_blocks` (ADR 0015)
 - [x] augmentation profiles `none` / `natural` / `document` and the augmentation-pipeline registry (ADR 0014)
 - [x] EuroSAT few-shot benchmark with DINOv2-small (`benchmarks/few_shot.py`, `docs/benchmarks/eurosat-dinov2-small.md`)
 - [x] EuroSAT few-shot benchmark with ResNet-50 (`docs/benchmarks/eurosat-resnet50.md`)

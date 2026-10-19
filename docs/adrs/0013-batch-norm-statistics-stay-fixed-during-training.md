@@ -36,3 +36,4 @@ DINOv2 and other transformer encoders use layer normalisation and were not affec
 - Results for batch-norm backbones differ from those obtained before this change.
 - Training and evaluation normalise features the same way, so the features that `end_to_end`'s linear probe is fitted on match those at the start of fine-tuning.
 - `freeze_batch_norm=False` gives standard train-mode behaviour, including the sensitivity to small batches described in the benchmarking guide.
+- With partial unfreezing (ADR 0015), batch-norm layers in the frozen part of the backbone stay in eval mode even with `freeze_batch_norm=False`; the option decides only for the trained blocks.

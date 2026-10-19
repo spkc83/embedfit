@@ -348,3 +348,63 @@ def test_a_model_without_pooler_or_tokens_gets_an_accurate_error():
         HFBackbone("local/poolformer", config=config, image_size=64)
     with pytest.raises(ConfigurationError, match="does not accept 48x48"):
         HFBackbone("local/tiny-vit", config=vit_config(), image_size=48)
+
+
+def _trainable(backbone):
+    return {name for name, p in backbone.named_parameters() if p.requires_grad}
+
+
+def test_vit_blocks_are_its_encoder_layers_with_the_final_norm_as_tail():
+    config = vit_config()
+    config.num_hidden_layers = 3
+    backbone = HFBackbone("local/tiny-vit", config=config)
+    blocks = backbone.parameter_blocks()
+    assert len(blocks) == 3
+    backbone.unfreeze(last_blocks=1)
+    names = _trainable(backbone)
+    assert names >= set(blocks[-1]) and any("layernorm" in n for n in names - set(blocks[-1]))
+    assert not any(".embeddings." in n for n in names)
+    assert not names & (set(blocks[0]) | set(blocks[1]))
+
+
+def test_dinov2_blocks_are_its_encoder_layers():
+    config = transformers.Dinov2Config(
+        hidden_size=32,
+        num_hidden_layers=4,
+        num_attention_heads=2,
+        intermediate_size=64,
+        image_size=32,
+        patch_size=8,
+    )
+    backbone = HFBackbone("local/tiny-dinov2", config=config)
+    blocks = backbone.parameter_blocks()
+    assert len(blocks) == 4
+    assert all(n.startswith(f"model.encoder.layer.{i}.") for i, b in enumerate(blocks) for n in b)
+
+
+def test_parallel_layer_lists_are_zipped_into_blocks():
+    # PVT keeps each stage's patch embedding (its downsampling) in a list beside the stages.
+    if not hasattr(transformers, "PvtConfig"):
+        pytest.skip("this transformers version has no PVT")
+    config = transformers.PvtConfig(
+        image_size=32,
+        depths=[1, 1, 1, 1],
+        hidden_sizes=[8, 16, 16, 16],
+        num_attention_heads=[1, 1, 1, 1],
+        sequence_reduction_ratios=[2, 2, 1, 1],
+        patch_sizes=[4, 2, 2, 2],
+        strides=[4, 2, 2, 2],
+    )
+    backbone = HFBackbone("local/tiny-pvt", config=config, pooling="mean")
+    blocks = backbone.parameter_blocks()
+    assert len(blocks) == 4
+    for index, block in enumerate(blocks):
+        prefixes = (f"model.encoder.patch_embeddings.{index}.", f"model.encoder.block.{index}.")
+        assert all(n.startswith(prefixes) for n in block)
+        assert all(any(n.startswith(p) for n in block) for p in prefixes)
+    backbone.unfreeze(last_blocks=1)
+    names = _trainable(backbone)
+    assert (
+        set(blocks[-1]) | {"model.encoder.layer_norm.weight", "model.encoder.layer_norm.bias"}
+        == names
+    )

@@ -111,6 +111,11 @@ class DummyBackbone(ImageBackbone):
         embeddings: torch.Tensor = self.projection(self.features(pixel_values))
         return embeddings
 
+    def parameter_blocks(self) -> list[list[str]]:
+        """Each layer of ``features`` that has parameters, then the projection."""
+        layers = [layer for layer in self.features if any(True for _ in layer.parameters())]
+        return [self._names_of(layer) for layer in [*layers, self.projection]]
+
     def save_pretrained(self, path: str | Path) -> None:
         """Write the configuration and weights to a directory.
 

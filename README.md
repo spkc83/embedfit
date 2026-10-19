@@ -146,8 +146,8 @@ Public components:
 
 | Component | Location | Purpose |
 | --- | --- | --- |
-| `EmbedFitModel` | `embedfit` | Backbone plus head: `from_pretrained` (identifier or saved directory), `save_pretrained`, `encode`, `fit_head`, `predict`, `predict_proba`, `risk_score`, `freeze_backbone` / `unfreeze_backbone`, differentiable `forward` |
-| `Trainer`, `TrainingArguments` | `embedfit` | Two-phase training (representation, then head) with `train`, `predict`, `evaluate`, and `save_model`. Modes `frozen`, `supcon`, `pair`, and the `end_to_end` cross-entropy baseline; arguments are validated on creation |
+| `EmbedFitModel` | `embedfit` | Backbone plus head: `from_pretrained` (identifier or saved directory), `save_pretrained`, `encode`, `fit_head`, `predict`, `predict_proba`, `risk_score`, `freeze_backbone` / `unfreeze_backbone` (whole backbone or its last blocks), differentiable `forward` |
+| `Trainer`, `TrainingArguments` | `embedfit` | Two-phase training (representation, then head) with `train`, `predict`, `evaluate`, and `save_model`. Modes `frozen`, `supcon`, `pair`, and the `end_to_end` cross-entropy baseline; optional partial unfreezing (`unfreeze_last_blocks`) and representation checkpoints on disk (`checkpoint_dir`); arguments are validated on creation |
 | `FewShotEvaluator` | `embedfit` | Benchmark of methods × shots × seeds as tidy records, with `aggregate` for mean and standard deviation |
 | `ImageDataset`; `ImageSample` | `embedfit`; `embedfit.data` | Sample records (`image`, `label`, optional `sample_id`, `group_id`, `timestamp`, `amount`, `metadata`); file paths stay undecoded until encoding |
 | `classification_metrics`, `confusion_matrix`, `roc_auc`, `pr_auc` | `embedfit.evaluation` | Standard metrics; macro averages cover every declared class |
