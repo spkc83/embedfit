@@ -141,14 +141,15 @@ Legend:
 - [x] domain-risk guide
 - [x] privacy/logging review
 - [x] changelog
-- [~] v0.1 release checklist (`plans/V0_1_RELEASE.md`: built items are verified; the version number, the benchmarks not yet run, and the unbuilt spec items not deferred remain open)
+- [x] v0.1 release checklist (`plans/V0_1_RELEASE.md`), version 0.1.0
 
-## After M12: baselines and real-image benchmarks
+## After M12: v0.1 scope, baselines, and real-image benchmarks
 
 - [x] `end_to_end` as linear probe then fine-tune (LP-FT, ADR 0012)
 - [x] batch-norm statistics fixed during representation training, `freeze_batch_norm` (ADR 0013)
 - [x] partial unfreezing of the last backbone blocks, `unfreeze_last_blocks` (ADR 0015)
 - [x] augmentation profiles `none` / `natural` / `document` and the augmentation-pipeline registry (ADR 0014)
+- [x] batch-sampler and metric registries (`register_sampler`, `register_metric`; SPEC §26)
 - [x] EuroSAT few-shot benchmark with DINOv2-small (`benchmarks/few_shot.py`, `docs/benchmarks/eurosat-dinov2-small.md`)
 - [x] EuroSAT few-shot benchmark with ResNet-50 (`docs/benchmarks/eurosat-resnet50.md`)
 - [x] RVL-CDIP document-image benchmark with DINOv2-small (`docs/benchmarks/rvl-cdip-dinov2-small.md`)

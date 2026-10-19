@@ -21,7 +21,7 @@ Common options: `--backbone`, `--seed`, `--quiet`, and, for the scripts that tra
 To use a pretrained encoder, install the extra and pass its identifier. Pretrained backbones need a much smaller learning rate than the untrained demo network:
 
 ```bash
-pip install 'embedfit[torchvision]'
+pip install -e '..[torchvision]'    # from this directory; EmbedFit is not on PyPI
 python 02_supcon_few_shot.py --backbone torchvision/resnet18 --learning-rate 2e-5 --epochs 5
 ```
 

@@ -21,7 +21,7 @@ The library must not:
 - log image contents;
 - log raw arrays/tensors;
 - write training examples to checkpoints;
-- serialize arbitrary metadata into model bundles. `save_pretrained(training_metadata=...)` writes whatever the caller passes; `Trainer.save_model` passes only the training arguments (without `output_dir`) and the training summary: mode, sample and step counts, loss curves, and best epoch;
+- serialize arbitrary metadata into model bundles. `save_pretrained(training_metadata=...)` writes whatever the caller passes; `Trainer.save_model` passes only the training arguments (without `output_dir` and `checkpoint_dir`) and the training summary: mode, sample and step counts, loss curves, and best epoch;
 - include raw metadata in exception strings;
 - send telemetry.
 

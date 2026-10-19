@@ -34,7 +34,7 @@ pip install -e ".[torchvision]"   # or another extra for pretrained backbones: t
 
 ## What the package provides
 
-The design is specified in [`SPEC.md`](SPEC.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md), with decisions recorded in [`docs/adrs/`](docs/adrs/). Contributors, human or agent, start from [`AGENTS.md`](AGENTS.md); open work is listed in [`TASKS.md`](TASKS.md) and [`plans/V0_1_RELEASE.md`](plans/V0_1_RELEASE.md).
+The design is specified in [`SPEC.md`](SPEC.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md), with decisions recorded in [`docs/adrs/`](docs/adrs/). Contributors, human or agent, start from [`AGENTS.md`](AGENTS.md); open work is listed in [`TASKS.md`](TASKS.md), and the v0.1 release checklist is [`plans/V0_1_RELEASE.md`](plans/V0_1_RELEASE.md).
 
 The snippets below run in order, offline. The first one builds stand-in data from synthetic images; replace it with your own labelled images:
 
@@ -140,7 +140,7 @@ args = TrainingArguments(training_mode="pair", num_workers=0)
 Trainer(model, args, train, relationship_rules=[rule]).train()
 ```
 
-`encode` accepts PIL images, numpy arrays, torch tensors, and file paths, and returns one L2-normalised row per image. Resolution, interpolation mode, and normalisation constants come from the selected checkpoint, never from a global default; pass `image_size=` to run a convolutional backbone at higher resolution.
+`encode` accepts PIL images, numpy arrays, torch tensors, file paths, and encoded image file bytes, and returns one L2-normalised row per image. Resolution, interpolation mode, and normalisation constants come from the selected checkpoint, never from a global default; pass `image_size=` to run a convolutional backbone at higher resolution.
 
 Public components:
 
@@ -156,7 +156,7 @@ Public components:
 | `select_threshold` (returns `ThresholdResult`) | `embedfit.evaluation` | Threshold for max F1 or a target precision, recall, FPR, or review rate; for validation data only |
 | `stratified_split`, `grouped_split`, `temporal_split`, `find_split_overlap` | `embedfit.data` | Reproducible splits by class, group, or time, and a check that no `sample_id` or `group_id` spans splits ([leakage guide](docs/guides/leakage.md)) |
 | `sample_few_shot` | `embedfit.sampling` | N samples per class, without replacement |
-| `register_sampler`, `create_sampler`, `available_samplers`, `BatchSampler` | `embedfit.sampling` | Registry of the batch samplers selectable with `TrainingArguments.sampler` for `supcon` and `end_to_end` (built-ins `balanced` and `random`), checked for every epoch before training |
+| `register_sampler`, `create_sampler`, `available_samplers`, `BatchSampler` | `embedfit.sampling` | Registry of the batch samplers selectable with `TrainingArguments.sampler` for `supcon` and `end_to_end` (built-ins `balanced` and `random`); every sampler except the built-in `balanced`, which is valid by construction, is checked for every epoch when the `Trainer` is created |
 | `register_metric`, `get_metric`, `available_metrics` | `embedfit.evaluation` | Registry of positive-class score metrics that `Trainer.evaluate(metrics=...)` and `FewShotEvaluator.run(metrics=...)` add to their results |
 | `LabelMapping` | `embedfit.data` | Ordered label ↔ class-index mapping that distinguishes `0` from `False` |
 | `SupConLoss`, `CosinePairLoss`, `create_loss`, `register_loss`, `available_losses` | `embedfit.losses` | Supervised contrastive loss over `[B, D]` or multi-view `[B, V, D]` embeddings, weighted cosine loss over embedding pairs, and a loss registry |

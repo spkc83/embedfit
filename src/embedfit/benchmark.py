@@ -93,12 +93,12 @@ class FewShotEvaluator:
 
         Raises:
             ConfigurationError: If a method is unknown or duplicated, the arguments given for
-                a method name a different ``training_mode``, a dataset has the wrong type, the
-                factory returns something other than a new ``EmbedFitModel`` with a new
-                backbone, a class in the pool has fewer samples than the largest shot count, or
-                a method cannot train at the smallest shot count, or ``metrics`` is invalid for
-                the factory's models. All of these are raised
-                before any model is trained.
+                a method name a different ``training_mode`` or set ``checkpoint_dir``, a dataset
+                has the wrong type, the factory returns something other than a new
+                ``EmbedFitModel`` with a new backbone, a class in the pool has fewer samples than
+                the largest shot count, a method cannot train at the smallest shot count, or
+                ``metrics`` is invalid for the factory's models. All of these are raised before
+                any model is trained.
         """
         if not isinstance(metrics, str) and isinstance(metrics, Iterable):
             metrics = tuple(metrics)  # Checked per model below, then used by every evaluate.

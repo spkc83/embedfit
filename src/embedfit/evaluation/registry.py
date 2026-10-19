@@ -39,8 +39,9 @@ def register_metric(name: str, metric: MetricFunction, *, overwrite: bool = Fals
             reports by default (``roc_auc``, ``accuracy``, ...) are reserved.
         metric: Callable invoked as ``metric(y_true, scores, *, positive_label)`` that returns
             a float, where ``scores`` holds the predicted probability of ``positive_label``.
-            Every ranking and calibration function in ``embedfit.evaluation`` except the
-            dollar metrics has this form; bind other options with ``functools.partial``.
+            Every ranking function in ``embedfit.evaluation`` except the dollar metrics has
+            this form, and so do ``brier_score`` and ``expected_calibration_error``; bind other
+            options with ``functools.partial``.
         overwrite: Replace an existing registration instead of raising.
 
     Raises:
