@@ -6,7 +6,7 @@ Status: Accepted. Amended by ADR 0012: `end_to_end` now starts from a linear pro
 
 After representation training, `Trainer` fits the classification head to convergence on the training embeddings of the final backbone in every mode, including `end_to_end`. In that mode the jointly trained linear classifier becomes a `LinearHead` and is then refitted (L-BFGS, starting from the trained weights); it is not used as it comes out of the training loop.
 
-Validation loss during representation training is a mean per sample (per pair in `pair` mode) over a fixed set of validation batches, the same in every epoch. For `supcon` and `pair` those batches are a sample of the validation data: class-balanced batches and a bounded set of pairs.
+Validation loss during representation training is a mean per sample (per pair in `pair` mode) over a fixed set of validation batches, the same in every epoch. For `supcon` and `pair` those batches are a sample of the validation data: class-balanced batches (with the default sampler) and a bounded set of pairs.
 
 ## Context
 
