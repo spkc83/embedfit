@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from embedfit.data import LabelMapping, to_rgb_tensor
+from embedfit.data import ImageDataset, LabelMapping, to_rgb_tensor
 from embedfit.exceptions import ConfigurationError, ImageInputError
 
 SOURCES = sorted((Path(__file__).resolve().parents[2] / "src" / "embedfit").rglob("*.py"))
@@ -253,3 +253,17 @@ def test_image_file_paths_never_reach_a_traceback_or_a_log(tmp_path, caplog, con
             logging.getLogger("application").exception("could not encode an image")
     assert "99887766" not in rendered and "99887766" not in caplog.text
     assert "ImageInputError" in rendered
+
+
+def test_skipping_unreadable_images_names_no_file_or_label(tmp_path, caplog):
+    secret = tmp_path / "acct-99887766-routing-0210.png"
+    secret.write_bytes(b"this is not an image")
+    records = [
+        {"image": secret, "label": "acct-99887766"},
+        {"image": tmp_path / "acct-99887766-missing.png", "label": "acct-99887766"},
+        {"image": b"acct-99887766", "label": "acct-99887766"},
+    ]
+    with caplog.at_level(logging.DEBUG):
+        dataset = ImageDataset(records, on_corrupt_image="skip")
+    assert len(dataset) == 0 and dataset.num_skipped == 3
+    assert "99887766" not in caplog.text and "99887766" not in repr(dataset)

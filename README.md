@@ -149,7 +149,7 @@ Public components:
 | `EmbedFitModel` | `embedfit` | Backbone plus head: `from_pretrained` (identifier or saved directory), `save_pretrained`, `encode`, `fit_head`, `predict`, `predict_proba`, `risk_score`, `freeze_backbone` / `unfreeze_backbone` (whole backbone or its last blocks), differentiable `forward` |
 | `Trainer`, `TrainingArguments` | `embedfit` | Two-phase training (representation, then head) with `train`, `predict`, `evaluate`, and `save_model`. Modes `frozen`, `supcon`, `pair`, and the `end_to_end` cross-entropy baseline; optional partial unfreezing (`unfreeze_last_blocks`) and representation checkpoints on disk (`checkpoint_dir`); arguments are validated on creation |
 | `FewShotEvaluator` | `embedfit` | Benchmark of methods × shots × seeds as tidy records, with `aggregate` for mean and standard deviation |
-| `ImageDataset`; `ImageSample` | `embedfit`; `embedfit.data` | Sample records (`image`, `label`, optional `sample_id`, `group_id`, `timestamp`, `amount`, `metadata`); file paths stay undecoded until encoding |
+| `ImageDataset`; `ImageSample` | `embedfit`; `embedfit.data` | Sample records (`image`, `label`, optional `sample_id`, `group_id`, `timestamp`, `amount`, `metadata`); file paths and encoded bytes stay undecoded until encoding; `from_pandas` and `from_hf_dataset` adapters; `on_corrupt_image="skip"` drops unreadable images |
 | `classification_metrics`, `confusion_matrix`, `roc_auc`, `pr_auc` | `embedfit.evaluation` | Standard metrics; macro averages cover every declared class |
 | `recall_at_fpr`, `precision_at_k`, `recall_at_k`, `precision_at_review_rate`, `recall_at_review_rate`, `dollar_recall`, `dollar_recall_at_review_rate` | `embedfit.evaluation` | Rare-event ranking metrics with an explicit positive label and order-independent tie handling |
 | `brier_score`, `calibration_bins` (returns `CalibrationBins`), `expected_calibration_error` | `embedfit.evaluation` | Calibration of positive-class probabilities |
@@ -178,7 +178,7 @@ Public components:
 | `DummyBackbone` | `embedfit.backbones` | Tiny trainable CNN with no checkpoint, for offline tests and examples |
 | `make_bar_images` | `embedfit.testing` | Deterministic synthetic image classes with learnable structure |
 
-The Hugging Face Dataset and pandas DataFrame adapters from [`SPEC.md`](SPEC.md) are not implemented, and the `triplet` training mode is deferred to v0.2; `Trainer` rejects an unavailable `training_mode` when it is created. v0.1 handles single-label classification only; multilabel classification and a prototype / nearest-centroid head are deferred.
+The `triplet` training mode is deferred to v0.2; `Trainer` rejects an unavailable `training_mode` when it is created. v0.1 handles single-label classification only; multilabel classification and a prototype / nearest-centroid head are deferred.
 
 ## Examples and guides
 
@@ -205,9 +205,9 @@ mypy
 python -m build
 ```
 
-Tests that download pretrained checkpoints are opt-in: `pytest -m network`. Each provider's adapter tests are skipped when its extra (`torchvision`, `timm`, `hf`) is missing; `pip install -e ".[dev,all]"` runs them all, including the preprocessing comparisons against `timm` and Transformers.
+Tests that download pretrained checkpoints are opt-in: `pytest -m network`. Each provider's adapter tests are skipped when its extra (`torchvision`, `timm`, `hf`) is missing, and the dataset adapter tests when `datasets` or `pandas` is missing; `pip install -e ".[dev,all]"` runs them all, including the preprocessing comparisons against `timm` and Transformers.
 
-Optional extras install backbone providers: `torchvision`, `timm`, and `hf`. The `datasets` and `pandas` extras are reserved for dataset adapters that are not implemented; `ImageDataset` accepts a sequence, or a map-style torch `Dataset`, of `{"image", "label", ...}` mappings. `all` installs every extra. The core install depends only on `torch`, `numpy`, `scikit-learn`, and `pillow` ([ADR 0006](docs/adrs/0006-core-dependencies-and-testing-utilities.md)).
+Optional extras install backbone providers: `torchvision`, `timm`, and `hf`. The `datasets` and `pandas` extras enable `ImageDataset.from_hf_dataset` and `ImageDataset.from_pandas`; without them, `ImageDataset` accepts a sequence, or a map-style torch `Dataset`, of `{"image", "label", ...}` mappings. `all` installs every extra. The core install depends only on `torch`, `numpy`, `scikit-learn`, and `pillow` ([ADR 0006](docs/adrs/0006-core-dependencies-and-testing-utilities.md)).
 
 Branching, commit, and documentation conventions are in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 

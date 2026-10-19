@@ -1,5 +1,6 @@
 """Task augmentation during representation training (SPEC §13, ADR 0014)."""
 
+import io
 import json
 
 import numpy as np
@@ -276,3 +277,19 @@ def test_draws_are_counted_from_zero_every_epoch_after_the_setup_check(mode, rep
     Trainer(make_model(), args, dataset(12, 0), eval_dataset=dataset(4, 1)).train()
     draws = 2 * args.batch_size
     assert draw_keys == [(epoch, draw) for epoch in range(args.num_epochs) for draw in range(draws)]
+
+
+def test_encoded_bytes_train_exactly_like_the_decoded_images():
+    images, labels = make_bar_images(6, num_classes=3, seed=0)
+    encoded = []
+    for image in images:
+        buffer = io.BytesIO()
+        image.save(buffer, "PNG")  # Lossless, so both datasets hold the same pixels.
+        encoded.append(buffer.getvalue())
+    test_data = dataset(4, 2)
+    runs = [
+        train("supcon", ImageDataset.from_lists(source, labels), augmentation="natural")
+        for source in (images, encoded)
+    ]
+    assert runs[0][2].train_losses == runs[1][2].train_losses
+    assert np.array_equal(*(model.encode(test_data.images) for model, _, _ in runs))

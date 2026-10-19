@@ -200,13 +200,18 @@ Accepted image forms:
 - torch tensor
 - numpy array
 - file path
+- encoded image file bytes (PNG, JPEG, ...)
 
 Dataset adapters should support:
 
 - Python sequence
 - `torch.utils.data.Dataset`
-- Hugging Face Dataset via optional adapter
-- pandas DataFrame via explicit adapter
+- Hugging Face Dataset via optional adapter (`ImageDataset.from_hf_dataset`, `datasets` extra)
+- pandas DataFrame via explicit adapter (`ImageDataset.from_pandas`, `pandas` extra)
+
+Both adapters map columns to sample fields (`columns={"image": ..., "label": ..., "sample_id": ..., "group_id": ..., "timestamp": ..., "amount": ...}`) and copy the columns listed in `metadata_columns` into `metadata`.
+
+Corrupt images: `on_corrupt_image="raise"` (default) raises when a missing or undecodable file is encoded; `"skip"` drops such records when the dataset is built and reports how many in `ImageDataset.num_skipped`.
 
 ## 7. Backbone abstraction
 

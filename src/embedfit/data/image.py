@@ -5,6 +5,8 @@ in [0, 1] at the image's native resolution. Resizing and normalisation are check
 and stay inside the adapter (ADR 0003); this module only removes input-format differences.
 """
 
+import io
+import struct
 from pathlib import Path
 from typing import TypeAlias
 
@@ -14,8 +16,22 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 
 from embedfit.exceptions import ImageInputError
 
-ImageLike: TypeAlias = Image.Image | np.ndarray | torch.Tensor | str | Path
-"""A PIL image, numpy array, torch tensor, or path to an image file."""
+ImageLike: TypeAlias = Image.Image | np.ndarray | torch.Tensor | str | Path | bytes
+"""A PIL image, numpy array, torch tensor, path to an image file, or encoded image file bytes."""
+
+# What Pillow raises on malformed data: OSError covers missing files and truncated data, and
+# some plugins fail with these other types while parsing or decoding, or (TypeError) while
+# converting pixels of data that loaded.
+_DECODE_ERRORS = (
+    UnidentifiedImageError,
+    OSError,
+    ValueError,
+    SyntaxError,
+    EOFError,
+    struct.error,
+    IndexError,
+    TypeError,
+)
 
 
 def _pil_to_array(image: Image.Image) -> np.ndarray:
@@ -41,16 +57,66 @@ def _pil_to_array(image: Image.Image) -> np.ndarray:
     return np.array(image.convert("RGB"))
 
 
-def _read_image_file(path: Path) -> np.ndarray:
+def _open_image(source: Path | bytes) -> Image.Image:
+    return Image.open(io.BytesIO(source) if isinstance(source, bytes) else source)
+
+
+def _read_image_file(source: Path | bytes) -> np.ndarray:
     # File names can carry sensitive identifiers, so the path appears neither in the message
     # nor in a chained cause (``from None``): a traceback or ``logger.exception`` prints causes.
+    what = "Encoded image bytes" if isinstance(source, bytes) else "Image file"
     try:
-        with Image.open(path) as image:
+        with _open_image(source) as image:
             return _pil_to_array(image)
     except FileNotFoundError:
         raise ImageInputError("Image file does not exist.") from None
-    except (UnidentifiedImageError, OSError):
-        raise ImageInputError("Image file could not be decoded; it may be corrupt.") from None
+    except (PermissionError, IsADirectoryError):
+        raise _unopenable() from None
+    except ImageInputError:
+        raise  # A readable image that the policy in _pil_to_array rejects.
+    except Image.DecompressionBombError:
+        raise _too_large(what) from None
+    except _DECODE_ERRORS:
+        raise ImageInputError(f"{what} could not be decoded; it may be corrupt.") from None
+
+
+def _unopenable() -> ImageInputError:
+    return ImageInputError("Image file could not be opened: it is a directory or not readable.")
+
+
+def _too_large(what: str) -> ImageInputError:
+    return ImageInputError(
+        f"{what} has more than twice Pillow's decompression-bomb pixel limit "
+        "(PIL.Image.MAX_IMAGE_PIXELS)."
+    )
+
+
+def is_readable(image: str | Path | bytes) -> bool:
+    """Whether an image file or encoded bytes exist and fully decode.
+
+    Used by the ``skip`` corrupt-image policy. A missing file, data Pillow cannot identify,
+    truncated data, data a Pillow plugin fails to parse, and an image with more than twice
+    Pillow's decompression-bomb limit (``PIL.Image.MAX_IMAGE_PIXELS``) are unreadable. Between
+    one and two times the limit Pillow only warns, and the image is readable. The image is
+    decoded and converted as ``to_rgb_tensor`` does it, so data that loads but fails in the
+    pixel conversion is unreadable too. A readable file that ``to_rgb_tensor`` rejects by
+    policy (for example a multi-frame file) counts as readable.
+
+    Raises:
+        ImageInputError: If the path names a directory or a file without read permission;
+            that is a setup error, not a corrupt image. The message names no path.
+    """
+    source = image if isinstance(image, bytes) else Path(image)
+    try:
+        with _open_image(source) as opened:
+            _pil_to_array(opened)
+    except (PermissionError, IsADirectoryError):
+        raise _unopenable() from None
+    except ImageInputError:
+        return True  # Decodable; rejected by policy when it is used.
+    except (Image.DecompressionBombError, *_DECODE_ERRORS):
+        return False
+    return True
 
 
 def to_rgb_tensor(image: ImageLike) -> torch.Tensor:
@@ -65,7 +131,8 @@ def to_rgb_tensor(image: ImageLike) -> torch.Tensor:
               is applied, so the tensor matches the image as displayed;
             - ``numpy.ndarray`` shaped ``[H, W]`` or ``[H, W, C]`` (channel-last);
             - ``torch.Tensor`` shaped ``[H, W]`` or ``[C, H, W]`` (channel-first);
-            - ``str`` or ``pathlib.Path`` naming an image file, decoded with Pillow.
+            - ``str`` or ``pathlib.Path`` naming an image file, decoded with Pillow;
+            - ``bytes`` holding an encoded image file (PNG, JPEG, ...), decoded like a file.
 
             Arrays and tensors must have 1 or 3 channels and be ``uint8`` in [0, 255] or finite
             floating point in [0, 1]. Single-channel input is replicated to three channels.
@@ -76,13 +143,16 @@ def to_rgb_tensor(image: ImageLike) -> torch.Tensor:
 
     Raises:
         ImageInputError: If the type, shape, channel count, dtype, or value range is
-            unsupported, or a file is missing or undecodable. Messages describe structure only,
-            never pixel values or file paths.
+            unsupported, or a file or encoded bytes are missing, undecodable, or over twice
+            Pillow's decompression-bomb limit. Messages describe structure only, never pixel
+            values or file paths.
     """
     if isinstance(image, Image.Image):
         image = _pil_to_array(image)
     elif isinstance(image, str | Path):
         image = _read_image_file(Path(image))
+    elif isinstance(image, bytes):
+        image = _read_image_file(image)
 
     if isinstance(image, np.ndarray):
         if image.ndim == 2:
@@ -107,7 +177,7 @@ def to_rgb_tensor(image: ImageLike) -> torch.Tensor:
     else:
         raise ImageInputError(
             f"Unsupported image type {type(image).__name__}; expected PIL.Image.Image, "
-            "numpy.ndarray, torch.Tensor, str, or pathlib.Path."
+            "numpy.ndarray, torch.Tensor, str, pathlib.Path, or bytes."
         )
 
     channels, height, width = tensor.shape
