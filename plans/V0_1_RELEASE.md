@@ -17,6 +17,14 @@ Status legend: `[x]` verified on `main`, `[ ]` open.
 - [x] save/load — pickle-free bundles, atomic saves, consistency checks on load
 - [x] few-shot evaluator, `end_to_end` baseline, `LinearHead` — every mode ends with a converged head (ADR 0011); `end_to_end` is LP-FT (ADR 0012)
 - [x] batch-norm statistics fixed during representation training — `TrainingArguments.freeze_batch_norm`, default `True` (ADR 0013); `tests/integration/test_batch_norm_training.py`
+- [x] augmentation profiles `none` / `natural` / `document` (§13): `TrainingArguments.augmentation`, `embedfit.augmentation` (ADR 0014). Evidence: `tests/unit/test_augmentation.py` (profile contract, `document` never mirrors over 200 seeds, crop and rotation bounds), `tests/integration/test_augmented_training.py` (only training draws augmented in every trained mode, identity pipeline equals `none`, reproducible and independent of `num_workers`).
+- [x] augmentation-pipeline registry (§26): `register_augmentation` and `TrainingArguments.augmentation`, with `"none"` reserved. Evidence: `tests/unit/test_augmentation_registry.py`, `tests/integration/test_augmented_training.py` (a registered pipeline used in every trained mode and under a registered custom sampler).
+- [x] dataset adapters for Hugging Face `datasets` and pandas DataFrames (§6): `ImageDataset.from_hf_dataset` and `ImageDataset.from_pandas`. Evidence: `tests/unit/test_hf_dataset_adapter.py`, `tests/unit/test_pandas_adapter.py`.
+- [x] corrupt-image policy `skip` with a reported count (`docs/design/DATA_MODEL.md`): `on_corrupt_image="skip"` and `ImageDataset.num_skipped`. Evidence: `tests/unit/test_dataset.py::TestSkipCorruptImages`, `tests/unit/test_image.py`, `tests/unit/test_privacy_audit.py`.
+- [x] partial unfreezing for the end-to-end baseline (`docs/research/BASELINES.md`) — `TrainingArguments.unfreeze_last_blocks`, for every mode that trains the backbone, with provider-defined blocks (ADR 0015); `tests/unit/test_backbone_blocks.py`, `tests/integration/test_partial_unfreezing.py`, and block tests per provider.
+- [x] representation checkpoints on disk — `TrainingArguments.checkpoint_dir` writes the best and the last epoch as model bundles (ADR 0016); `tests/integration/test_representation_checkpoints.py`.
+- [x] batch-sampler registry (§26): `register_sampler` and `TrainingArguments.sampler` for `supcon` and `end_to_end` batches; a custom sampler is checked for every epoch before training. Evidence: `tests/unit/test_sampler_registry.py`, `tests/integration/test_registries.py`.
+- [x] metric registry (§26): `register_metric`, `Trainer.evaluate(metrics=...)`, and `FewShotEvaluator.run(metrics=...)`. Evidence: `tests/unit/evaluation/test_metric_registry.py`, `tests/integration/test_registries.py`.
 
 ## Quality
 
@@ -42,22 +50,13 @@ Real-image results: EuroSAT with DINOv2-small at 4, 8, and 16 shots ([results](.
 
 ## Release hygiene
 
-- [ ] version set to 0.1.0 — currently `0.1.0.dev0` in `src/embedfit/_version.py`
-- [x] changelog — `CHANGELOG.md`
+- [x] version set to 0.1.0 — `src/embedfit/_version.py`, read by the package build
+- [x] changelog — `CHANGELOG.md`, section `[0.1.0] - 2026-10-18`
 - [x] license decision — Apache-2.0
 
 ## Specified for v0.1 but not built
 
-These are specified for v0.1 in `SPEC.md` or the design and research docs, but are not built. Each needs a decision: build it, or defer it in `SPEC.md`.
-
-- [x] Augmentation profiles `none` / `natural` / `document` (§13): `TrainingArguments.augmentation`, `embedfit.augmentation` (ADR 0014). Evidence: `tests/unit/test_augmentation.py` (profile contract, `document` never mirrors over 200 seeds, crop and rotation bounds), `tests/integration/test_augmented_training.py` (only training draws augmented in every trained mode, identity pipeline equals `none`, reproducible and independent of `num_workers`).
-- [x] Dataset adapters for Hugging Face `datasets` and pandas DataFrames (§6): `ImageDataset.from_hf_dataset` and `ImageDataset.from_pandas`. Evidence: `tests/unit/test_hf_dataset_adapter.py`, `tests/unit/test_pandas_adapter.py`.
-- [x] Corrupt-image policy `skip` with a reported count (`docs/design/DATA_MODEL.md`): `on_corrupt_image="skip"` and `ImageDataset.num_skipped`. Evidence: `tests/unit/test_dataset.py::TestSkipCorruptImages`, `tests/unit/test_image.py`, `tests/unit/test_privacy_audit.py`.
-- [x] Partial unfreezing for the end-to-end baseline (`docs/research/BASELINES.md`) — `TrainingArguments.unfreeze_last_blocks`, for every mode that trains the backbone, with provider-defined blocks (ADR 0015); `tests/unit/test_backbone_blocks.py`, `tests/integration/test_partial_unfreezing.py`, and block tests per provider.
-- [x] Representation checkpoints on disk — `TrainingArguments.checkpoint_dir` writes the best and the last epoch as model bundles (ADR 0016); `tests/integration/test_representation_checkpoints.py`.
-- [x] Sampler registry (§26): `register_sampler` and `TrainingArguments.sampler` for `supcon` and `end_to_end` batches, checked for every epoch before training. Evidence: `tests/unit/test_sampler_registry.py`, `tests/integration/test_registries.py`.
-- [x] Metric registry (§26): `register_metric`, `Trainer.evaluate(metrics=...)`, and `FewShotEvaluator.run(metrics=...)`. Evidence: `tests/unit/evaluation/test_metric_registry.py`, `tests/integration/test_registries.py`.
-- [x] Augmentation pipeline registry (§26): `register_augmentation` and `TrainingArguments.augmentation`, with `"none"` reserved. Evidence: `tests/unit/test_augmentation_registry.py`, `tests/integration/test_augmented_training.py` (a registered pipeline used in every trained mode and under a registered custom sampler).
+None. Every item that `SPEC.md` or the design and research docs specify for v0.1 is built, or is deferred in `SPEC.md` (below).
 
 ## Deferred beyond v0.1
 
