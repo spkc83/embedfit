@@ -23,7 +23,7 @@ Status legend: `[x]` verified on `main`, `[ ]` open.
 - [x] corrupt-image policy `skip` with a reported count (`docs/design/DATA_MODEL.md`): `on_corrupt_image="skip"` and `ImageDataset.num_skipped`. Evidence: `tests/unit/test_dataset.py::TestSkipCorruptImages`, `tests/unit/test_image.py`, `tests/unit/test_privacy_audit.py`.
 - [x] partial unfreezing for the end-to-end baseline (`docs/research/BASELINES.md`) — `TrainingArguments.unfreeze_last_blocks`, for every mode that trains the backbone, with provider-defined blocks (ADR 0015); `tests/unit/test_backbone_blocks.py`, `tests/integration/test_partial_unfreezing.py`, and block tests per provider.
 - [x] representation checkpoints on disk — `TrainingArguments.checkpoint_dir` writes the best and the last epoch as model bundles (ADR 0016); `tests/integration/test_representation_checkpoints.py`.
-- [x] batch-sampler registry (§26): `register_sampler` and `TrainingArguments.sampler` for `supcon` and `end_to_end` batches; a custom sampler is checked for every epoch before training. Evidence: `tests/unit/test_sampler_registry.py`, `tests/integration/test_registries.py`.
+- [x] batch-sampler registry (§26): `register_sampler` and `TrainingArguments.sampler` for `supcon` and `end_to_end` batches; every sampler except the built-in `balanced`, which is valid by construction, has its batches checked for every epoch when the `Trainer` is created (the built-in `random` included). Evidence: `tests/unit/test_sampler_registry.py`, `tests/integration/test_registries.py`.
 - [x] metric registry (§26): `register_metric`, `Trainer.evaluate(metrics=...)`, and `FewShotEvaluator.run(metrics=...)`. Evidence: `tests/unit/evaluation/test_metric_registry.py`, `tests/integration/test_registries.py`.
 
 ## Quality
