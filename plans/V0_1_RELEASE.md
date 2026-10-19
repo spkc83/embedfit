@@ -29,7 +29,7 @@ Status legend: `[x]` verified on `main`, `[ ]` open.
 ## Quality
 
 - [x] offline CPU tests green — no GPU, and internet sockets are blocked for every test not marked `network`
-- [x] coverage target met — 98% overall; every module in `TEST_STRATEGY.md`'s list is above 85%
+- [x] coverage target met — 98% overall (line and branch coverage, `pytest --cov=embedfit`, on 0.1.0); every module in `TEST_STRATEGY.md`'s list is at 93% or above, the lowest being `losses/registry.py` (93%) and `retrieval/brute_force.py` (94%); the lowest module overall is `backbones/_preprocess.py` (91%)
 - [x] lint green — `ruff check`, `ruff format --check`, and `mypy` with `disallow_untyped_defs`
 - [x] package build green — wheel and sdist, Apache-2.0 metadata, `py.typed`
 - [x] examples execute — six scripts run by `tests/integration/test_examples.py`
