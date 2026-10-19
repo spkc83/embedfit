@@ -34,7 +34,7 @@ pip install -e ".[torchvision]"   # or another extra for pretrained backbones: t
 
 ## What the package provides
 
-The design is specified in [`SPEC.md`](SPEC.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md), with decisions recorded in [`docs/adrs/`](docs/adrs/). Contributors, human or agent, start from [`AGENTS.md`](AGENTS.md); open work is listed in [`TASKS.md`](TASKS.md) and [`plans/V0_1_RELEASE.md`](plans/V0_1_RELEASE.md).
+The design is specified in [`SPEC.md`](SPEC.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md), with decisions recorded in [`docs/adrs/`](docs/adrs/). Contributors, human or agent, start from [`AGENTS.md`](AGENTS.md); open work is listed in [`TASKS.md`](TASKS.md), and the v0.1 release checklist is [`plans/V0_1_RELEASE.md`](plans/V0_1_RELEASE.md).
 
 The snippets below run in order, offline. The first one builds stand-in data from synthetic images; replace it with your own labelled images:
 
@@ -140,7 +140,7 @@ args = TrainingArguments(training_mode="pair", num_workers=0)
 Trainer(model, args, train, relationship_rules=[rule]).train()
 ```
 
-`encode` accepts PIL images, numpy arrays, torch tensors, and file paths, and returns one L2-normalised row per image. Resolution, interpolation mode, and normalisation constants come from the selected checkpoint, never from a global default; pass `image_size=` to run a convolutional backbone at higher resolution.
+`encode` accepts PIL images, numpy arrays, torch tensors, file paths, and encoded image file bytes, and returns one L2-normalised row per image. Resolution, interpolation mode, and normalisation constants come from the selected checkpoint, never from a global default; pass `image_size=` to run a convolutional backbone at higher resolution.
 
 Public components:
 

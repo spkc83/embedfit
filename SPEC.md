@@ -550,7 +550,7 @@ Allow custom:
 
 Simple registries are sufficient in v0.1.
 
-Implemented: backbones (`register_backbone_provider`, by `<provider>/<name>` identifier), heads (`register_head`, `TrainingArguments.head`), losses (`register_loss`), batch samplers for `supcon` and `end_to_end` (`register_sampler`, `TrainingArguments.sampler`), and positive-class score metrics (`register_metric`, `Trainer.evaluate(metrics=...)`). Pair samplers and multiclass metrics are not pluggable in v0.1.
+Implemented: backbones (`register_backbone_provider`, by `<provider>/<name>` identifier), heads (`register_head`, `TrainingArguments.head`), losses (`register_loss` and `create_loss`; no `TrainingArguments` field selects a registered loss, and training builds the `supcon` and `cosine_pair` losses by name), batch samplers for `supcon` and `end_to_end` (`register_sampler`, `TrainingArguments.sampler`), positive-class score metrics (`register_metric`, `Trainer.evaluate(metrics=...)`), and augmentation pipelines (`register_augmentation`, `TrainingArguments.augmentation`). Pair samplers and multiclass metrics are not pluggable in v0.1.
 
 ## 27. Version boundary
 

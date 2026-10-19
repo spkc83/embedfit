@@ -176,7 +176,7 @@ Do not guess across providers when ambiguous.
 
 `ImageDataset` normalizes records, not pixels.
 
-Pixel transforms belong to the active backbone's `preprocess`.
+Resizing and normalisation belong to the active backbone's `preprocess`. Task augmentation (`embedfit.augmentation`) is the only other pixel transform: it runs before `preprocess`, on representation-training draws only (ADR 0014).
 
 Reason: preprocessing requirements belong to the checkpoint.
 

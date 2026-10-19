@@ -1,7 +1,7 @@
 """Shared command-line options for the examples.
 
 Every example runs offline in seconds on the ``dummy/tiny`` backbone, a small untrained CNN.
-Pass ``--backbone torchvision/resnet18`` (with ``pip install 'embedfit[torchvision]'``) to run
+Pass ``--backbone torchvision/resnet18`` (with the ``torchvision`` extra installed) to run
 the same code on a pretrained encoder; representation training then wants a much smaller
 learning rate, e.g. ``--learning-rate 2e-5``.
 """

@@ -60,7 +60,7 @@ Metric functions take arrays of labels and scores and never call a model.
 
 ## Metric registry
 
-`Trainer.evaluate(metrics=[...])` and `FewShotEvaluator.run(metrics=[...])` add registered metrics to the default results. A registered metric is a callable `metric(y_true, scores, *, positive_label) -> float`, where `scores` is the predicted probability of `positive_label`. Every ranking and calibration function in `embedfit.evaluation` except the dollar metrics has this form, so a parameterised one registers with `functools.partial`:
+`Trainer.evaluate(metrics=[...])` and `FewShotEvaluator.run(metrics=[...])` add registered metrics to the default results. A registered metric is a callable `metric(y_true, scores, *, positive_label) -> float`, where `scores` is the predicted probability of `positive_label`. Every ranking function in `embedfit.evaluation` except the dollar metrics has this form, and so do `brier_score` and `expected_calibration_error` (`calibration_bins` returns bins, not a number), so a parameterised one registers with `functools.partial`:
 
 ```python
 from functools import partial

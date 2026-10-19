@@ -4,7 +4,7 @@ Status: Accepted
 
 ## Decision
 
-1. A saved model is a directory of JSON files, NumPy `.npz` arrays, and a tensor-only PyTorch state dict. Nothing is pickled: the logistic-regression head stores its coefficients and intercepts as arrays and rebuilds the scikit-learn estimator from them.
+1. A saved model is a directory of JSON files, NumPy `.npz` arrays, and a tensor-only PyTorch state dict (Transformers' safetensors files for `hf` backbones). Nothing is pickled: the logistic-regression head stores its coefficients and intercepts as arrays and rebuilds the scikit-learn estimator from them.
 2. Components are reloaded by registered name, never by import path: `backbone/config.json` names a backbone provider with a registered loader, and `head/config.json` names a registered head class.
 3. `embedfit_config.json` carries a `format_version` and a SHA-256 fingerprint of the backbone's configuration file. Loading refuses a newer format version, a changed backbone configuration, or a mismatched embedding dimension.
 4. `EmbedFitModel.from_pretrained` recognises a saved model by the presence of `embedfit_config.json`, which takes precedence over reading the same string as an identifier, and refuses every option other than `device` for a saved model.

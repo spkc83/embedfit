@@ -251,8 +251,8 @@ class EmbedFitModel(nn.Module):
         Args:
             images: A ``list`` or ``tuple`` of images is a batch; any other value is one image.
                 Each image may be any form accepted by ``embedfit.data.to_rgb_tensor`` (PIL
-                image, numpy array, torch tensor, or file path), and forms may be mixed. A 4-D
-                array is rejected: pass a list of images instead.
+                image, numpy array, torch tensor, file path, or encoded image file bytes), and
+                forms may be mixed. A 4-D array is rejected: pass a list of images instead.
             batch_size: Number of images per forward pass.
             normalize: L2-normalise each embedding. ``None`` uses ``normalize_embeddings``.
             convert_to_numpy: Return ``numpy.ndarray`` instead of a CPU ``torch.Tensor``.

@@ -31,7 +31,7 @@ Embeddings are L2-normalised inside the loss by default, so the result does not 
 
 ## Balanced class batches
 
-`Trainer` derives the batch shape from `TrainingArguments.batch_size` with `batch_shape`:
+With the default `balanced` sampler, `Trainer` derives the batch shape from `TrainingArguments.batch_size` with `batch_shape`:
 
 ```python
 classes_per_batch = min(num_classes, batch_size // 2)
