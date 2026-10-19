@@ -1,6 +1,7 @@
 """Training configuration, validated when it is created."""
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from pathlib import Path
 
 from embedfit.augmentation.registry import NO_AUGMENTATION, available_augmentations
 from embedfit.exceptions import ConfigurationError
@@ -23,6 +24,12 @@ def _is_int(value: object) -> bool:
 
 def _is_number(value: object) -> bool:
     return isinstance(value, int | float) and not isinstance(value, bool)
+
+
+def _paths_overlap(first: str | Path, second: str | Path) -> bool:
+    """Whether two directories are the same, or one lies inside the other."""
+    a, b = Path(first).resolve(), Path(second).resolve()
+    return a == b or a in b.parents or b in a.parents
 
 
 @dataclass
@@ -78,6 +85,14 @@ class TrainingArguments:
             given to ``embedfit.augmentation.register_augmentation``. It runs before the
             backbone's own preprocessing; validation, mining, head fitting, and prediction
             always see the original images (ADR 0014). Must be ``"none"`` in ``frozen`` mode.
+        unfreeze_last_blocks: Train only the last this many blocks of the backbone (>= 1),
+            plus the parameters after them (such as a final norm), in every mode that trains
+            the backbone; the earlier blocks and the stem stay frozen, including their
+            batch-norm statistics (ADR 0015). What a block is depends on the backbone
+            (``ImageBackbone.parameter_blocks``). ``None`` trains the whole backbone.
+        checkpoint_dir: Directory that representation training writes a checkpoint to after
+            every epoch, keeping the best and the last (ADR 0016). It must be missing or empty
+            when training starts and must not overlap ``output_dir``. ``None`` writes nothing.
 
     Raises:
         ConfigurationError: If any value is invalid. Raised at construction, never mid-training.
@@ -109,6 +124,8 @@ class TrainingArguments:
     freeze_batch_norm: bool = True
     sampler: str | None = None
     augmentation: str = NO_AUGMENTATION
+    unfreeze_last_blocks: int | None = None
+    checkpoint_dir: str | None = None
 
     def __post_init__(self) -> None:
         _require(
@@ -208,3 +225,33 @@ class TrainingArguments:
             isinstance(self.output_dir, str) and bool(self.output_dir),
             "output_dir must be a non-empty str.",
         )
+        _require(
+            self.unfreeze_last_blocks is None
+            or (_is_int(self.unfreeze_last_blocks) and self.unfreeze_last_blocks >= 1),
+            f"unfreeze_last_blocks must be an int >= 1 or None, got {self.unfreeze_last_blocks!r}.",
+        )
+        _require(
+            self.checkpoint_dir is None
+            or (isinstance(self.checkpoint_dir, str) and bool(self.checkpoint_dir)),
+            "checkpoint_dir must be a non-empty str or None.",
+        )
+        for name in ("unfreeze_last_blocks", "checkpoint_dir"):
+            _require(
+                self.training_mode != "frozen" or getattr(self, name) is None,
+                f"{name} only applies to modes that train the backbone, not 'frozen'.",
+            )
+        _require(
+            self.checkpoint_dir is None or not _paths_overlap(self.checkpoint_dir, self.output_dir),
+            "checkpoint_dir and output_dir must not be the same directory or contain each "
+            "other: saving the model replaces output_dir as a whole.",
+        )
+
+
+def _recorded_arguments(args: TrainingArguments) -> dict[str, object]:
+    """The training arguments stored with a saved model or checkpoint. ``output_dir`` and
+    ``checkpoint_dir`` are left out because a local path can reveal a user name."""
+    return {
+        name: value
+        for name, value in asdict(args).items()
+        if name not in ("output_dir", "checkpoint_dir")
+    }

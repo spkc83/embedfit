@@ -64,7 +64,7 @@ Owns:
 - representation phase
 - head fitting phase
 - per-epoch validation loss (when `eval_dataset` is given)
-- checkpoint selection
+- checkpoint selection, and optional representation checkpoints on disk (ADR 0016)
 
 The two phases must be explicit in code and logs.
 
@@ -77,7 +77,7 @@ Responsibilities:
 - instantiate checkpoint
 - preprocess input
 - produce one vector per image
-- freeze/unfreeze parameters
+- freeze/unfreeze parameters, and define the blocks that partial unfreezing counts (ADR 0015)
 - serialize provider metadata
 
 ### `ClassificationHead`
@@ -136,7 +136,7 @@ fit LinearHead probe on embeddings of the untouched backbone
 → evaluate
 ```
 
-In every path that trains the encoder, batch-norm layers stay in eval mode by default (`freeze_batch_norm=True`, ADR 0013).
+In every path that trains the encoder, batch-norm layers stay in eval mode by default (`freeze_batch_norm=True`, ADR 0013). `unfreeze_last_blocks` restricts training to the encoder's last blocks; the frozen part, including its batch-norm statistics, does not change (ADR 0015).
 
 ## Embedding contract
 

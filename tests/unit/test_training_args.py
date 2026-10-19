@@ -47,6 +47,17 @@ def test_defaults_match_the_specification():
         ({"device": 0}, "device"),
         ({"deterministic": "yes"}, "deterministic"),
         ({"output_dir": ""}, "output_dir"),
+        ({"unfreeze_last_blocks": 0}, "unfreeze_last_blocks"),
+        ({"unfreeze_last_blocks": -1}, "unfreeze_last_blocks"),
+        ({"unfreeze_last_blocks": True}, "unfreeze_last_blocks"),
+        ({"unfreeze_last_blocks": 1.5}, "unfreeze_last_blocks"),
+        ({"training_mode": "frozen", "unfreeze_last_blocks": 1}, "unfreeze_last_blocks"),
+        ({"checkpoint_dir": ""}, "checkpoint_dir"),
+        ({"checkpoint_dir": 3}, "checkpoint_dir"),
+        ({"training_mode": "frozen", "checkpoint_dir": "ckpt"}, "checkpoint_dir"),
+        ({"output_dir": "run", "checkpoint_dir": "run"}, "checkpoint_dir"),
+        ({"output_dir": "run", "checkpoint_dir": "run/checkpoints"}, "checkpoint_dir"),
+        ({"output_dir": "run/model", "checkpoint_dir": "run"}, "checkpoint_dir"),
         ({"sampler": "magic"}, "sampler must be one of"),
         ({"training_mode": "frozen", "sampler": "balanced"}, "sampler only applies"),
         ({"training_mode": "pair", "sampler": "random"}, "sampler only applies"),
@@ -64,6 +75,13 @@ def test_none_disables_gradient_clipping():
     assert TrainingArguments(max_grad_norm=None).max_grad_norm is None
 
 
+def test_new_options_default_to_off():
+    args = TrainingArguments()
+    assert (args.unfreeze_last_blocks, args.checkpoint_dir) == (None, None)
+    configured = TrainingArguments(unfreeze_last_blocks=2, checkpoint_dir="checkpoints")
+    assert (configured.unfreeze_last_blocks, configured.checkpoint_dir) == (2, "checkpoints")
+
+
 @pytest.mark.parametrize("mode", ["frozen", "supcon", "pair", "end_to_end"])
 def test_the_default_sampler_is_chosen_by_the_mode(mode):
     assert TrainingArguments(training_mode=mode).sampler is None
@@ -76,6 +94,7 @@ def test_a_registered_sampler_is_accepted_for_batch_based_modes():
 
 def test_every_argument_is_json_serialisable():
     json.dumps(asdict(TrainingArguments()))
+    json.dumps(asdict(TrainingArguments(unfreeze_last_blocks=1, checkpoint_dir="checkpoints")))
 
 
 def test_augmentation_accepts_profiles_and_registered_pipelines(monkeypatch):

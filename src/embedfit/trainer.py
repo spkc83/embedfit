@@ -7,6 +7,7 @@ from pathlib import Path
 
 import numpy as np
 
+from embedfit.checkpoints import checkpoint_model
 from embedfit.data.dataset import ImageDataset
 from embedfit.evaluation.classification import classification_metrics
 from embedfit.evaluation.registry import get_metric, requested_metrics
@@ -20,17 +21,11 @@ from embedfit.representation import (
     validate_representation_setup,
 )
 from embedfit.sampling.pairs import RelationshipRule
-from embedfit.training_args import TrainingArguments
+from embedfit.training_args import TrainingArguments, _paths_overlap, _recorded_arguments
 from embedfit.utils.device import resolve_device
 from embedfit.utils.seed import set_seed
 
 logger = logging.getLogger(__name__)
-
-
-def _recorded_arguments(args: TrainingArguments) -> dict[str, object]:
-    """The training arguments stored with a saved model. ``output_dir`` is left out because a
-    local path can reveal a user name."""
-    return {name: value for name, value in asdict(args).items() if name != "output_dir"}
 
 
 _IMPLEMENTED_MODES = ("frozen", "supcon", "pair", "end_to_end")
@@ -174,9 +169,9 @@ class Trainer:
     def train(self) -> TrainOutput:
         """Run both phases and leave the model ready for prediction.
 
-        Representation training unfreezes the whole backbone first, so any partial freezing
-        applied beforehand is discarded; ``freeze_backbone_before_head`` decides the state
-        afterwards.
+        Representation training first unfreezes the whole backbone, or only its last
+        ``args.unfreeze_last_blocks`` blocks, so any freezing applied beforehand is discarded;
+        ``freeze_backbone_before_head`` decides the state afterwards.
 
         Returns:
             A ``TrainOutput`` summary.
@@ -197,7 +192,9 @@ class Trainer:
                 self.args.training_mode,
                 self.args.num_epochs,
             )
-            self.model.unfreeze_backbone()
+            if self.args.checkpoint_dir is not None:
+                checkpoint_model(self.model, self.args)  # A used directory changes nothing.
+            self.model.unfreeze_backbone(self.args.unfreeze_last_blocks)
             result = train_representation(
                 self.model,
                 self.train_dataset,
@@ -318,7 +315,8 @@ class Trainer:
 
         The metadata holds the training arguments and the ``TrainOutput`` summary (mode,
         sample count, steps, losses). It contains no samples, labels, or identifiers, and
-        ``output_dir`` is left out because a local path can reveal a user name.
+        ``output_dir`` and ``checkpoint_dir`` are left out because a local path can reveal a
+        user name.
 
         Args:
             path: Target directory. Defaults to ``args.output_dir``.
@@ -327,11 +325,19 @@ class Trainer:
             The directory written, loadable with ``EmbedFitModel.from_pretrained``.
 
         Raises:
-            ConfigurationError: If ``train`` has not run, or the model cannot be saved.
+            ConfigurationError: If ``train`` has not run, ``path`` overlaps
+                ``args.checkpoint_dir``, or the model cannot be saved.
         """
         if self._last_output is None:
             raise ConfigurationError("Nothing to save yet: call train() first.")
         directory = Path(path if path is not None else self.args.output_dir)
+        if self.args.checkpoint_dir is not None and _paths_overlap(
+            directory, self.args.checkpoint_dir
+        ):
+            raise ConfigurationError(
+                "The model cannot be saved into, around, or as checkpoint_dir: saving replaces "
+                "the target directory as a whole."
+            )
         self.model.save_pretrained(
             directory,
             training_metadata={

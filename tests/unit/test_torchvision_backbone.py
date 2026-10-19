@@ -264,3 +264,60 @@ def test_pretrained_resnet18_uses_checkpoint_preprocessing():
     assert (model.backbone.preprocess(image) - reference).abs().max() < 0.05
     embeddings = model.encode([Image.new("RGB", (300, 200), "gray")] * 2)
     assert embeddings.ndim == 2 and embeddings.shape == (2, 512)
+
+
+def _trainable(backbone):
+    return {name for name, p in backbone.named_parameters() if p.requires_grad}
+
+
+def test_resnet_blocks_are_its_four_stages(resnet):
+    blocks = resnet.parameter_blocks()
+    assert [block[0].split(".")[1] for block in blocks] == ["layer1", "layer2", "layer3", "layer4"]
+    resnet.unfreeze(last_blocks=4)
+    assert not any(name.startswith(("model.conv1.", "model.bn1.")) for name in _trainable(resnet))
+    resnet.unfreeze(last_blocks=1)
+    assert {name.split(".")[1] for name in _trainable(resnet)} == {"layer4"}
+
+
+def test_vit_blocks_are_encoder_layers_with_the_final_norm_as_tail():
+    backbone = TorchvisionBackbone("vit_b_32", weights=None, image_size=224)
+    assert backbone.num_blocks == 12
+    backbone.unfreeze(last_blocks=1)
+    names = _trainable(backbone)
+    assert {"model.encoder.ln.weight", "model.encoder.ln.bias"} <= names
+    assert all(
+        n.startswith(("model.encoder.layers.encoder_layer_11.", "model.encoder.ln.")) for n in names
+    )
+
+
+@pytest.mark.parametrize("name", ["convnext_tiny", "swin_t"])
+def test_downsampling_layers_join_the_stage_after_them(name):
+    backbone = TorchvisionBackbone(name, weights=None, image_size=64)
+    blocks = backbone.parameter_blocks()
+    assert len(blocks) == 4  # As timm counts the same architectures.
+    assert {n.split(".")[2] for n in blocks[0]} == {"1"}
+    for index, block in enumerate(blocks[1:], start=1):
+        assert {n.split(".")[2] for n in block} == {str(2 * index), str(2 * index + 1)}
+    assert all(n.startswith("model.features.0.") for n in _stem(backbone))
+
+
+def _stem(backbone):
+    blocked = {n for block in backbone.parameter_blocks() for n in block}
+    first = next(iter(backbone.parameter_blocks()[0]))
+    names = [n for n, _ in backbone.named_parameters()]
+    return [n for n in names[: names.index(first)] if n not in blocked]
+
+
+def test_efficientnet_and_regnet_stages():
+    efficientnet = TorchvisionBackbone("efficientnet_b0", weights=None, image_size=64)
+    assert efficientnet.num_blocks == 7
+    efficientnet.unfreeze(last_blocks=1)
+    assert {n.split(".")[2] for n in _trainable(efficientnet)} == {"7", "8"}  # 8: final conv.
+    assert TorchvisionBackbone("regnet_y_400mf", weights=None, image_size=64).num_blocks == 4
+
+
+def test_unsupported_architecture_has_no_blocks():
+    backbone = TorchvisionBackbone("googlenet", weights=None, image_size=64)
+    assert backbone.num_blocks == 0
+    with pytest.raises(ConfigurationError, match="defines no blocks"):
+        backbone.unfreeze(last_blocks=1)

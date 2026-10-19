@@ -131,6 +131,11 @@ class FewShotEvaluator:
                     f"training_arguments['{method}'] has training_mode "
                     f"'{arguments[method].training_mode}'."
                 )
+            if arguments[method].checkpoint_dir is not None:
+                raise ConfigurationError(
+                    f"training_arguments['{method}'] sets checkpoint_dir, but every run would "
+                    "write to the same directory; FewShotEvaluator does not write checkpoints."
+                )
         used: list[weakref.ref[Any]] = []
 
         def fresh_model() -> EmbedFitModel:

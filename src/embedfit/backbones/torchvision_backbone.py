@@ -253,6 +253,34 @@ class TorchvisionBackbone(ImageBackbone):
         features: torch.Tensor = self.model(pixel_values)
         return features.flatten(start_dim=1)
 
+    def parameter_blocks(self) -> list[list[str]]:
+        """The stages or layers of the supported architecture families.
+
+        ResNet, ResNeXt, and Wide ResNet: ``layer1`` to ``layer4``. Vision Transformer: the
+        encoder layers. RegNet: the trunk stages. ConvNeXt and Swin: the stages of
+        ``features``, each with the downsampling layer before it, so the counts match timm's
+        for the same architectures. EfficientNet: the stages between the stem and the final
+        convolution. Other architectures define no blocks.
+        """
+        models = _import_torchvision().models
+        model = self.model
+        stages: list[list[nn.Module]]
+        if isinstance(model, models.ResNet):
+            stages = [[model.layer1], [model.layer2], [model.layer3], [model.layer4]]
+        elif isinstance(model, models.VisionTransformer):
+            stages = [[layer] for layer in model.encoder.layers]
+        elif isinstance(model, models.RegNet):
+            stages = [[stage] for stage in model.trunk_output]
+        elif isinstance(model, models.ConvNeXt | models.SwinTransformer):
+            # features: stem, stage, downsampling, stage, downsampling, stage, ...
+            layers = list(model.features)[1:]
+            stages = [layers[:1]] + [layers[i : i + 2] for i in range(1, len(layers), 2)]
+        elif isinstance(model, models.EfficientNet):
+            stages = [[stage] for stage in list(model.features)[1:-1]]
+        else:
+            return []
+        return [self._names_of(*modules) for modules in stages]
+
     def save_pretrained(self, path: str | Path) -> None:
         """Write the configuration and current weights to a directory.
 

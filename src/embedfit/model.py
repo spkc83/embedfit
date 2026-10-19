@@ -209,9 +209,16 @@ class EmbedFitModel(nn.Module):
         """Stop gradient updates to the backbone and hold it in eval mode."""
         self.backbone.freeze()
 
-    def unfreeze_backbone(self) -> None:
-        """Allow gradient updates to the backbone again."""
-        self.backbone.unfreeze()
+    def unfreeze_backbone(self, last_blocks: int | None = None) -> None:
+        """Allow gradient updates to the whole backbone, or only to its last blocks.
+
+        Args:
+            last_blocks: As in ``ImageBackbone.unfreeze``.
+
+        Raises:
+            ConfigurationError: If ``last_blocks`` is out of range for the backbone.
+        """
+        self.backbone.unfreeze(last_blocks)
 
     def forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
         """Differentiable embedding of preprocessed images, for use in training loops.

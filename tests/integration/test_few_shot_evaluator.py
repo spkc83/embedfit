@@ -254,3 +254,26 @@ def test_a_method_that_cannot_train_fails_before_any_other_method_trains(
             pool, test_dataset=test_set, methods=["frozen", "supcon"], model_factory=factory
         )
     assert trained == []
+
+
+def test_checkpoint_dir_is_refused_before_any_training(pool, test_set, tmp_path):
+    calls = []
+
+    def counting_factory():
+        calls.append(1)
+        return factory()
+
+    arguments = {
+        "supcon": TrainingArguments(
+            training_mode="supcon", num_workers=0, checkpoint_dir=str(tmp_path / "ckpt")
+        )
+    }
+    with pytest.raises(ConfigurationError, match="checkpoint_dir"):
+        FewShotEvaluator(shots=[4], seeds=[1]).run(
+            pool,
+            test_dataset=test_set,
+            methods=["frozen", "supcon"],
+            model_factory=counting_factory,
+            training_arguments=arguments,
+        )
+    assert not calls and not (tmp_path / "ckpt").exists()
