@@ -219,7 +219,7 @@ def test_logs_show_both_phases_and_losses_without_sample_content(caplog):
     caplog.set_level(logging.INFO, logger="embedfit")
     Trainer(make_model(), supcon_args(num_epochs=1), dataset(6, 0)).train()
     assert "Phase 1/2 (representation): 'supcon' for 1 epochs" in caplog.text
-    assert "Epoch 1/1: train loss" in caplog.text and "Phase 2/2 (head)" in caplog.text
+    assert "Epoch 1 (step 2/2): train loss" in caplog.text and "Phase 2/2 (head)" in caplog.text
     assert "vertical" not in caplog.text
 
 
