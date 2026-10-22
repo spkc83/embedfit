@@ -24,25 +24,42 @@ def write_results(path, config):
 
 @pytest.mark.parametrize(
     ("key", "default", "other"),
-    [("unfreeze_last_blocks", None, 2), ("augmentation", "none", "natural")],
+    [
+        ("unfreeze_last_blocks", None, 2),
+        ("augmentation", "none", "natural"),
+        ("max_steps", None, 100),
+        ("projection_dim", None, 128),
+        ("contrastive_views", 1, 2),
+    ],
 )
 def test_a_file_from_before_an_option_resumes_with_its_default(
     few_shot, tmp_path, key, default, other
 ):
     output = tmp_path / "results.json"
     old = {"dataset": "eurosat", "gradient_accumulation_steps": 1, "dataset_revision": None}
-    current = {**old, "unfreeze_last_blocks": None, "augmentation": "none"}
+    current = {
+        **old,
+        "unfreeze_last_blocks": None,
+        "augmentation": "none",
+        "max_steps": None,
+        "projection_dim": None,
+        "contrastive_views": 1,
+    }
     write_results(output, old)
     assert few_shot.read_previous(output, current) is not None
     with pytest.raises(SystemExit, match="different configuration"):
         few_shot.read_previous(output, {**current, key: other})
 
 
+@pytest.mark.parametrize(
+    "option",
+    ["--unfreeze-last-blocks", "--max-steps", "--projection-dim", "--contrastive-views"],
+)
 @pytest.mark.parametrize("value", ["0", "-1", "x"])
-def test_unfreeze_last_blocks_must_be_a_positive_int(few_shot, value, capsys):
+def test_count_options_must_be_positive_ints(few_shot, option, value, capsys):
     with pytest.raises(SystemExit):
-        few_shot.main(["--unfreeze-last-blocks", value])
-    assert "--unfreeze-last-blocks: expected a positive int" in capsys.readouterr().err
+        few_shot.main([option, value])
+    assert f"{option}: expected a positive int" in capsys.readouterr().err
 
 
 REQUIRED = ["--dataset", "eurosat", "--evaluate-on", "validation", "--output", "results.json"]
@@ -54,8 +71,27 @@ def test_an_unknown_augmentation_is_rejected(few_shot, capsys):
     assert "--augmentation: invalid choice" in capsys.readouterr().err
 
 
-@pytest.mark.parametrize("option", [["--augmentation", "natural"], ["--unfreeze-last-blocks", "1"]])
+@pytest.mark.parametrize(
+    "option",
+    [["--augmentation", "natural"], ["--unfreeze-last-blocks", "1"], ["--max-steps", "50"]],
+)
 def test_training_options_need_a_trained_method(few_shot, option, capsys):
     with pytest.raises(SystemExit):
         few_shot.main([*REQUIRED, "--methods", "frozen", *option])
     assert "applies to trained methods only" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "option",
+    [["--projection-dim", "128"], ["--contrastive-views", "2", "--augmentation", "natural"]],
+)
+def test_supcon_options_need_the_supcon_method(few_shot, option, capsys):
+    with pytest.raises(SystemExit):
+        few_shot.main([*REQUIRED, "--methods", "frozen", "pair", *option])
+    assert "applies to the supcon method only" in capsys.readouterr().err
+
+
+def test_several_views_need_an_augmentation(few_shot, capsys):
+    with pytest.raises(SystemExit):
+        few_shot.main([*REQUIRED, "--methods", "supcon", "--contrastive-views", "2"])
+    assert "--contrastive-views above 1 needs --augmentation" in capsys.readouterr().err

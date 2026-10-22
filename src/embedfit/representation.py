@@ -76,7 +76,10 @@ class _AugmentedPixelDataset(Dataset[tuple[torch.Tensor, int]]):
     """Like ``_PixelDataset``, but each image is augmented before preprocessing.
 
     Indexed by the ``(epoch, draw, position)`` keys of ``_DrawKeys``, so every draw gets its
-    own seed, whichever worker process loads it.
+    own seed, whichever worker process loads it. With ``views`` above 1 an item stacks that
+    many augmentations of the image, ``[views, C, H, W]``; view ``v`` of draw ``d`` is seeded
+    as draw ``d * views + v``, so every view has a seed of its own and one view is seeded
+    exactly as without views.
     """
 
     def __init__(
@@ -86,26 +89,34 @@ class _AugmentedPixelDataset(Dataset[tuple[torch.Tensor, int]]):
         targets: np.ndarray,
         augmentation: Augmentation,
         seed: int,
+        views: int = 1,
     ) -> None:
         self._backbone = model.backbone
         self._images = dataset.images
         self._targets = targets.tolist()
         self._augmentation = augmentation
         self._seed = seed
+        self._views = views
 
     def __len__(self) -> int:
         return len(self._images)
 
     def __getitem__(self, key: tuple[int, int, int]) -> tuple[torch.Tensor, int]:
         epoch, draw, position = key
-        image = augment_image(
-            self._augmentation,
-            to_rgb_tensor(self._images[position]),
-            seed=self._seed,
-            epoch=epoch,
-            draw=draw,
-        )
-        return self._backbone.preprocess(image), self._targets[position]
+        image = to_rgb_tensor(self._images[position])
+        pixels = [
+            self._backbone.preprocess(
+                augment_image(
+                    self._augmentation,
+                    image,
+                    seed=self._seed,
+                    epoch=epoch,
+                    draw=draw * self._views + view,
+                )
+            )
+            for view in range(self._views)
+        ]
+        return (pixels[0] if self._views == 1 else torch.stack(pixels)), self._targets[position]
 
 
 class _DrawKeys:
@@ -147,7 +158,10 @@ def _loader(
     seed: int,
     augmentation: Augmentation | None = None,
 ) -> tuple[DataLoader[tuple[torch.Tensor, int]], BatchSampler | _DrawKeys]:
-    """A loader of preprocessed images and class indices, and the sampler to set epochs on."""
+    """A loader of preprocessed images and class indices, and the sampler to set epochs on.
+
+    With ``augmentation``, each image is augmented ``args.contrastive_views`` times.
+    """
     assert model.label_mapping is not None
     targets = model.label_mapping.encode(dataset.labels)
     sampler = _batch_sampler(args, targets, seed)
@@ -160,7 +174,9 @@ def _loader(
         return loader, sampler
     keys = _DrawKeys(sampler)
     augmented = DataLoader(
-        _AugmentedPixelDataset(model, dataset, targets, augmentation, seed),
+        _AugmentedPixelDataset(
+            model, dataset, targets, augmentation, seed, views=args.contrastive_views
+        ),
         batch_sampler=keys,
         num_workers=args.num_workers,
     )
@@ -320,11 +336,14 @@ def _objective(
     classifier: nn.Linear | None = None,
     mine: bool = False,
     augmentation: Augmentation | None = None,
+    projection: nn.Module | None = None,
 ) -> _Objective:
     """Build the objective selected by ``args.training_mode`` for one dataset.
 
     ``classifier`` is the jointly trained linear layer of ``end_to_end`` mode; without one the
     objective can check the data but not compute a loss.
+    ``projection`` is the projection head of ``supcon`` mode (``args.projection_dim``); without
+    one the loss is applied to the backbone's embeddings.
     ``mine`` enables hard-negative mining (``pair`` mode, training data only).
     ``augmentation`` is applied to every image drawn (training data only).
     """
@@ -338,9 +357,13 @@ def _objective(
 
         def supcon_loss(batch: Any) -> torch.Tensor:
             pixels, targets = batch
-            loss: torch.Tensor = supcon(
-                model(pixels.to(device=device, dtype=dtype)), targets.to(device)
-            )
+            # Views, [B, V, C, H, W], are embedded in one pass and regrouped as [B, V, D].
+            embeddings = model(pixels.flatten(0, -4).to(device=device, dtype=dtype))
+            if projection is not None:
+                embeddings = projection(embeddings)
+            if pixels.ndim == 5:
+                embeddings = embeddings.unflatten(0, pixels.shape[:2])
+            loss: torch.Tensor = supcon(embeddings, targets.to(device))
             return loss
 
         return _Objective(loader, sampler.set_epoch, lambda epoch: len(sampler), supcon_loss)
@@ -400,6 +423,37 @@ def _objective(
     return _Objective(pair_loader, pairs.set_epoch, batches, pair_loss)
 
 
+def _steps_in_epoch(objective: _Objective, epoch: int, args: TrainingArguments) -> int:
+    """Optimizer steps that a full epoch takes (fewer under fp16 if steps are skipped)."""
+    return math.ceil(objective.batches_in_epoch(epoch) / args.gradient_accumulation_steps)
+
+
+def _planned_epochs(objective: _Objective, args: TrainingArguments) -> int:
+    """Epochs that training runs: ``num_epochs``, or with ``max_steps`` the epochs needed to
+    take that many steps, the last of them possibly partial (ADR 0017)."""
+    if args.max_steps is None:
+        return args.num_epochs
+    epochs, steps = 0, 0
+    while steps < args.max_steps:
+        steps += _steps_in_epoch(objective, epochs, args)
+        epochs += 1
+    return epochs
+
+
+def _projection_head(model: EmbedFitModel, args: TrainingArguments) -> nn.Module:
+    """The ``supcon`` projection head ``Linear(D, D) → ReLU → Linear(D, projection_dim)``
+    (ADR 0018), initialised from ``args.seed`` and on the backbone's device and dtype."""
+    assert args.projection_dim is not None
+    dimension = model.embedding_dim
+    with torch.random.fork_rng(devices=[]):
+        torch.manual_seed(args.seed)
+        head = nn.Sequential(
+            nn.Linear(dimension, dimension), nn.ReLU(), nn.Linear(dimension, args.projection_dim)
+        )
+    first = next(model.backbone.parameters(), None)
+    return head.to(device=model.device, dtype=first.dtype if first is not None else torch.float32)
+
+
 def validate_representation_setup(
     model: EmbedFitModel,
     train_dataset: ImageDataset,
@@ -416,9 +470,9 @@ def validate_representation_setup(
             with fewer than 2 samples; ``pair``: no positive or no negative pair can be
             formed; ``end_to_end``: a class of the model without training samples; ``supcon``
             and ``end_to_end``: a batch of a sampler other than the built-in ``balanced``, in
-            any epoch, that is empty, holds a position outside the data, or (``supcon``) holds
-            no two samples of one class, or such a sampler that yields no batches, or whose
-            length differs from its batch count or between epochs),
+            any epoch that training runs, that is empty, holds a position outside the data,
+            or (``supcon``) holds no two samples of one class, or such a sampler that yields
+            no batches, or whose length differs from its batch count or between epochs),
             relationship rules are given for a mode other than ``pair``, the backbone
             has no trainable parameters, ``unfreeze_last_blocks`` exceeds the backbone's
             blocks, checkpoints cannot be written (see ``checkpoint_model``), the
@@ -432,15 +486,16 @@ def validate_representation_setup(
             f"relationship_rules only apply to training_mode='pair', not '{args.training_mode}'."
         )
     checks = (
-        ("train_dataset", train_dataset, args.seed, range(args.num_epochs)),
+        ("train_dataset", train_dataset, args.seed, True),
         # Validation batches are those of epoch 0 after every epoch.
-        ("eval_dataset", eval_dataset, args.seed + _EVAL_SEED_OFFSET, range(1)),
+        ("eval_dataset", eval_dataset, args.seed + _EVAL_SEED_OFFSET, False),
     )
-    for name, dataset, seed, epochs in checks:
+    for name, dataset, seed, training in checks:
         if dataset is not None:
             if len(dataset) == 0:
                 raise ConfigurationError(f"{name} is empty.")
-            _objective(model, dataset, args, rules, seed=seed)
+            objective = _objective(model, dataset, args, rules, seed=seed)
+            epochs = range(_planned_epochs(objective, args) if training else 1)
             sampler = args.sampler or _DEFAULT_SAMPLERS.get(args.training_mode)
             if sampler is not None and needs_batch_check(sampler):
                 assert model.label_mapping is not None
@@ -547,7 +602,10 @@ def train_representation(
 ) -> RepresentationResult:
     """Adapt the backbone with the objective named by ``args.training_mode``.
 
-    ``"supcon"`` draws class-balanced batches and applies the supervised contrastive loss.
+    ``"supcon"`` draws class-balanced batches and applies the supervised contrastive loss, to
+    the embeddings or, with ``args.projection_dim``, to a projection head that is trained with
+    the backbone and discarded afterwards; ``args.contrastive_views`` augments every drawn
+    image that many times (ADR 0018).
     ``args.sampler`` replaces the batches of ``"supcon"`` and ``"end_to_end"`` with those of a
     registered sampler, for training and validation alike.
     ``"pair"`` draws a bounded set of positive and negative pairs each epoch (``PairSampler``)
@@ -559,6 +617,9 @@ def train_representation(
     ``classifier``. The classifier sees exactly the embeddings the model produces (normalised
     or not) and ``temperature`` plays no part, so the baseline shares no hyperparameter with
     the contrastive losses.
+
+    Training lasts ``args.num_epochs`` epochs, or with ``args.max_steps`` exactly that many
+    optimizer steps, as many epochs as they take, the last possibly partial (ADR 0017).
 
     Each epoch draws its batches from ``train_dataset`` only. When ``eval_dataset``
     is given, its loss is measured after every epoch (without gradients) on a
@@ -590,11 +651,12 @@ def train_representation(
         model: The model whose backbone is trained. It must have labels.
         train_dataset: Training samples.
         eval_dataset: Optional validation samples for checkpoint selection.
-        args: Hyperparameters: ``num_epochs``, ``batch_size``, ``learning_rate``,
+        args: Hyperparameters: ``num_epochs`` or ``max_steps``, ``batch_size``, ``learning_rate``,
             ``weight_decay``, ``warmup_ratio``, ``temperature``,
             ``gradient_accumulation_steps``, ``max_grad_norm``, ``mixed_precision``,
-            ``num_workers``, ``seed``, ``augmentation``, and for pairs
-            ``positives_per_example`` and ``negatives_per_example``.
+            ``num_workers``, ``seed``, ``augmentation``, for ``supcon`` ``projection_dim`` and
+            ``contrastive_views``, and for pairs ``positives_per_example`` and
+            ``negatives_per_example``.
         rules: Relationship rules for ``"pair"`` mode.
         validate: Run ``validate_representation_setup`` first. ``Trainer`` has already done so
             when it was created and passes ``False``.
@@ -625,6 +687,8 @@ def train_representation(
     augmentation = create_augmentation(args.augmentation)
     if augmentation is not None:
         logger.info("Augmenting training images with '%s'", args.augmentation)
+    # Like the classifier, built before the objectives, the optimizer, and the best-epoch state.
+    projection = _projection_head(model, args) if args.projection_dim is not None else None
     objective = _objective(
         model,
         train_dataset,
@@ -634,6 +698,7 @@ def train_representation(
         classifier=classifier,
         mine=True,
         augmentation=augmentation,
+        projection=projection,
     )
     loader = objective.loader
     validation = None
@@ -645,14 +710,18 @@ def train_representation(
             rules,
             seed=args.seed + _EVAL_SEED_OFFSET,
             classifier=classifier,
+            projection=projection,
         )
     # Everything that training updates, so that the best epoch can be restored as a whole.
-    trained = nn.ModuleList([model.backbone] + ([classifier] if classifier is not None else []))
+    extra = [module for module in (classifier, projection) if module is not None]
+    trained = nn.ModuleList([model.backbone, *extra])
 
     accumulation = args.gradient_accumulation_steps
-    total_steps = sum(
-        math.ceil(objective.batches_in_epoch(epoch) / accumulation)
-        for epoch in range(args.num_epochs)
+    epochs = _planned_epochs(objective, args)
+    total_steps = (
+        args.max_steps
+        if args.max_steps is not None
+        else sum(_steps_in_epoch(objective, epoch, args) for epoch in range(epochs))
     )
     parameters = [p for p in trained.parameters() if p.requires_grad]
     if not parameters:
@@ -668,8 +737,10 @@ def train_representation(
     train_losses: list[float] = []
     eval_losses: list[float] = []
     best_state: dict[str, torch.Tensor] | None = None
-    best_epoch, steps = 0, 0
-    for epoch in range(args.num_epochs):
+    best_epoch, steps, epoch = 0, 0, 0
+    # With max_steps, epochs continue until the budget is spent: fp16 steps skipped on overflow
+    # do not count, so they can add an epoch beyond the plan.
+    while (epoch < epochs) if args.max_steps is None else (steps < args.max_steps):
         model.train()
         objective.set_epoch(epoch)  # May re-encode for mining, which restores train mode.
         if args.freeze_batch_norm:
@@ -703,6 +774,8 @@ def train_representation(
                     # and must not advance the schedule or the step count.
                     scheduler.step()
                     steps += 1
+                if steps == args.max_steps:
+                    break  # Mid-epoch; the partial epoch is still validated and checkpointed.
         train_losses.append(float(np.mean(batch_losses)))
 
         if validation is not None:
@@ -728,16 +801,21 @@ def train_representation(
                     for name, value in trained.state_dict().items()
                 }
             logger.info(
-                "Epoch %d/%d: train loss %.4f, validation loss %.4f",
+                "Epoch %d (step %d/%d): train loss %.4f, validation loss %.4f",
                 epoch + 1,
-                args.num_epochs,
+                steps,
+                total_steps,
                 train_losses[-1],
                 eval_losses[-1],
             )
         else:
             best_epoch = epoch + 1
             logger.info(
-                "Epoch %d/%d: train loss %.4f", epoch + 1, args.num_epochs, train_losses[-1]
+                "Epoch %d (step %d/%d): train loss %.4f",
+                epoch + 1,
+                steps,
+                total_steps,
+                train_losses[-1],
             )
         if checkpoints is not None:
             checkpoints.save(
@@ -747,8 +825,9 @@ def train_representation(
                 train_losses=train_losses,
                 eval_losses=eval_losses,
             )
+        epoch += 1
 
-    if best_state is not None and best_epoch != args.num_epochs:
+    if best_state is not None and best_epoch != epoch:
         trained.load_state_dict(best_state)
         logger.info("Restored backbone weights from epoch %d", best_epoch)
     return RepresentationResult(steps, train_losses, eval_losses, best_epoch, classifier)

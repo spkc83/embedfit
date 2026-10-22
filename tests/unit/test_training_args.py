@@ -1,11 +1,12 @@
 import json
-from dataclasses import asdict
+from dataclasses import asdict, fields
 
 import pytest
 
 from embedfit import TrainingArguments
 from embedfit.augmentation import registry as augmentation_registry
 from embedfit.exceptions import ConfigurationError
+from embedfit.training_args import _recorded_arguments
 
 
 def test_defaults_match_the_specification():
@@ -64,6 +65,27 @@ def test_defaults_match_the_specification():
         ({"augmentation": "strong"}, "augmentation must be one of"),
         ({"augmentation": None}, "augmentation must be one of"),
         ({"training_mode": "frozen", "augmentation": "natural"}, "augmentation='natural'"),
+        ({"max_steps": 0}, "max_steps must be an int >= 1 or None"),
+        ({"max_steps": 2.0}, "max_steps must be an int >= 1 or None"),
+        ({"max_steps": True}, "max_steps must be an int >= 1 or None"),
+        ({"training_mode": "frozen", "max_steps": 10}, "max_steps only applies"),
+        ({"projection_dim": 0}, "projection_dim must be an int >= 1 or None"),
+        ({"projection_dim": 8.0}, "projection_dim must be an int >= 1 or None"),
+        ({"training_mode": "pair", "projection_dim": 8}, "projection_dim only applies"),
+        ({"training_mode": "end_to_end", "projection_dim": 8}, "projection_dim only applies"),
+        ({"training_mode": "frozen", "projection_dim": 8}, "projection_dim only applies"),
+        ({"contrastive_views": 0}, "contrastive_views must be an int >= 1"),
+        ({"contrastive_views": None}, "contrastive_views must be an int >= 1"),
+        ({"contrastive_views": True}, "contrastive_views must be an int >= 1"),
+        (
+            {"training_mode": "pair", "contrastive_views": 2, "augmentation": "natural"},
+            "contrastive_views only applies",
+        ),
+        (
+            {"training_mode": "end_to_end", "contrastive_views": 2, "augmentation": "natural"},
+            "contrastive_views only applies",
+        ),
+        ({"contrastive_views": 2}, "contrastive_views=2 needs an augmentation"),
     ],
 )
 def test_invalid_values_fail_at_construction(kwargs, match):
@@ -80,6 +102,38 @@ def test_new_options_default_to_off():
     assert (args.unfreeze_last_blocks, args.checkpoint_dir) == (None, None)
     configured = TrainingArguments(unfreeze_last_blocks=2, checkpoint_dir="checkpoints")
     assert (configured.unfreeze_last_blocks, configured.checkpoint_dir) == (2, "checkpoints")
+    assert (args.max_steps, args.projection_dim, args.contrastive_views) == (None, None, 1)
+
+
+@pytest.mark.parametrize("mode", ["supcon", "pair", "end_to_end"])
+def test_max_steps_applies_to_every_trained_mode(mode):
+    assert TrainingArguments(training_mode=mode, max_steps=7).max_steps == 7
+
+
+def test_max_steps_replaces_num_epochs_whatever_its_value():
+    args = TrainingArguments(num_epochs=3, max_steps=50)
+    assert (args.num_epochs, args.max_steps) == (3, 50)
+
+
+def test_supcon_accepts_a_projection_head_and_several_views():
+    args = TrainingArguments(projection_dim=8, contrastive_views=2, augmentation="natural")
+    assert (args.projection_dim, args.contrastive_views) == (8, 2)
+    assert TrainingArguments(training_mode="pair", contrastive_views=1).contrastive_views == 1
+
+
+def test_new_fields_come_last_and_are_recorded():
+    names = [field.name for field in fields(TrainingArguments)]
+    assert names[-4:] == ["checkpoint_dir", "max_steps", "projection_dim", "contrastive_views"]
+    recorded = _recorded_arguments(
+        TrainingArguments(
+            max_steps=9, projection_dim=4, contrastive_views=2, augmentation="natural"
+        )
+    )
+    assert (recorded["max_steps"], recorded["projection_dim"], recorded["contrastive_views"]) == (
+        9,
+        4,
+        2,
+    )
 
 
 @pytest.mark.parametrize("mode", ["frozen", "supcon", "pair", "end_to_end"])

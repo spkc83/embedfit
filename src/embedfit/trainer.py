@@ -187,11 +187,18 @@ class Trainer:
         if self.args.training_mode == "frozen":
             logger.info("Phase 1/2 (representation): skipped, backbone stays frozen")
         else:
-            logger.info(
-                "Phase 1/2 (representation): '%s' for %d epochs",
-                self.args.training_mode,
-                self.args.num_epochs,
-            )
+            if self.args.max_steps is None:
+                logger.info(
+                    "Phase 1/2 (representation): '%s' for %d epochs",
+                    self.args.training_mode,
+                    self.args.num_epochs,
+                )
+            else:
+                logger.info(
+                    "Phase 1/2 (representation): '%s' for %d steps",
+                    self.args.training_mode,
+                    self.args.max_steps,
+                )
             if self.args.checkpoint_dir is not None:
                 checkpoint_model(self.model, self.args)  # A used directory changes nothing.
             self.model.unfreeze_backbone(self.args.unfreeze_last_blocks)

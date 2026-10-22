@@ -28,7 +28,9 @@
     "docs/adrs/0013-batch-norm-statistics-stay-fixed-during-training.md",
     "docs/adrs/0014-task-augmentation-before-provider-preprocessing.md",
     "docs/adrs/0015-partial-unfreezing-counts-provider-blocks.md",
-    "docs/adrs/0016-representation-checkpoints-are-model-bundles.md"
+    "docs/adrs/0016-representation-checkpoints-are-model-bundles.md",
+    "docs/adrs/0017-step-budget-for-representation-training.md",
+    "docs/adrs/0018-supcon-projection-head-and-views.md"
   ],
   "agent_entrypoints": [
     "AGENTS.md",

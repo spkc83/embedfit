@@ -209,6 +209,9 @@ def read_previous(output: Path, config: dict) -> dict | None:
         saved.setdefault("dataset_revision", None)
         saved.setdefault("augmentation", "none")
         saved.setdefault("unfreeze_last_blocks", None)
+        saved.setdefault("max_steps", None)
+        saved.setdefault("projection_dim", None)
+        saved.setdefault("contrastive_views", 1)
     except (json.JSONDecodeError, KeyError, TypeError, ValueError):
         raise SystemExit(f"{output} is not a results file written by this script.") from None
     measured = {"evaluation_duplicates_dropped", "evaluation_size"}  # Known after loading.
@@ -297,6 +300,25 @@ def main(argv: list[str] | None = None) -> None:
         default=None,
         help="trained methods: train only the backbone's last N blocks (ADR 0015)",
     )
+    parser.add_argument(
+        "--max-steps",
+        type=positive_int,
+        default=None,
+        help="trained methods: train for this many optimizer steps instead of --epochs (ADR 0017)",
+    )
+    parser.add_argument(
+        "--projection-dim",
+        type=positive_int,
+        default=None,
+        help="supcon: compute the loss on a projection head of this output size (ADR 0018)",
+    )
+    parser.add_argument(
+        "--contrastive-views",
+        type=positive_int,
+        default=1,
+        help="supcon: augmented views of every drawn image; above 1 needs --augmentation "
+        "(ADR 0018)",
+    )
     parser.add_argument("--evaluate-on", choices=["validation", "test"], required=True)
     parser.add_argument("--pool-per-class", type=int, default=100)
     parser.add_argument("--eval-per-class", type=int, default=100)
@@ -312,6 +334,16 @@ def main(argv: list[str] | None = None) -> None:
         parser.error("--augmentation applies to trained methods only, and none is selected")
     if args.unfreeze_last_blocks is not None and not set(args.methods) & set(TRAINED_METHODS):
         parser.error("--unfreeze-last-blocks applies to trained methods only, and none is selected")
+    if args.max_steps is not None and not set(args.methods) & set(TRAINED_METHODS):
+        parser.error("--max-steps applies to trained methods only, and none is selected")
+    for option, value, default in (
+        ("--projection-dim", args.projection_dim, None),
+        ("--contrastive-views", args.contrastive_views, 1),
+    ):
+        if value != default and "supcon" not in args.methods:
+            parser.error(f"{option} applies to the supcon method only, and it is not selected")
+    if args.contrastive_views > 1 and args.augmentation == "none":
+        parser.error("--contrastive-views above 1 needs --augmentation: the views would be equal")
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
     # Before any download library is imported: they read these when imported.
     os.environ.setdefault("HF_HOME", str(args.data_root / "huggingface"))
@@ -331,12 +363,19 @@ def main(argv: list[str] | None = None) -> None:
         "freeze_batch_norm": not args.train_mode_batch_norm,
         "augmentation": args.augmentation,
         "unfreeze_last_blocks": args.unfreeze_last_blocks,
+        "max_steps": args.max_steps,
     }
     arguments = {
         method: TrainingArguments(training_mode=method, learning_rate=rates[method], **budget)
         for method in args.methods
         if method in TRAINED_METHODS
     }
+    if "supcon" in arguments:
+        arguments["supcon"] = replace(
+            arguments["supcon"],
+            projection_dim=args.projection_dim,
+            contrastive_views=args.contrastive_views,
+        )
     if "pair" in arguments:
         arguments["pair"] = TrainingArguments(
             training_mode="pair",

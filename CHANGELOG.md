@@ -4,6 +4,13 @@ All notable changes to EmbedFit are recorded here, following [Keep a Changelog](
 
 ## [Unreleased]
 
+### Added
+
+- `TrainingArguments.max_steps`: a representation-training budget in optimizer steps for every trained mode. It replaces `num_epochs`, which is then ignored; training stops after exactly that many steps, part-way through an epoch if need be, and the learning-rate schedule is sized on it. A final partial epoch is validated and checkpointed like any other (ADR 0017).
+- `TrainingArguments.projection_dim`: `supcon` computes its loss on a projection head `Linear(D, D) → ReLU → Linear(D, projection_dim)` that is trained with the backbone and discarded afterwards; the head and retrieval keep using the backbone embedding (ADR 0018).
+- `TrainingArguments.contrastive_views`: `supcon` augments every drawn image this many times, each view with its own seed, and passes the views to `SupConLoss` as `[B, V, D]`; needs an augmentation (ADR 0018).
+- `benchmarks/few_shot.py --max-steps`, `--projection-dim`, and `--contrastive-views`.
+
 ## [0.1.0] - 2026-10-18
 
 The first release.

@@ -170,6 +170,9 @@ sampler: str | None = None   # supcon / end_to_end batch sampler; None = mode de
 augmentation: str = "none"   # task augmentation of training draws (§13, ADR 0014)
 unfreeze_last_blocks: int | None = None   # train only the backbone's last N blocks (ADR 0015)
 checkpoint_dir: str | None = None         # best and last epoch written as bundles (ADR 0016)
+max_steps: int | None = None              # budget in optimizer steps; replaces num_epochs (ADR 0017)
+projection_dim: int | None = None         # supcon: loss on a discarded projection head (ADR 0018)
+contrastive_views: int = 1                # supcon: augmented views per drawn image (ADR 0018)
 ```
 
 ## 6. Input data
