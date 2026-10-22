@@ -124,8 +124,24 @@ def test_a_step_budget_does_not_record_the_ignored_epochs(few_shot):
     assert namespace(few_shot, "--epochs", "3")["epochs"] == 3
 
 
-def test_the_device_is_part_of_the_configuration_and_cudnn_is_not(few_shot):
+def test_the_device_is_part_of_the_configuration_and_cudnn_is_not(few_shot, monkeypatch):
+    monkeypatch.setattr(few_shot, "resolve_device", lambda device: few_shot.torch.device(device))
+    monkeypatch.setattr(few_shot.torch.cuda, "current_device", lambda: 0)
     config = namespace(few_shot, "--device", "cuda", "--disable-cudnn")
-    assert config["device"] == "cuda"
+    assert config["device"] == "cuda:0"
     assert "disable_cudnn" not in config
     assert namespace(few_shot, "--device", "cuda") == config
+
+
+@pytest.mark.parametrize("device", ["auto", "gpu"])
+def test_the_device_must_be_a_named_available_device(few_shot, device, capsys):
+    with pytest.raises(SystemExit):
+        few_shot.parse_arguments([*REQUIRED, "--device", device])
+    assert "--device" in capsys.readouterr().err
+
+
+def test_one_cuda_device_has_one_spelling(few_shot, monkeypatch):
+    monkeypatch.setattr(few_shot, "resolve_device", lambda device: few_shot.torch.device(device))
+    monkeypatch.setattr(few_shot.torch.cuda, "current_device", lambda: 0)
+    assert namespace(few_shot, "--device", "cuda") == namespace(few_shot, "--device", "cuda:0")
+    assert namespace(few_shot, "--device", "cuda:0")["device"] == "cuda:0"

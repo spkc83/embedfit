@@ -52,7 +52,9 @@ from PIL import Image
 import embedfit
 from embedfit import EmbedFitModel, FewShotEvaluator, ImageDataset, Trainer, TrainingArguments
 from embedfit.augmentation import available_augmentations
+from embedfit.exceptions import ConfigurationError
 from embedfit.sampling import sample_few_shot
+from embedfit.utils.device import resolve_device
 
 TRAINED_METHODS = ("end_to_end", "supcon", "pair")
 DOCUMENT_SHORT_SIDE = 512
@@ -374,6 +376,15 @@ def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
     ):
         if value != default and "supcon" not in args.methods:
             parser.error(f"{option} applies to the supcon method only, and it is not selected")
+    if args.device == "auto":
+        parser.error("--device must name a device: 'auto' could resolve differently on resume")
+    try:
+        device = resolve_device(args.device)
+    except ConfigurationError as error:
+        parser.error(f"--device: {error}")
+    if device.type == "cuda" and device.index is None:
+        device = torch.device("cuda", torch.cuda.current_device())
+    args.device = str(device)  # One spelling per device, so that resuming compares like with like.
     if args.contrastive_views > 1 and args.augmentation == "none":
         parser.error("--contrastive-views above 1 needs --augmentation: the views would be equal")
     return args
