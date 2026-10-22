@@ -36,6 +36,7 @@ import contextlib
 import hashlib
 import json
 import logging
+import math
 import os
 import platform
 import tempfile
@@ -212,6 +213,8 @@ def read_previous(output: Path, config: dict) -> dict | None:
         saved.setdefault("max_steps", None)
         saved.setdefault("projection_dim", None)
         saved.setdefault("contrastive_views", 1)
+        saved.setdefault("temperature", 0.07)
+        saved.setdefault("device", "cpu")
     except (json.JSONDecodeError, KeyError, TypeError, ValueError):
         raise SystemExit(f"{output} is not a results file written by this script.") from None
     measured = {"evaluation_duplicates_dropped", "evaluation_size"}  # Known after loading.
@@ -226,6 +229,16 @@ def positive_int(value: str) -> int:
     if not value.isdigit() or int(value) < 1:
         raise argparse.ArgumentTypeError(f"expected a positive int, got {value!r}")
     return int(value)
+
+
+def positive_float(value: str) -> float:
+    try:
+        number = float(value)
+    except ValueError:
+        number = math.nan
+    if not number > 0 or math.isinf(number):
+        raise argparse.ArgumentTypeError(f"expected a positive number, got {value!r}")
+    return number
 
 
 def parse_learning_rates(values: list[str], default: float) -> dict[str, float]:
@@ -320,6 +333,23 @@ def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
         help="supcon: augmented views of every drawn image; above 1 needs --augmentation "
         "(ADR 0018)",
     )
+    parser.add_argument(
+        "--temperature",
+        type=positive_float,
+        default=0.07,
+        help="supcon: temperature of the supervised contrastive loss",
+    )
+    parser.add_argument(
+        "--device",
+        default="cpu",
+        help="device for encoding and training, e.g. cpu or cuda; no fallback to another device",
+    )
+    parser.add_argument(
+        "--disable-cudnn",
+        action="store_true",
+        help="run CUDA convolutions without cuDNN, for GPUs that the installed cuDNN does not "
+        "support",
+    )
     parser.add_argument("--evaluate-on", choices=["validation", "test"], required=True)
     parser.add_argument("--pool-per-class", type=int, default=100)
     parser.add_argument("--eval-per-class", type=int, default=100)
@@ -340,6 +370,7 @@ def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
     for option, value, default in (
         ("--projection-dim", args.projection_dim, None),
         ("--contrastive-views", args.contrastive_views, 1),
+        ("--temperature", args.temperature, 0.07),
     ):
         if value != default and "supcon" not in args.methods:
             parser.error(f"{option} applies to the supcon method only, and it is not selected")
@@ -353,7 +384,7 @@ def resume_configuration(args: argparse.Namespace) -> dict:
     config = {
         key: str(value) if isinstance(value, Path) else value
         for key, value in vars(args).items()
-        if key not in {"data_root", "output", "threads"}
+        if key not in {"data_root", "output", "threads", "disable_cudnn"}
     }
     if args.max_steps is not None:
         config["epochs"] = None  # Ignored under a step budget (ADR 0017).
@@ -373,6 +404,8 @@ def main(argv: list[str] | None = None) -> None:
     Path(os.environ["TMPDIR"]).mkdir(parents=True, exist_ok=True)
     tempfile.tempdir = None  # Re-read TMPDIR on the next use.
     torch.set_num_threads(args.threads)
+    if args.disable_cudnn:
+        torch.backends.cudnn.enabled = False
     if args.image_size is None:
         args.image_size = DEFAULT_IMAGE_SIZE[args.dataset]
 
@@ -396,6 +429,7 @@ def main(argv: list[str] | None = None) -> None:
             arguments["supcon"],
             projection_dim=args.projection_dim,
             contrastive_views=args.contrastive_views,
+            temperature=args.temperature,
         )
     if "pair" in arguments:
         arguments["pair"] = TrainingArguments(
@@ -439,7 +473,7 @@ def main(argv: list[str] | None = None) -> None:
 
     def model_factory() -> EmbedFitModel:
         return EmbedFitModel.from_pretrained(
-            args.backbone, labels=labels, image_size=args.image_size
+            args.backbone, labels=labels, image_size=args.image_size, device=args.device
         )
 
     # Fail before any training: the pool must cover the largest shot count and every method
@@ -453,7 +487,8 @@ def main(argv: list[str] | None = None) -> None:
     session = {
         "embedfit": embedfit.__version__,
         "torch": torch.__version__,
-        "device": "cpu",
+        "device": args.device,
+        "cudnn": torch.backends.cudnn.enabled,
         "threads": args.threads,
         "processor": platform.processor() or platform.machine(),
         "elapsed_seconds": 0.0,
