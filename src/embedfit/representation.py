@@ -78,8 +78,8 @@ class _AugmentedPixelDataset(Dataset[tuple[torch.Tensor, int]]):
     Indexed by the ``(epoch, draw, position)`` keys of ``_DrawKeys``, so every draw gets its
     own seed, whichever worker process loads it. With ``views`` above 1 an item stacks that
     many augmentations of the image, ``[views, C, H, W]``; view ``v`` of draw ``d`` is seeded
-    as draw ``d * views + v``, so every view has a seed of its own and one view is seeded
-    exactly as without views.
+    as draw ``d * views + v``, so every view has a seed of its own, and with one view the seeds
+    are exactly those of earlier versions (ADR 0018).
     """
 
     def __init__(
@@ -430,12 +430,22 @@ def _steps_in_epoch(objective: _Objective, epoch: int, args: TrainingArguments) 
 
 def _planned_epochs(objective: _Objective, args: TrainingArguments) -> int:
     """Epochs that training runs: ``num_epochs``, or with ``max_steps`` the epochs needed to
-    take that many steps, the last of them possibly partial (ADR 0017)."""
+    take that many steps, the last of them possibly partial (ADR 0017).
+
+    Raises:
+        ConfigurationError: If an epoch before the budget is reached has no batches.
+    """
     if args.max_steps is None:
         return args.num_epochs
     epochs, steps = 0, 0
     while steps < args.max_steps:
-        steps += _steps_in_epoch(objective, epochs, args)
+        planned = _steps_in_epoch(objective, epochs, args)
+        if planned == 0:
+            raise ConfigurationError(
+                f"The batches give no optimizer step in epoch {epochs + 1}, so max_steps="
+                f"{args.max_steps} can never be reached."
+            )
+        steps += planned
         epochs += 1
     return epochs
 
@@ -446,7 +456,7 @@ def _projection_head(model: EmbedFitModel, args: TrainingArguments) -> nn.Module
     assert args.projection_dim is not None
     dimension = model.embedding_dim
     with torch.random.fork_rng(devices=[]):
-        torch.manual_seed(args.seed)
+        torch.default_generator.manual_seed(args.seed)  # The CPU generator only.
         head = nn.Sequential(
             nn.Linear(dimension, dimension), nn.ReLU(), nn.Linear(dimension, args.projection_dim)
         )
@@ -471,8 +481,10 @@ def validate_representation_setup(
             formed; ``end_to_end``: a class of the model without training samples; ``supcon``
             and ``end_to_end``: a batch of a sampler other than the built-in ``balanced``, in
             any epoch that training runs, that is empty, holds a position outside the data,
-            or (``supcon``) holds no two samples of one class, or such a sampler that yields
-            no batches, or whose length differs from its batch count or between epochs),
+            or (``supcon``, with one view) holds no two samples of one class, or such a
+            sampler that yields no batches, gives an epoch no optimizer step before
+            ``max_steps`` is reached, or whose length differs from its batch count or between
+            epochs),
             relationship rules are given for a mode other than ``pair``, the backbone
             has no trainable parameters, ``unfreeze_last_blocks`` exceeds the backbone's
             blocks, checkpoints cannot be written (see ``checkpoint_model``), the
@@ -495,16 +507,17 @@ def validate_representation_setup(
             if len(dataset) == 0:
                 raise ConfigurationError(f"{name} is empty.")
             objective = _objective(model, dataset, args, rules, seed=seed)
-            epochs = range(_planned_epochs(objective, args) if training else 1)
             sampler = args.sampler or _DEFAULT_SAMPLERS.get(args.training_mode)
             if sampler is not None and needs_batch_check(sampler):
                 assert model.label_mapping is not None
                 targets = model.label_mapping.encode(dataset.labels)
+                # Several views of an image are positives of each other; validation has one.
+                one_view = args.contrastive_views == 1 or not training
                 _check_batches(
                     _batch_sampler(args, targets, seed),
                     targets,
-                    epochs,
-                    need_positive=args.training_mode == "supcon",
+                    range(_planned_epochs(objective, args) if training else 1),
+                    need_positive=args.training_mode == "supcon" and one_view,
                 )
     augmentation = create_augmentation(args.augmentation)
     if augmentation is not None:
@@ -717,14 +730,14 @@ def train_representation(
     trained = nn.ModuleList([model.backbone, *extra])
 
     accumulation = args.gradient_accumulation_steps
-    epochs = _planned_epochs(objective, args)
+    epochs = args.num_epochs  # The budget unless max_steps is set.
     total_steps = (
         args.max_steps
         if args.max_steps is not None
         else sum(_steps_in_epoch(objective, epoch, args) for epoch in range(epochs))
     )
     parameters = [p for p in trained.parameters() if p.requires_grad]
-    if not parameters:
+    if not any(p.requires_grad for p in model.backbone.parameters()):
         raise ConfigurationError(
             "Every backbone parameter is frozen; call unfreeze_backbone() before training."
         )

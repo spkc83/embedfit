@@ -161,6 +161,71 @@ def test_the_sampler_check_covers_the_epochs_max_steps_will_run(late_failure):
         Trainer(make_model(), make_args(sampler=late_failure, max_steps=7), data)
 
 
+class NoBatches(LateFailure):
+    """A sampler that reports and yields no batches."""
+
+    def _batches(self):
+        return []
+
+    def __len__(self):
+        return 0
+
+
+def test_a_sampler_without_batches_fails_before_max_steps_are_planned(monkeypatch):
+    monkeypatch.setattr(sampler_registry, "_SAMPLERS", dict(sampler_registry._SAMPLERS))
+    register_sampler("no_batches", NoBatches)
+    with pytest.raises(ConfigurationError, match="no optimizer step in epoch 1"):
+        Trainer(make_model(), make_args(sampler="no_batches", max_steps=5), dataset(4, 0))
+
+
+class Singles(LateFailure):
+    """Three batches an epoch, each of one image per class: no two samples of a class."""
+
+    def _batches(self):
+        single = [int(np.flatnonzero(self.targets == c)[0]) for c in np.unique(self.targets)]
+        return [single] * 3
+
+    def __len__(self):
+        return 3
+
+
+@pytest.fixture
+def singles(monkeypatch):
+    monkeypatch.setattr(sampler_registry, "_SAMPLERS", dict(sampler_registry._SAMPLERS))
+    register_sampler("singles", Singles)
+    return "singles"
+
+
+def test_one_view_needs_two_samples_of_a_class_per_batch(singles):
+    with pytest.raises(ConfigurationError, match="no two samples of the same class"):
+        Trainer(make_model(), make_args(sampler=singles, augmentation="natural"), dataset(4, 0))
+
+
+def test_several_views_are_positives_of_each_other_in_the_sampler_check(singles):
+    args = make_args(sampler=singles, max_steps=4, contrastive_views=2, augmentation="natural")
+    output = Trainer(make_model(), args, dataset(4, 0)).train()
+    assert output.representation_steps == 4
+
+
+def test_validation_batches_have_one_view_and_still_need_two_samples_of_a_class(singles):
+    args = make_args(sampler=singles, contrastive_views=2, augmentation="natural")
+    with pytest.raises(ConfigurationError, match="no two samples of the same class"):
+        Trainer(make_model(), args, dataset(4, 0), eval_dataset=dataset(4, 1))
+
+
+def test_pair_setup_validation_draws_no_pairs_ahead(monkeypatch):
+    drawn = []
+    pairs_for = representation._PairDataset.pairs_for
+
+    def spy(self, epoch):
+        drawn.append(epoch)
+        return pairs_for(self, epoch)
+
+    monkeypatch.setattr(representation._PairDataset, "pairs_for", spy)
+    Trainer(make_model(), make_args("pair", max_steps=50), dataset(4, 0))
+    assert drawn == [0]  # Only the dataset's first epoch, as without max_steps.
+
+
 # --- projection_dim -------------------------------------------------------------------------
 
 
@@ -201,6 +266,45 @@ def test_the_projection_is_seeded_from_the_arguments_not_the_global_generator():
         model.eval()
         embeddings.append(model.encode(test_data.images))
     assert np.array_equal(*embeddings)
+
+
+def test_the_projection_does_not_hide_a_frozen_backbone():
+    model = make_model()
+    model.freeze_backbone()
+    with pytest.raises(ConfigurationError, match="Every backbone parameter is frozen"):
+        train_representation(model, dataset(12, 0), None, make_args(projection_dim=8))
+
+
+def test_the_end_to_end_classifier_does_not_hide_a_frozen_backbone():
+    model = make_model()
+    model.freeze_backbone()
+    with pytest.raises(ConfigurationError, match="Every backbone parameter is frozen"):
+        train_representation(model, dataset(12, 0), None, make_args("end_to_end"))
+
+
+def test_the_projection_seed_leaves_accelerator_generators_alone(monkeypatch):
+    def forbidden(seed):
+        raise AssertionError("an accelerator generator was seeded")
+
+    model = make_model()
+    monkeypatch.setattr(torch.cuda, "manual_seed_all", forbidden)
+    monkeypatch.setattr(torch.cuda, "manual_seed", forbidden)
+    representation._projection_head(model, make_args(projection_dim=8))
+
+
+def test_the_best_epoch_state_holds_the_projection(monkeypatch):
+    snapshots = []
+    state_dict = torch.nn.ModuleList.state_dict
+
+    def spy(self, *args, **kwargs):
+        state = state_dict(self, *args, **kwargs)
+        snapshots.append(set(state))
+        return state
+
+    monkeypatch.setattr(torch.nn.ModuleList, "state_dict", spy)
+    train(eval_data=dataset(4, 1), projection_dim=8)
+    # The ModuleList holds the backbone at 0 and the projection head at 1.
+    assert snapshots and all({"1.0.weight", "1.2.weight"} <= keys for keys in snapshots)
 
 
 def test_the_projection_is_not_saved_with_the_model(tmp_path):

@@ -10,7 +10,7 @@ Status: Accepted
 - A step is an optimizer step: one per group of `gradient_accumulation_steps` batches (the last group of an epoch can be shorter). Under `fp16`, a step that the gradient scaler skips on overflow does not count, as before, so the budget is `max_steps` real updates.
 - The warm-up and linear decay of the learning rate are sized on `max_steps`, so the rate reaches zero on the last step.
 - Epochs keep their meaning. A final partial epoch counts as an epoch: its mean training loss is recorded, validation loss is measured after it, it can be the best epoch, and it is checkpointed (ADR 0016). Samplers still get `set_epoch` at the start of every epoch, and hard-negative mining still refreshes on its epoch schedule.
-- The setup check of custom batch samplers (SPEC §26) iterates every epoch that training will run. That count is computed when the `Trainer` is created from the batches per epoch: the sampler's length, the drawn pairs per epoch in `pair` mode, or, with hard-negative mining, the largest number of pairs an epoch can hold, the same plan the learning-rate schedule uses without `max_steps`. Steps skipped under `fp16` can add epochs beyond that plan, and their batches are not checked in advance.
+- The setup check of custom batch samplers (SPEC §26) iterates every epoch that training will run. That count is computed when the `Trainer` is created from the batches per epoch: the sampler's length, the drawn pairs per epoch in `pair` mode, or, with hard-negative mining, the largest number of pairs an epoch can hold, the same plan the learning-rate schedule uses without `max_steps`. Steps skipped under `fp16` can add epochs beyond that plan, and their batches are not checked in advance. A sampler that gives an epoch of the plan no optimizer step is rejected, since the budget could never be reached. The plan is computed only for the samplers that are checked, so `pair` mode draws no pairs ahead for it.
 - `TrainOutput.representation_steps` equals `max_steps` after a completed run. The value is recorded with the other training arguments in saved models and checkpoints.
 
 ## Context
@@ -28,4 +28,3 @@ The budget was epochs only. In a few-shot run an epoch is a handful of batches: 
 
 - At few shots, training a fixed number of steps means many epochs over the same images. Validation loss after every epoch, or augmentation (ADR 0014), become more important against overfitting.
 - `num_epochs` is no longer the training length when `max_steps` is set; logs report `epoch (step k/max_steps)`.
-- The epoch plan is computed before training, which for `pair` mode without mining draws the pairs of every planned epoch up front, as the schedule already did for the epoch budget.

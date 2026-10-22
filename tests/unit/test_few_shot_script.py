@@ -95,3 +95,15 @@ def test_several_views_need_an_augmentation(few_shot, capsys):
     with pytest.raises(SystemExit):
         few_shot.main([*REQUIRED, "--methods", "supcon", "--contrastive-views", "2"])
     assert "--contrastive-views above 1 needs --augmentation" in capsys.readouterr().err
+
+
+def namespace(few_shot, *options):
+    parser_args = few_shot.parse_arguments([*REQUIRED, *options])
+    return few_shot.resume_configuration(parser_args)
+
+
+def test_a_step_budget_does_not_record_the_ignored_epochs(few_shot):
+    config = namespace(few_shot, "--max-steps", "100", "--epochs", "3")
+    assert (config["max_steps"], config["epochs"]) == (100, None)
+    assert namespace(few_shot, "--max-steps", "100", "--epochs", "7") == config
+    assert namespace(few_shot, "--epochs", "3")["epochs"] == 3

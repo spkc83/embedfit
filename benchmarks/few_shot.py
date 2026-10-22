@@ -240,7 +240,8 @@ def parse_learning_rates(values: list[str], default: float) -> dict[str, float]:
     return rates
 
 
-def main(argv: list[str] | None = None) -> None:
+def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
+    """The command line, with every check that needs no data; exits on an error."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
         "--data-root",
@@ -327,7 +328,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--output", type=Path, required=True, help="JSON file for the records")
     args = parser.parse_args(argv)
     try:  # Before loading any data, so that a typo fails at once.
-        rates = parse_learning_rates(args.learning_rate, args.default_learning_rate)
+        parse_learning_rates(args.learning_rate, args.default_learning_rate)
     except ValueError:
         parser.error("--learning-rate expects METHOD=RATE with a number as RATE")
     if args.augmentation != "none" and not set(args.methods) & set(TRAINED_METHODS):
@@ -344,6 +345,26 @@ def main(argv: list[str] | None = None) -> None:
             parser.error(f"{option} applies to the supcon method only, and it is not selected")
     if args.contrastive_views > 1 and args.augmentation == "none":
         parser.error("--contrastive-views above 1 needs --augmentation: the views would be equal")
+    return args
+
+
+def resume_configuration(args: argparse.Namespace) -> dict:
+    """The options a results file is resumed under: every one that changes the records."""
+    config = {
+        key: str(value) if isinstance(value, Path) else value
+        for key, value in vars(args).items()
+        if key not in {"data_root", "output", "threads"}
+    }
+    if args.max_steps is not None:
+        config["epochs"] = None  # Ignored under a step budget (ADR 0017).
+    config["freeze_batch_norm"] = not args.train_mode_batch_norm
+    config["dataset_revision"] = RVL_CDIP_REVISION if args.dataset == "rvl-cdip" else None
+    return config
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = parse_arguments(argv)
+    rates = parse_learning_rates(args.learning_rate, args.default_learning_rate)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
     # Before any download library is imported: they read these when imported.
     os.environ.setdefault("HF_HOME", str(args.data_root / "huggingface"))
@@ -390,14 +411,8 @@ def main(argv: list[str] | None = None) -> None:
     # depends only on its shots and seed, so a resumed run gives the same records. The thread
     # count is not part of the configuration, so a run can be resumed with a different one;
     # every session's environment is recorded.
-    config = {
-        key: str(value) if isinstance(value, Path) else value
-        for key, value in vars(args).items()
-        if key not in {"data_root", "output", "threads"}
-    }
+    config = resume_configuration(args)
     config["learning_rates"] = {method: rates[method] for method in arguments}
-    config["freeze_batch_norm"] = not args.train_mode_batch_norm
-    config["dataset_revision"] = RVL_CDIP_REVISION if args.dataset == "rvl-cdip" else None
     previous = read_previous(args.output, config)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     records: list[dict] = previous["records"] if previous else []

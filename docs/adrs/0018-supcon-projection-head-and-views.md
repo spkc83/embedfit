@@ -27,6 +27,7 @@ backbone embedding (D, normalised or not, as the model produces it)
 - The views of a draw are stacked to `[B, V, C, H, W]`, embedded in one forward pass, and given to `SupConLoss` as `[B, V, D]` (or `[B, V, projection_dim]`); views of one image are positives of each other.
 - View `v` of the draw with index `d` in its epoch is augmented with the seed of draw `d × V + v` (ADR 0014). Every view has a seed of its own, a run stays reproducible and independent of `num_workers`, and with one view the seeds are exactly those of earlier versions.
 - Validation batches use one view of the original images, as before.
+- The setup check of custom batch samplers (SPEC §26) no longer requires two samples of one class in a training batch, since every image has positives among its own views. Validation batches, which have one view, still need them.
 
 ## Context
 
