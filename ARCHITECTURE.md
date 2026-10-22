@@ -153,9 +153,9 @@ No module may silently change embedding dimensionality unless that change is an 
 
 ## Projection head policy
 
-There is no projection head. The backbone output that representation training adapts is the embedding that the head and retrieval use.
+By default there is no projection head: the backbone output that representation training adapts is the embedding that the head and retrieval use.
 
-An optional projection head would have to state which representation is used downstream: the projected one, or only the backbone's.
+`supcon` training can compute its loss on a projection head (`projection_dim`, ADR 0018). The head exists only during training: downstream, the classification head, `encode`, and retrieval use the backbone's embedding, and the projection is not saved.
 
 ## Backbone providers
 

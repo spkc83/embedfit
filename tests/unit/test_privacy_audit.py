@@ -35,12 +35,15 @@ LOGGED_NAMES = {
     "probe_loss",
     "fraction",
     "count",
+    "steps",
+    "total_steps",
 }
 LOGGED_ATTRIBUTES = {
     "identifier",
     "embedding_dim",
     "training_mode",
     "num_epochs",
+    "max_steps",
     "_metric",
     "augmentation",  # A registered pipeline name, like training_mode.
 }

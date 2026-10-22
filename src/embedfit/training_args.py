@@ -39,7 +39,8 @@ class TrainingArguments:
     Attributes:
         training_mode: ``"frozen"`` (no backbone updates), ``"supcon"``, ``"pair"``,
             ``"triplet"``, or ``"end_to_end"``.
-        num_epochs: Representation-training epochs (>= 1). Unused in ``frozen`` mode.
+        num_epochs: Representation-training epochs (>= 1). Unused in ``frozen`` mode, and
+            ignored when ``max_steps`` is set.
         batch_size: Representation-training batch size (>= 1). Unused in ``frozen`` mode.
         eval_batch_size: Images per forward pass when encoding for head fitting and prediction.
         learning_rate: Backbone learning rate (> 0).
@@ -93,6 +94,20 @@ class TrainingArguments:
         checkpoint_dir: Directory that representation training writes a checkpoint to after
             every epoch, keeping the best and the last (ADR 0016). It must be missing or empty
             when training starts and must not overlap ``output_dir``. ``None`` writes nothing.
+        max_steps: Representation-training budget in optimizer steps (>= 1), replacing
+            ``num_epochs``, which is then ignored: training runs as many epochs as it needs and
+            stops after this many steps, part-way through an epoch if need be, and the
+            learning-rate schedule is sized on it (ADR 0017). ``None`` trains for
+            ``num_epochs`` epochs. Rejected in ``frozen`` mode.
+        projection_dim: ``supcon`` mode: compute the contrastive loss on a projection head
+            ``Linear(D, D) → ReLU → Linear(D, projection_dim)`` over the backbone's
+            embeddings, trained with the backbone and discarded afterwards; the classification
+            head and every encoding use the backbone's embeddings (ADR 0018). ``None`` applies
+            the loss to the embeddings directly. Rejected in other modes.
+        contrastive_views: ``supcon`` mode: augmented views of every drawn image (>= 1), each
+            with its own augmentation seed; the views of one image are positives of each other
+            (ADR 0018). Above 1 it needs an ``augmentation`` other than ``"none"``. Validation
+            batches use one view of the original images. Must be 1 in other modes.
 
     Raises:
         ConfigurationError: If any value is invalid. Raised at construction, never mid-training.
@@ -126,6 +141,9 @@ class TrainingArguments:
     augmentation: str = NO_AUGMENTATION
     unfreeze_last_blocks: int | None = None
     checkpoint_dir: str | None = None
+    max_steps: int | None = None
+    projection_dim: int | None = None
+    contrastive_views: int = 1
 
     def __post_init__(self) -> None:
         _require(
@@ -235,7 +253,31 @@ class TrainingArguments:
             or (isinstance(self.checkpoint_dir, str) and bool(self.checkpoint_dir)),
             "checkpoint_dir must be a non-empty str or None.",
         )
-        for name in ("unfreeze_last_blocks", "checkpoint_dir"):
+        for name in ("max_steps", "projection_dim"):
+            value = getattr(self, name)
+            _require(
+                value is None or (_is_int(value) and value >= 1),
+                f"{name} must be an int >= 1 or None, got {value!r}.",
+            )
+        _require(
+            _is_int(self.contrastive_views) and self.contrastive_views >= 1,
+            f"contrastive_views must be an int >= 1, got {self.contrastive_views!r}.",
+        )
+        _require(
+            self.projection_dim is None or self.training_mode == "supcon",
+            f"projection_dim only applies to training_mode='supcon', not '{self.training_mode}'.",
+        )
+        _require(
+            self.contrastive_views == 1 or self.training_mode == "supcon",
+            "contrastive_views only applies to training_mode='supcon', not "
+            f"'{self.training_mode}'.",
+        )
+        _require(
+            self.contrastive_views == 1 or self.augmentation != NO_AUGMENTATION,
+            f"contrastive_views={self.contrastive_views} needs an augmentation: without one "
+            "every view of an image is identical.",
+        )
+        for name in ("unfreeze_last_blocks", "checkpoint_dir", "max_steps"):
             _require(
                 self.training_mode != "frozen" or getattr(self, name) is None,
                 f"{name} only applies to modes that train the backbone, not 'frozen'.",

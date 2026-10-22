@@ -209,6 +209,9 @@ def read_previous(output: Path, config: dict) -> dict | None:
         saved.setdefault("dataset_revision", None)
         saved.setdefault("augmentation", "none")
         saved.setdefault("unfreeze_last_blocks", None)
+        saved.setdefault("max_steps", None)
+        saved.setdefault("projection_dim", None)
+        saved.setdefault("contrastive_views", 1)
     except (json.JSONDecodeError, KeyError, TypeError, ValueError):
         raise SystemExit(f"{output} is not a results file written by this script.") from None
     measured = {"evaluation_duplicates_dropped", "evaluation_size"}  # Known after loading.
@@ -237,7 +240,8 @@ def parse_learning_rates(values: list[str], default: float) -> dict[str, float]:
     return rates
 
 
-def main(argv: list[str] | None = None) -> None:
+def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
+    """The command line, with every check that needs no data; exits on an error."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
         "--data-root",
@@ -297,6 +301,25 @@ def main(argv: list[str] | None = None) -> None:
         default=None,
         help="trained methods: train only the backbone's last N blocks (ADR 0015)",
     )
+    parser.add_argument(
+        "--max-steps",
+        type=positive_int,
+        default=None,
+        help="trained methods: train for this many optimizer steps instead of --epochs (ADR 0017)",
+    )
+    parser.add_argument(
+        "--projection-dim",
+        type=positive_int,
+        default=None,
+        help="supcon: compute the loss on a projection head of this output size (ADR 0018)",
+    )
+    parser.add_argument(
+        "--contrastive-views",
+        type=positive_int,
+        default=1,
+        help="supcon: augmented views of every drawn image; above 1 needs --augmentation "
+        "(ADR 0018)",
+    )
     parser.add_argument("--evaluate-on", choices=["validation", "test"], required=True)
     parser.add_argument("--pool-per-class", type=int, default=100)
     parser.add_argument("--eval-per-class", type=int, default=100)
@@ -305,13 +328,43 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--output", type=Path, required=True, help="JSON file for the records")
     args = parser.parse_args(argv)
     try:  # Before loading any data, so that a typo fails at once.
-        rates = parse_learning_rates(args.learning_rate, args.default_learning_rate)
+        parse_learning_rates(args.learning_rate, args.default_learning_rate)
     except ValueError:
         parser.error("--learning-rate expects METHOD=RATE with a number as RATE")
     if args.augmentation != "none" and not set(args.methods) & set(TRAINED_METHODS):
         parser.error("--augmentation applies to trained methods only, and none is selected")
     if args.unfreeze_last_blocks is not None and not set(args.methods) & set(TRAINED_METHODS):
         parser.error("--unfreeze-last-blocks applies to trained methods only, and none is selected")
+    if args.max_steps is not None and not set(args.methods) & set(TRAINED_METHODS):
+        parser.error("--max-steps applies to trained methods only, and none is selected")
+    for option, value, default in (
+        ("--projection-dim", args.projection_dim, None),
+        ("--contrastive-views", args.contrastive_views, 1),
+    ):
+        if value != default and "supcon" not in args.methods:
+            parser.error(f"{option} applies to the supcon method only, and it is not selected")
+    if args.contrastive_views > 1 and args.augmentation == "none":
+        parser.error("--contrastive-views above 1 needs --augmentation: the views would be equal")
+    return args
+
+
+def resume_configuration(args: argparse.Namespace) -> dict:
+    """The options a results file is resumed under: every one that changes the records."""
+    config = {
+        key: str(value) if isinstance(value, Path) else value
+        for key, value in vars(args).items()
+        if key not in {"data_root", "output", "threads"}
+    }
+    if args.max_steps is not None:
+        config["epochs"] = None  # Ignored under a step budget (ADR 0017).
+    config["freeze_batch_norm"] = not args.train_mode_batch_norm
+    config["dataset_revision"] = RVL_CDIP_REVISION if args.dataset == "rvl-cdip" else None
+    return config
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = parse_arguments(argv)
+    rates = parse_learning_rates(args.learning_rate, args.default_learning_rate)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
     # Before any download library is imported: they read these when imported.
     os.environ.setdefault("HF_HOME", str(args.data_root / "huggingface"))
@@ -331,12 +384,19 @@ def main(argv: list[str] | None = None) -> None:
         "freeze_batch_norm": not args.train_mode_batch_norm,
         "augmentation": args.augmentation,
         "unfreeze_last_blocks": args.unfreeze_last_blocks,
+        "max_steps": args.max_steps,
     }
     arguments = {
         method: TrainingArguments(training_mode=method, learning_rate=rates[method], **budget)
         for method in args.methods
         if method in TRAINED_METHODS
     }
+    if "supcon" in arguments:
+        arguments["supcon"] = replace(
+            arguments["supcon"],
+            projection_dim=args.projection_dim,
+            contrastive_views=args.contrastive_views,
+        )
     if "pair" in arguments:
         arguments["pair"] = TrainingArguments(
             training_mode="pair",
@@ -351,14 +411,8 @@ def main(argv: list[str] | None = None) -> None:
     # depends only on its shots and seed, so a resumed run gives the same records. The thread
     # count is not part of the configuration, so a run can be resumed with a different one;
     # every session's environment is recorded.
-    config = {
-        key: str(value) if isinstance(value, Path) else value
-        for key, value in vars(args).items()
-        if key not in {"data_root", "output", "threads"}
-    }
+    config = resume_configuration(args)
     config["learning_rates"] = {method: rates[method] for method in arguments}
-    config["freeze_batch_norm"] = not args.train_mode_batch_norm
-    config["dataset_revision"] = RVL_CDIP_REVISION if args.dataset == "rvl-cdip" else None
     previous = read_previous(args.output, config)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     records: list[dict] = previous["records"] if previous else []
