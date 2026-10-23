@@ -41,7 +41,7 @@ import os
 import platform
 import tempfile
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from dataclasses import replace
 from pathlib import Path
 
@@ -185,22 +185,30 @@ LOADERS: dict[str, Callable[..., tuple[dict[str, Split], list[str]]]] = {
 }
 
 
-def _digest(item: Image.Image | Path) -> str:
+def digest(item: Image.Image | Path) -> str:
+    """SHA-256 of an image's mode, size, and pixels."""
     with Image.open(item) if isinstance(item, Path) else contextlib.nullcontext(item) as image:
         return hashlib.sha256(f"{image.mode}{image.size}".encode() + image.tobytes()).hexdigest()
 
 
 def drop_pool_duplicates(splits: dict[str, Split], evaluate_on: str) -> int:
     """Remove evaluation images whose pixels match a pool image; return how many."""
-    pool = {_digest(image) for image, _ in splits["pool"]}
-    kept = [(image, label) for image, label in splits[evaluate_on] if _digest(image) not in pool]
+    pool = {digest(image) for image, _ in splits["pool"]}
+    kept = [(image, label) for image, label in splits[evaluate_on] if digest(image) not in pool]
     dropped = len(splits[evaluate_on]) - len(kept)
     splits[evaluate_on] = kept
     return dropped
 
 
-def read_previous(output: Path, config: dict) -> dict | None:
-    """Results already in ``output``, or ``None``; exit if they are for another configuration."""
+MEASURED = ("evaluation_duplicates_dropped", "evaluation_size")  # Known after loading.
+
+
+def read_previous(output: Path, config: dict, measured: Collection[str] = MEASURED) -> dict | None:
+    """Results already in ``output``, or ``None``; exit if they are for another configuration.
+
+    ``measured`` names the configuration entries that are only known after loading the data,
+    and are left out of the comparison here.
+    """
     if not output.exists():
         return None
     try:
@@ -219,8 +227,7 @@ def read_previous(output: Path, config: dict) -> dict | None:
         saved.setdefault("device", "cpu")
     except (json.JSONDecodeError, KeyError, TypeError, ValueError):
         raise SystemExit(f"{output} is not a results file written by this script.") from None
-    measured = {"evaluation_duplicates_dropped", "evaluation_size"}  # Known after loading.
-    if set(saved) - measured != set(config) or any(
+    if set(saved) - set(measured) != set(config) or any(
         saved[key] != value for key, value in config.items()
     ):
         raise SystemExit(f"{output} holds results for a different configuration.")

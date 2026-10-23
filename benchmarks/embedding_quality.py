@@ -24,6 +24,7 @@ import math
 import time
 from collections.abc import Callable, Hashable, Sequence
 from dataclasses import replace
+from pathlib import Path
 
 import few_shot
 import numpy as np
@@ -38,6 +39,7 @@ logger = logging.getLogger(__name__)
 TASKS = ("open_set", "rare_positive")
 POSITIVE, NEGATIVE = "positive", "negative"
 TARGET_FPRS = (0.01, 0.05)
+MEASURED = (*few_shot.MEASURED, "evaluation_repeats_dropped")  # Known after loading.
 
 Evaluation = Callable[[EmbedFitModel], dict[str, float]]
 
@@ -46,6 +48,10 @@ def partition_classes(
     classes: Sequence[str], unseen: int, *, seed: int
 ) -> tuple[list[str], list[str]]:
     """Seen and unseen classes, each in the order of ``classes``; they depend only on ``seed``."""
+    if unseen < 2:
+        raise SystemExit(
+            f"--unseen-classes {unseen}: the open_set task needs at least 2 unseen classes."
+        )
     if len(classes) - unseen < 2:
         raise SystemExit(
             f"--unseen-classes {unseen} of {len(classes)} classes leaves "
@@ -63,16 +69,30 @@ def _of_classes(dataset: ImageDataset, classes: Sequence[Hashable]) -> ImageData
 
 def open_set_sample(
     pool: ImageDataset, classes: Sequence[str], *, unseen: int, shots: int, seed: int
-) -> tuple[list[str], ImageDataset, ImageDataset]:
-    """The seen classes, the few-shot training sample, and the unseen classes' support set.
+) -> tuple[list[str], ImageDataset, ImageDataset, ImageDataset]:
+    """The seen classes, the training sample, the support set, and the held-out reference.
 
-    Both samples hold ``shots`` pool images per class: the training sample of every seen class,
-    the support set of every unseen class.
+    Each holds ``shots`` pool images per class: the training sample and the held-out reference
+    of every seen class, disjoint from each other, and the support set of every unseen class.
     """
     seen, held_out = partition_classes(classes, unseen, seed=seed)
-    train = sample_few_shot(_of_classes(pool, seen), shots=shots, seed=seed)
+    seen_pool = _of_classes(pool, seen)
+    train = sample_few_shot(seen_pool, shots=shots, seed=seed)
     support = sample_few_shot(_of_classes(pool, held_out), shots=shots, seed=seed)
-    return seen, train, support
+    trained = {id(sample) for sample in train}  # subset shares the pool's sample objects.
+    rest = seen_pool.subset(i for i, sample in enumerate(seen_pool) if id(sample) not in trained)
+    rng = np.random.default_rng([seed, 2])
+    labels = np.asarray(rest.labels, dtype=object)
+    chosen: list[int] = []
+    for name in seen:
+        members = np.flatnonzero(labels == name)
+        if shots > len(members):
+            raise SystemExit(
+                f"The held-out reference needs {shots} more images of a seen class, which has "
+                f"{len(members)} left in the pool after the training sample."
+            )
+        chosen.extend(rng.choice(members, shots, replace=False).tolist())
+    return seen, train, support, rest.subset(sorted(chosen))
 
 
 def rare_positive_sample(
@@ -173,7 +193,11 @@ def ranking_metrics(is_positive: np.ndarray, scores: np.ndarray) -> dict[str, fl
 
 
 def open_set_evaluation(
-    train: ImageDataset, support: ImageDataset, evaluation: ImageDataset, seen: Sequence[str]
+    train: ImageDataset,
+    support: ImageDataset,
+    heldout: ImageDataset,
+    evaluation: ImageDataset,
+    seen: Sequence[str],
 ) -> Evaluation:
     """The ``open_set`` metrics of a model trained on ``train``."""
     labels = np.asarray(evaluation.labels, dtype=object)
@@ -182,7 +206,6 @@ def open_set_evaluation(
 
     def evaluate(model: EmbedFitModel) -> dict[str, float]:
         embeddings = model.encode(evaluation.images)
-        reference = model.encode(train.images)
         predicted = model.predict(embeddings=embeddings[is_seen])
         metrics = {"seen_accuracy": float(np.mean(predicted == np.asarray(seen_labels)))}
         for prefix, mask, names in (
@@ -194,9 +217,11 @@ def open_set_evaluation(
         metrics["unseen_centroid_accuracy"] = centroid_accuracy(
             model.encode(support.images), support.labels, embeddings[~is_seen], unseen_labels
         )
-        novelty = 1 - max_similarity(embeddings, reference)
-        for name in ("roc_auc", "pr_auc"):
-            metrics[f"novelty_{name}"] = get_metric(name)(~is_seen, novelty, positive_label=True)
+        for prefix, images in (("novelty", train.images), ("novelty_heldout", heldout.images)):
+            novelty = 1 - max_similarity(embeddings, model.encode(images))
+            for name in ("roc_auc", "pr_auc"):
+                metric = get_metric(name)
+                metrics[f"{prefix}_{name}"] = metric(~is_seen, novelty, positive_label=True)
         return metrics
 
     return evaluate
@@ -223,6 +248,33 @@ def rare_positive_evaluation(
     return evaluate
 
 
+def drop_repeated_images(dataset: ImageDataset) -> tuple[ImageDataset, int]:
+    """Keep the first of every set of images with identical pixels; return how many were dropped.
+
+    A repeated image would retrieve its copy at rank 1 and inflate the retrieval metrics.
+    """
+    seen: set[str] = set()
+    kept = []
+    for position, image in enumerate(dataset.images):
+        digest = few_shot.digest(image)
+        if digest not in seen:
+            seen.add(digest)
+            kept.append(position)
+    return dataset.subset(kept), len(dataset) - len(kept)
+
+
+def read_previous(output: Path, config: dict) -> dict | None:
+    """``few_shot.read_previous``, also requiring a known task in every record."""
+    previous = few_shot.read_previous(output, config, measured=MEASURED)
+    try:
+        known = previous is None or all(record["task"] in TASKS for record in previous["records"])
+    except (KeyError, TypeError):
+        known = False
+    if not known:
+        raise SystemExit(f"{output} is not a results file written by this script.")
+    return previous
+
+
 def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
     """The command line, with every check that needs no data; exits on an error."""
     parser = few_shot.training_parser(__doc__.splitlines()[0])
@@ -241,6 +293,11 @@ def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
     )
     args = parser.parse_args(argv)
     few_shot.check_arguments(parser, args)
+    if args.unseen_classes < 2:
+        parser.error(
+            f"--unseen-classes must be at least 2, got {args.unseen_classes}: among a single "
+            "unseen class, retrieval and centroid accuracy are 1 by construction"
+        )
     if len(set(args.tasks)) != len(args.tasks):
         parser.error("--tasks names a task twice")
     for option, value, default, task in (
@@ -263,7 +320,7 @@ def main(argv: list[str] | None = None) -> None:
     # support set depends only on the task, shots, and seed.
     config = few_shot.resume_configuration(args)
     config["learning_rates"] = {method: rates[method] for method in arguments}
-    previous = few_shot.read_previous(args.output, config)
+    previous = read_previous(args.output, config)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     records: list[dict] = previous["records"] if previous else []
     sessions: list[dict] = previous["environment"]["sessions"] if previous else []
@@ -271,8 +328,10 @@ def main(argv: list[str] | None = None) -> None:
     elapsed = sum(entry["elapsed_seconds"] for entry in sessions)
 
     splits, classes, duplicates = few_shot.load_splits(args)
-    pool, evaluation = splits["pool"], splits[args.evaluate_on]
+    pool = splits["pool"]
+    evaluation, repeats = drop_repeated_images(splits[args.evaluate_on])
     config["evaluation_duplicates_dropped"] = duplicates
+    config["evaluation_repeats_dropped"] = repeats
     config["evaluation_size"] = len(evaluation)
     if previous and previous["config"] != config:
         raise SystemExit(f"{args.output} holds results for different evaluation data.")
@@ -282,10 +341,11 @@ def main(argv: list[str] | None = None) -> None:
     ) -> tuple[list[str], str | None, ImageDataset, Evaluation]:
         """The model's labels and positive label, the training set, and the evaluation."""
         if task == "open_set":
-            seen, train, support = open_set_sample(
+            seen, train, support, heldout = open_set_sample(
                 pool, classes, unseen=args.unseen_classes, shots=shots, seed=seed
             )
-            return seen, None, train, open_set_evaluation(train, support, evaluation, seen)
+            evaluate = open_set_evaluation(train, support, heldout, evaluation, seen)
+            return seen, None, train, evaluate
         positive, train = rare_positive_sample(
             pool, classes, shots=shots, negatives=args.negatives, seed=seed
         )
@@ -355,6 +415,7 @@ def main(argv: list[str] | None = None) -> None:
             for method in args.methods:
                 cells = [
                     f"{row['mean']:.3f} ± {row['std']:.3f}"
+                    + (f" ({row['num_undefined']} undefined)" if row["num_undefined"] else "")
                     for row in summary
                     if row["method"] == method and row["metric"] == metric
                 ]
