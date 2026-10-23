@@ -255,9 +255,9 @@ def parse_learning_rates(values: list[str], default: float) -> dict[str, float]:
     return rates
 
 
-def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
-    """The command line, with every check that needs no data; exits on an error."""
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+def training_parser(description: str) -> argparse.ArgumentParser:
+    """The options of every benchmark script: data, methods, training budget, and output."""
+    parser = argparse.ArgumentParser(description=description)
     parser.add_argument(
         "--data-root",
         type=lambda value: Path(value).expanduser().resolve(),
@@ -358,7 +358,11 @@ def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--split-seed", type=int, default=0)
     parser.add_argument("--threads", type=int, default=4)
     parser.add_argument("--output", type=Path, required=True, help="JSON file for the records")
-    args = parser.parse_args(argv)
+    return parser
+
+
+def check_arguments(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    """Every check of the ``training_parser`` options that needs no data; exits on an error."""
     try:  # Before loading any data, so that a typo fails at once.
         parse_learning_rates(args.learning_rate, args.default_learning_rate)
     except ValueError:
@@ -387,6 +391,13 @@ def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
     args.device = str(device)  # One spelling per device, so that resuming compares like with like.
     if args.contrastive_views > 1 and args.augmentation == "none":
         parser.error("--contrastive-views above 1 needs --augmentation: the views would be equal")
+
+
+def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
+    """The command line, with every check that needs no data; exits on an error."""
+    parser = training_parser(__doc__.splitlines()[0])
+    args = parser.parse_args(argv)
+    check_arguments(parser, args)
     return args
 
 
@@ -404,10 +415,8 @@ def resume_configuration(args: argparse.Namespace) -> dict:
     return config
 
 
-def main(argv: list[str] | None = None) -> None:
-    args = parse_arguments(argv)
-    rates = parse_learning_rates(args.learning_rate, args.default_learning_rate)
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
+def prepare_environment(args: argparse.Namespace) -> None:
+    """Point caches and temporary files at ``--data-root`` and apply the process options."""
     # Before any download library is imported: they read these when imported.
     os.environ.setdefault("HF_HOME", str(args.data_root / "huggingface"))
     os.environ.setdefault("TORCH_HOME", str(args.data_root / "torch"))
@@ -420,6 +429,11 @@ def main(argv: list[str] | None = None) -> None:
     if args.image_size is None:
         args.image_size = DEFAULT_IMAGE_SIZE[args.dataset]
 
+
+def training_arguments(
+    args: argparse.Namespace, rates: dict[str, float]
+) -> dict[str, TrainingArguments]:
+    """``TrainingArguments`` of every selected trained method; ``frozen`` needs none."""
     budget = {
         "num_epochs": args.epochs,
         "batch_size": args.batch_size,
@@ -450,6 +464,55 @@ def main(argv: list[str] | None = None) -> None:
             negatives_per_example=args.pairs_per_example,
             **budget,
         )
+    return arguments
+
+
+def load_splits(args: argparse.Namespace) -> tuple[dict[str, ImageDataset], list[str], int]:
+    """The pool and the evaluated split, the class names, and the duplicates dropped."""
+    loaded, labels = LOADERS[args.dataset](
+        args.data_root,
+        pool=args.pool_per_class,
+        evaluation=args.eval_per_class,
+        evaluate_on=args.evaluate_on,
+        seed=args.split_seed,
+    )
+    duplicates = drop_pool_duplicates(loaded, args.evaluate_on)
+    splits = {
+        name: ImageDataset.from_lists([image for image, _ in items], [label for _, label in items])
+        for name, items in loaded.items()
+    }
+    return splits, labels, duplicates
+
+
+def new_session(args: argparse.Namespace) -> dict:
+    """The environment of this session; ``elapsed_seconds`` grows as groups finish."""
+    return {
+        "embedfit": embedfit.__version__,
+        "torch": torch.__version__,
+        "device": args.device,
+        "cudnn": torch.backends.cudnn.enabled,
+        "threads": args.threads,
+        "processor": platform.processor() or platform.machine(),
+        "elapsed_seconds": 0.0,
+    }
+
+
+def write_results(output: Path, payload: dict) -> None:
+    """Write ``payload`` as JSON so that a crash mid-write never corrupts ``output``."""
+    staging = output.with_name(output.name + ".partial")
+    with staging.open("w") as handle:
+        handle.write(json.dumps(payload, indent=1))
+        handle.flush()
+        os.fsync(handle.fileno())
+    staging.replace(output)
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = parse_arguments(argv)
+    rates = parse_learning_rates(args.learning_rate, args.default_learning_rate)
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
+    prepare_environment(args)
+    arguments = training_arguments(args, rates)
 
     # Results are written after every (shots, seed) group, and a rerun with the same output
     # file and configuration skips the groups already there. Each group's few-shot sample
@@ -465,18 +528,7 @@ def main(argv: list[str] | None = None) -> None:
     done = {(r["shots"], r["seed"]) for r in records}
     elapsed = sum(entry["elapsed_seconds"] for entry in sessions)
 
-    loaded, labels = LOADERS[args.dataset](
-        args.data_root,
-        pool=args.pool_per_class,
-        evaluation=args.eval_per_class,
-        evaluate_on=args.evaluate_on,
-        seed=args.split_seed,
-    )
-    duplicates = drop_pool_duplicates(loaded, args.evaluate_on)
-    splits = {
-        name: ImageDataset.from_lists([image for image, _ in items], [label for _, label in items])
-        for name, items in loaded.items()
-    }
+    splits, labels, duplicates = load_splits(args)
     config["evaluation_duplicates_dropped"] = duplicates
     config["evaluation_size"] = len(splits[args.evaluate_on])
     if previous and previous["config"] != config:
@@ -495,15 +547,7 @@ def main(argv: list[str] | None = None) -> None:
         options = arguments.get(method, TrainingArguments(training_mode="frozen"))
         Trainer(model_factory(), replace(options, seed=args.seeds[0]), smallest)
 
-    session = {
-        "embedfit": embedfit.__version__,
-        "torch": torch.__version__,
-        "device": args.device,
-        "cudnn": torch.backends.cudnn.enabled,
-        "threads": args.threads,
-        "processor": platform.processor() or platform.machine(),
-        "elapsed_seconds": 0.0,
-    }
+    session = new_session(args)
     sessions.append(session)
     for shots in args.shots:
         for seed in args.seeds:
@@ -523,12 +567,7 @@ def main(argv: list[str] | None = None) -> None:
             elapsed = sum(entry["elapsed_seconds"] for entry in sessions)
             environment = {**session, "elapsed_seconds": elapsed, "sessions": sessions}
             payload = {"config": config, "environment": environment, "records": records}
-            staging = args.output.with_name(args.output.name + ".partial")
-            with staging.open("w") as handle:  # A crash mid-write never corrupts the results.
-                handle.write(json.dumps(payload, indent=1))
-                handle.flush()
-                os.fsync(handle.fileno())
-            staging.replace(args.output)
+            write_results(args.output, payload)
 
     evaluator = FewShotEvaluator(shots=args.shots, seeds=args.seeds)
     summary = evaluator.aggregate(records)

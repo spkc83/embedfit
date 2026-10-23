@@ -51,6 +51,28 @@ summary = evaluator.aggregate(records)
 
 The number of training runs is `len(methods) × len(shots) × len(seeds)`, and each run builds a new model with `model_factory`. For a pretrained backbone that means reloading its weights every run, which is deliberate: a shared model would carry trained weights from one run into the next, and the evaluator rejects a factory that returns the same model or backbone twice.
 
+## Embedding quality
+
+Accuracy scores the head on the classes it was trained on. `benchmarks/embedding_quality.py` scores the embeddings themselves, on two tasks where a head alone cannot answer: retrieving and recognising classes that were never trained on, and ranking a rare positive class. It takes the same data, training, resume, and device options as `benchmarks/few_shot.py`, trains every method through `Trainer` exactly as `FewShotEvaluator` does, and adds `--tasks` (default `open_set rare_positive`), `--unseen-classes` (default 3), and `--negatives` (default 200). The records are those of `FewShotEvaluator` with a `task` key, and the script prints the mean and sample standard deviation over seeds per task, metric, method, and shot count.
+
+For a given task, shot count, and seed, every method gets the same training set, the same unseen classes or positive class, and the same support set. The unseen classes, the positive class, and the negatives depend only on the seed, so they are the same at every shot count. Embeddings are those `model.encode` returns; similarities are cosine similarities.
+
+**`open_set`.** Per seed, `--unseen-classes` classes are drawn at random and held out; at least two classes must stay seen. Every method trains on `shots` pool images of each seen class (`sample_few_shot`), with the seen classes as the model's labels. The whole evaluated split, seen and unseen classes, is then encoded.
+
+- `seen_accuracy`: the head's accuracy on the seen-class evaluation images.
+- `seen_map`, `seen_precision_at_1`: leave-one-out retrieval among the seen-class evaluation images. Each image queries all the other seen-class evaluation images through a cosine `RetrievalIndex`; the relevant results are the images of its class. `seen_map` is `mean_average_precision` over the full ranking and `seen_precision_at_1` the mean of `retrieval_precision_at_k` at `k=1`. An image that is the only one of its class is not a query; with no query left, both are NaN.
+- `unseen_map`, `unseen_precision_at_1`: the same among the unseen-class evaluation images only. This measures whether the geometry learned on the seen classes also groups classes it never saw.
+- `unseen_centroid_accuracy`: `shots` pool images of each unseen class (the support set, drawn with `sample_few_shot`) are encoded with the trained model, and each unseen-class evaluation image is assigned to the class whose centroid (the mean of the class's unit-length support embeddings) is the most cosine-similar.
+- `novelty_roc_auc`, `novelty_pr_auc`: every evaluation image gets the novelty score `1 − max cosine similarity to the training images' embeddings`; the unseen-class images are the positives. PR-AUC is average precision, so its chance level is the share of unseen-class images.
+
+**`rare_positive`.** Per seed, one class is drawn as the positive class. The training set holds `shots` positives (`sample_few_shot` of that class) and `--negatives` negatives drawn without replacement from the pool's other classes, as evenly as possible: the counts per class differ by at most one. The labels are `positive` and `negative`, with `positive` as the model's positive label. Evaluation ranks the whole evaluated split: the positive class's images against all others.
+
+- `roc_auc`, `pr_auc`, `recall_at_fpr_0.01`, `recall_at_fpr_0.05`: from the head's predicted probability of `positive`, with the registry's `roc_auc` and `pr_auc` and `embedfit.evaluation.recall_at_fpr` (recall at the most permissive observed threshold whose false-positive rate is at most 1 % or 5 %).
+- `knn_roc_auc`, `knn_pr_auc`, `knn_recall_at_fpr_0.01`, `knn_recall_at_fpr_0.05`: the same four metrics for a score that uses no head, the maximum cosine similarity to the training positives' embeddings ("similar to a known case").
+- `prevalence`: the share of positive images in the evaluated split, the chance level of both PR-AUCs.
+
+`supcon` draws class-balanced batches, so with two classes every batch holds half positives: up to half the batch size, and all of them when there are fewer, so the few positives recur in every batch while the negatives rotate. Its sampler needs at least two images per class, so `supcon` at one shot fails with a `ConfigurationError` before any training. `pair` trains at one shot: the single positive has no positive partner, but the negatives do, and every anchor still gets negative partners.
+
 ## A runnable version
 
 [`examples/06_few_shot_benchmark.py`](../../examples/06_few_shot_benchmark.py) runs this comparison on synthetic images in a few seconds. [EuroSAT with DINOv2-small](../benchmarks/eurosat-dinov2-small.md) is a run on real images, including the learning-rate selection on a validation split.

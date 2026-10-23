@@ -10,6 +10,7 @@ All notable changes to EmbedFit are recorded here, following [Keep a Changelog](
 - `TrainingArguments.projection_dim`: `supcon` computes its loss on a projection head `Linear(D, D) → ReLU → Linear(D, projection_dim)` that is trained with the backbone and discarded afterwards; the head and retrieval keep using the backbone embedding (ADR 0018).
 - `TrainingArguments.contrastive_views`: `supcon` augments every drawn image this many times, each view with its own seed, and passes the views to `SupConLoss` as `[B, V, D]`; needs an augmentation (ADR 0018).
 - `benchmarks/few_shot.py --max-steps`, `--projection-dim`, and `--contrastive-views`.
+- `benchmarks/embedding_quality.py`: an embedding-quality benchmark with the data and training options of `benchmarks/few_shot.py`. The `open_set` task holds classes out of training and measures retrieval, nearest-centroid accuracy, and novelty detection on them; the `rare_positive` task trains on a few positives among many negatives and ranks the evaluated split by the head's probability and by similarity to the known positives (`docs/guides/benchmarking.md`).
 - `benchmarks/few_shot.py --temperature` (`supcon`), `--device` (default `cpu`; part of the resume configuration), and `--disable-cudnn`, which runs CUDA convolutions without cuDNN for GPUs the installed cuDNN does not support.
 
 ## [0.1.0] - 2026-10-18
