@@ -7,7 +7,7 @@
 3. At which label counts does representation adaptation help?
 4. Which backbone family transfers best to check/document imagery?
 5. Does hard-negative mining improve separation?
-6. Does retrieval identify recurring risk patterns beyond classification?
+6. Does retrieval identify recurring risk patterns beyond classification? `benchmarks/embedding_quality.py` measures retrieval and novelty detection on held-out classes and similarity ranking of rare positives ([benchmarking guide](../guides/benchmarking.md#embedding-quality)).
 7. How much performance drops on out-of-time data?
 
 ## Backbone matrix

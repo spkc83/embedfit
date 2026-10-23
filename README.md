@@ -184,7 +184,7 @@ The `triplet` training mode is deferred to v0.2; `Trainer` rejects an unavailabl
 
 - [`examples/`](examples/README.md): six runnable scripts on synthetic images, from the frozen baseline to a rare-event risk workflow and a few-shot benchmark.
 - [Avoiding data leakage](docs/guides/leakage.md): choosing splits and checking them.
-- [Benchmarking few-shot methods](docs/guides/benchmarking.md): what makes a comparison fair.
+- [Benchmarking few-shot methods](docs/guides/benchmarking.md): what makes a comparison fair, and how `benchmarks/embedding_quality.py` scores the embeddings on unseen classes and rare positives.
 - [Rare-event risk workflows](docs/guides/rare-event-risk.md): splits, positive class, metrics, thresholds, and retrieval for rare, costly classes.
 - [EuroSAT with DINOv2-small](docs/benchmarks/eurosat-dinov2-small.md): a few-shot benchmark on real images, with the script to reproduce it in [`benchmarks/`](benchmarks/few_shot.py).
 - [EuroSAT with ResNet-50](docs/benchmarks/eurosat-resnet50.md): the same protocol with a batch-norm convolutional backbone.

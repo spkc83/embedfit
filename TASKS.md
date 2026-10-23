@@ -155,4 +155,5 @@ Legend:
 - [x] EuroSAT few-shot benchmark with DINOv2-small (`benchmarks/few_shot.py`, `docs/benchmarks/eurosat-dinov2-small.md`)
 - [x] EuroSAT few-shot benchmark with ResNet-50 (`docs/benchmarks/eurosat-resnet50.md`)
 - [x] RVL-CDIP document-image benchmark with DINOv2-small (`docs/benchmarks/rvl-cdip-dinov2-small.md`)
+- [x] embedding-quality benchmark script, open-set and rare-positive tasks (`benchmarks/embedding_quality.py`)
 - [ ] further real-image benchmarks (`docs/research/EXPERIMENT_MATRIX.md`)
