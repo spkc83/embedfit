@@ -2,13 +2,24 @@
 
 import importlib.util
 import json
+import math
 from pathlib import Path
 
+import numpy as np
 import pytest
 import torch
 from torch import nn
 
-from embedfit import EmbedFitModel, FewShotEvaluator, ImageDataset
+from embedfit import (
+    EmbedFitModel,
+    FewShotEvaluator,
+    ImageDataset,
+    Trainer,
+    TrainingArguments,
+)
+from embedfit.exceptions import ConfigurationError
+from embedfit.heads import LinearHead
+from embedfit.representation import _linear_probe
 from embedfit.testing import BAR_CLASSES, make_bar_images
 
 SCRIPT = Path(__file__).resolve().parents[2] / "benchmarks" / "few_shot.py"
@@ -304,13 +315,63 @@ def test_interpolation_at_zero_is_the_frozen_baseline(run, capsys):
     assert "supcon α=0" in printed and "pair α=0.5" in printed
 
 
-def test_an_interpolated_score_does_not_depend_on_the_other_weights(run):
-    # end_to_end's linear head is warm-started, so it must start from the trained head every time.
-    alone = run("--methods", "end_to_end", "--interpolate", "0.5", output="alone.json")
-    together = run("--methods", "end_to_end", "--interpolate", "0", "0.5", output="both.json")
-    assert values(alone["records"], "end_to_end", 0.5) == values(
-        together["records"], "end_to_end", 0.5
-    )
-    assert values(alone["records"], "end_to_end", None) == values(
-        together["records"], "end_to_end", None
-    )
+def end_to_end_trainer():
+    train = ImageDataset.from_lists(*bars(3, seed=1))
+    model = EmbedFitModel.from_pretrained("dummy/tiny", labels=CLASSES, image_size=16)
+    budget = {"batch_size": 8, "num_workers": 0, "max_steps": 2, "learning_rate": 1e-2}
+    return Trainer(model, TrainingArguments(training_mode="end_to_end", **budget), train)
+
+
+def probabilities(few_shot, alphas):
+    trainer = end_to_end_trainer()
+    images = bars(2, seed=30)[0]
+    return {
+        alpha: trainer.model.predict_proba(images)
+        for alpha in few_shot.trained_weights(trainer, alphas)
+    }
+
+
+def test_an_interpolated_head_does_not_depend_on_the_other_weights(few_shot):
+    alone, together = probabilities(few_shot, [0.5]), probabilities(few_shot, [0.0, 0.5])
+    assert np.array_equal(alone[None], together[None])
+    assert np.array_equal(alone[0.5], together[0.5])
+    assert not np.array_equal(together[0.0], together[0.5])
+
+
+def test_end_to_end_at_zero_is_its_linear_probe(few_shot):
+    trainer = end_to_end_trainer()
+    weights = few_shot.trained_weights(trainer, [0.0])
+    assert next(weights) is None
+    trained = trainer.model.head.to_module()
+    assert next(weights) == 0.0
+    head = trainer.model.head
+    assert isinstance(head, LinearHead)
+    fresh = end_to_end_trainer()
+    probe = _linear_probe(fresh.model, fresh.train_dataset, fresh.args)
+    assert torch.equal(head.to_module().weight, probe.weight)
+    assert torch.equal(head.to_module().bias, probe.bias)
+    assert not torch.equal(trained.weight, probe.weight)
+
+
+def test_frozen_is_never_interpolated(few_shot):
+    train = ImageDataset.from_lists(*bars(3, seed=1))
+    model = EmbedFitModel.from_pretrained("dummy/tiny", labels=CLASSES, image_size=16)
+    trainer = Trainer(model, TrainingArguments(training_mode="frozen"), train)
+    assert list(few_shot.trained_weights(trainer, [0.0, 0.5])) == [None]
+
+
+def test_distinct_weights_have_distinct_summary_rows(few_shot):
+    args = few_shot.parse_arguments([*REQUIRED, "--interpolate", "1e-7", "1.000001e-7", "-0"])
+    assert args.interpolate == [0.0, 1e-7, 1.000001e-7]
+    assert math.copysign(1, args.interpolate[0]) == 1
+    rows = few_shot.row_names(["frozen", "supcon"], args.interpolate)
+    assert rows == ["frozen", "supcon", "supcon α=0.0", "supcon α=1e-07", "supcon α=1.000001e-07"]
+
+
+def test_interpolation_needs_states_of_the_backbone(few_shot):
+    module = nn.Linear(2, 2)
+    state = few_shot.backbone_state(module, "cpu")
+    partial = {"weight": state["weight"]}
+    for initial, trained in ((partial, state), (state, partial), (state, {**state, "x": 1})):
+        with pytest.raises(ConfigurationError, match="exactly the backbone's parameters"):
+            few_shot.interpolate_backbone(module, initial, trained, 0.5)

@@ -25,7 +25,6 @@ import math
 import time
 from collections.abc import Callable, Hashable, Sequence
 from dataclasses import replace
-from itertools import chain
 from pathlib import Path
 
 import few_shot
@@ -386,16 +385,7 @@ def main(argv: list[str] | None = None) -> None:
                 for method in args.methods:
                     model = model_factory(labels, positive_label)
                     trainer = Trainer(model, options(method, seed), train)
-                    initial = None
-                    if method in arguments and args.interpolate:  # Kept off the device.
-                        initial = few_shot.backbone_state(model.backbone, "cpu")
-                    trainer.train()
-                    weights = (
-                        few_shot.interpolations(trainer, initial, args.interpolate)
-                        if initial is not None
-                        else ()
-                    )
-                    for alpha in chain([None], weights):  # Scored before the next weight.
+                    for alpha in few_shot.trained_weights(trainer, args.interpolate):
                         for metric, value in evaluate(model).items():
                             records.append(
                                 {

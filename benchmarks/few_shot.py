@@ -58,6 +58,7 @@ import embedfit
 from embedfit import EmbedFitModel, FewShotEvaluator, ImageDataset, Trainer, TrainingArguments
 from embedfit.augmentation import available_augmentations
 from embedfit.exceptions import ConfigurationError
+from embedfit.heads import LinearHead
 from embedfit.sampling import sample_few_shot
 from embedfit.utils.device import resolve_device
 
@@ -267,7 +268,7 @@ def interpolation_weight(value: str) -> float:
         number = math.nan
     if not 0 <= number < 1:
         raise argparse.ArgumentTypeError(f"expected a number in [0, 1), got {value!r}")
-    return number
+    return number + 0.0  # -0 becomes 0, so that it has one summary row.
 
 
 def backbone_state(backbone: nn.Module, device: torch.device | str) -> dict[str, torch.Tensor]:
@@ -289,9 +290,19 @@ def interpolate_backbone(
     Floating-point parameters and buffers are interpolated on the backbone's device; every
     other tensor (e.g. a batch-norm batch count) is copied from ``trained``. ``alpha`` 0 gives
     ``initial`` exactly.
+
+    Raises:
+        ConfigurationError: If ``initial`` or ``trained`` does not name exactly the backbone's
+            parameters and buffers.
     """
+    tensors = dict(chain(backbone.named_parameters(), backbone.named_buffers()))
+    if not set(initial) == set(trained) == set(tensors):
+        raise ConfigurationError(
+            "The initial and trained states must hold exactly the backbone's parameters and "
+            "buffers."
+        )
     with torch.no_grad():
-        for name, tensor in chain(backbone.named_parameters(), backbone.named_buffers()):
+        for name, tensor in tensors.items():
             if tensor.is_floating_point():
                 start = initial[name].to(tensor.device)  # One tensor at a time on the device.
                 tensor.copy_(torch.lerp(start, trained[name], alpha))
@@ -299,22 +310,32 @@ def interpolate_backbone(
                 tensor.copy_(trained[name])
 
 
-def interpolations(
-    trainer: Trainer, initial: dict[str, torch.Tensor], alphas: Sequence[float]
-) -> Iterator[float]:
-    """Set the trained model to each weight in ``alphas`` in turn, and yield the weight.
+def trained_weights(trainer: Trainer, alphas: Sequence[float]) -> Iterator[float | None]:
+    """Train, yield ``None``, then set the model to each weight in ``alphas`` and yield it.
 
-    ``initial`` is the backbone state from before training (``backbone_state``). At every
-    weight the backbone is interpolated and the head refitted on the training set as
-    ``Trainer.train`` does (ADR 0011), starting from the trained model's head, so a weight's
-    result does not depend on the others. The model is left at the last weight.
+    Score the model at every yield; the next one changes it. ``frozen`` yields ``None`` only.
+    At every weight the backbone is ``(1 - alpha) * initial + alpha * trained`` and a new head
+    is fitted on the training set, so a weight's result does not depend on the others:
+    ``end_to_end`` gets a ``LinearHead`` seeded and configured as its linear probe (ADR 0012),
+    so that at ``alpha`` 0 it is that probe; every other mode gets a copy of its head as it was
+    before training, refitted. The initial state is kept on the CPU and the trained one on the
+    model's device.
     """
     model = trainer.model
+    interpolate = bool(alphas) and trainer.args.training_mode != "frozen"
+    initial = backbone_state(model.backbone, "cpu") if interpolate else {}
+    untrained_head = copy.deepcopy(model.head)
+    trainer.train()
+    yield None
+    if not interpolate:
+        return
     trained = backbone_state(model.backbone, model.device)  # The one extra state on the device.
-    head = copy.deepcopy(model.head)
     for alpha in alphas:
         interpolate_backbone(model.backbone, initial, trained, alpha)
-        model.head = copy.deepcopy(head)
+        if trainer.args.training_mode == "end_to_end":
+            model.head = LinearHead(seed=trainer.args.seed)
+        else:
+            model.head = copy.deepcopy(untrained_head)
         model.fit_head(
             trainer.train_dataset.images,
             trainer.train_dataset.labels,
@@ -324,8 +345,11 @@ def interpolations(
 
 
 def row_name(method: str, alpha: float | None) -> str:
-    """The summary row of a method's records at an interpolation weight (``None``: as trained)."""
-    return method if alpha is None else f"{method} α={alpha:g}"
+    """The summary row of a method's records at an interpolation weight (``None``: as trained).
+
+    ``repr`` gives distinct weights distinct names.
+    """
+    return method if alpha is None else f"{method} α={alpha!r}"
 
 
 def row_names(methods: Sequence[str], alphas: Sequence[float]) -> list[str]:
@@ -668,17 +692,7 @@ def main(argv: list[str] | None = None) -> None:
                 model = model_factory()
                 options = arguments.get(method, TrainingArguments(training_mode=method))
                 trainer = Trainer(model, replace(options, seed=seed), sample)
-                initial = None
-                if method in arguments and args.interpolate:  # Kept off the device.
-                    initial = backbone_state(model.backbone, "cpu")
-                trainer.train()
-                # Each weight is scored before the generator moves the model to the next one.
-                weights = (
-                    interpolations(trainer, initial, args.interpolate)
-                    if initial is not None
-                    else ()
-                )
-                for alpha in chain([None], weights):
+                for alpha in trained_weights(trainer, args.interpolate):
                     records += [
                         {
                             "method": method,
