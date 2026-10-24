@@ -357,8 +357,9 @@ def test_a_tiny_run_of_both_tasks_writes_tidy_records(run, capsys):
         *("--default-learning-rate", "1e-2"),
     )
     records = results["records"]
-    keys = {"task", "method", "backbone", "shots", "seed", "metric", "value"}
+    keys = {"task", "method", "alpha", "backbone", "shots", "seed", "metric", "value"}
     assert all(set(record) == keys for record in records)
+    assert {r["alpha"] for r in records} == {None}
     for task, metrics in (("open_set", OPEN_SET_METRICS), ("rare_positive", RARE_POSITIVE_METRICS)):
         found = {(r["method"], r["metric"]) for r in records if r["task"] == task}
         assert found == {(method, metric) for method in METHODS for metric in metrics}
@@ -470,3 +471,31 @@ def test_the_summary_counts_undefined_runs(run, quality, monkeypatch, capsys):
     assert len(lines) == 2 and all("(1 undefined)" in line for line in lines)
     accuracy = [line for line in printed if "accuracy" in line]
     assert accuracy and all("undefined" not in line for line in accuracy)
+
+
+def test_interpolation_at_zero_is_the_frozen_baseline(run, capsys):
+    results = run(
+        *("--methods", "frozen", "supcon", "--interpolate", "0", "0.5", "--max-steps", "2"),
+        *("--negatives", "6", "--unseen-classes", "2", "--batch-size", "8"),
+        *("--default-learning-rate", "1e-2"),
+    )
+
+    def scores(method, alpha):
+        return {
+            (r["task"], r["metric"]): r["value"]
+            for r in results["records"]
+            if (r["method"], r["alpha"]) == (method, alpha)
+        }
+
+    frozen = scores("frozen", None)
+    assert len(frozen) == len(OPEN_SET_METRICS) + len(RARE_POSITIVE_METRICS)
+    interpolated = scores("supcon", 0.0)
+    assert interpolated.keys() == frozen.keys()
+    for key, value in frozen.items():
+        assert value == interpolated[key] or (math.isnan(value) and math.isnan(interpolated[key]))
+    assert scores("supcon", 0.5).keys() == frozen.keys()
+    trained = scores("supcon", None)
+    assert any(trained[key] != value for key, value in frozen.items() if not math.isnan(value))
+    assert results["config"]["interpolate"] == [0.0, 0.5]
+    printed = capsys.readouterr().out
+    assert "supcon α=0.5" in printed
