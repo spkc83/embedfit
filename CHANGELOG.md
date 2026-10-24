@@ -19,6 +19,10 @@ All notable changes to EmbedFit are recorded here, following [Keep a Changelog](
 
 - `benchmarks/embedding_quality.py`: the `open_set` error for too few classes states how many classes the task needs.
 
+### Fixed
+
+- `benchmarks/few_shot.py` and `benchmarks/embedding_quality.py` switch NNPACK off where it cannot run, so that convolutions on the CPU, or on CUDA with `--disable-cudnn`, no longer log "Could not initialize NNPACK" on every call. Results do not change: NNPACK is never used there.
+
 ## [0.1.0] - 2026-10-18
 
 The first release.
