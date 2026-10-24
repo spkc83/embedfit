@@ -2,7 +2,7 @@
 
 Compares training modes as ``FewShotEvaluator`` does, and with ``--interpolate`` also scores
 every trained backbone with its weights interpolated toward the pretrained ones (WiSE-FT;
-``docs/guides/benchmarking.md``). Two datasets are supported, both downloaded
+``docs/guides/benchmarking.md``). Six datasets are supported, all downloaded
 on first use. Everything the run downloads or derives (datasets, pretrained weights, the page
 cache) goes under ``--data-root``, by default the git-ignored ``.cache/`` folder of the
 repository; the ``datasets`` library, Hugging Face Hub, and torch hub caches and the temporary
@@ -21,6 +21,19 @@ Nothing from the data is committed:
   converted to grayscale, shrunk to a shorter side of 512 px (still larger than the model
   input) and written once as PNG files under ``--data-root``; the run reads them from disk, so
   memory holds only the model and the current batch.
+- ``dtd``: Describable Textures (47 classes), via torchvision. Official partition 1: the pool is
+  its training split, and validation and test are its own (40 images per class each).
+- ``pets``: Oxford-IIIT Pets (37 breeds), via torchvision. Its trainval split is the pool, less
+  20 images per class carved off with ``--split-seed`` as the validation split; test is its own.
+- ``flowers``: Oxford Flowers-102, via torchvision. Its train and val splits (10 images per
+  class each) together are the pool, so that 16 shots fit; 10 images per class carved off its
+  test split with ``--split-seed`` are the validation split, and the rest of it is the test split.
+- ``pcam``: PatchCamelyon (2 classes, 96x96 histopathology patches), the Hugging Face dataset
+  ``1aurent/PatchCamelyon`` at a pinned revision (``pip install -e ".[datasets]"``). The pool
+  comes from the first of its 13 training shards; validation and test are its own splits.
+
+For the last four, ``--pool-per-class`` and ``--eval-per-class`` are caps: a class with fewer
+images in the split contributes all of them. ``eurosat`` and ``rvl-cdip`` exit instead.
 
 Few-shot samples come from the pool. Tune with ``--evaluate-on validation`` and report with
 ``--evaluate-on test``. Only the pool and the evaluated split are loaded. An evaluation image
@@ -48,6 +61,7 @@ from collections.abc import Callable, Collection, Iterator, Sequence
 from dataclasses import replace
 from itertools import chain
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import torch
@@ -70,7 +84,40 @@ RVL_CDIP_DATASET = "jinhybr/rvl_cdip_400_train_val_test"
 RVL_CDIP_REVISION = (
     "13462a42e3375e80a9bd46a64c58e1bcaba77874"  # Pinned: the page cache is keyed on it.
 )
-DEFAULT_IMAGE_SIZE = {"eurosat": 112, "rvl-cdip": 224}
+DTD_PARTITION = 1  # Of DTD's ten official train/val/test partitions.
+CARVED_VALIDATION = {"pets": 20, "flowers": 10}  # Validation images carved off per class.
+FLOWERS_CLASSES = 102
+PCAM_DATASET = "1aurent/PatchCamelyon"
+PCAM_REVISION = "e4bd149e7a868a9d811fdd9f9a9fb78c05c104ab"
+PCAM_FILES = {  # The pool comes from the first of the 13 training shards (about 20,000 images).
+    "pool": ["data/train-00000-of-00013-4717c3cf92578c96.parquet"],
+    "validation": [
+        "data/valid-00000-of-00002-0e1a29e0620125c6.parquet",
+        "data/valid-00001-of-00002-aad8011eb887c9d9.parquet",
+    ],
+    "test": [
+        "data/test-00000-of-00002-bb04e6313f58efa0.parquet",
+        "data/test-00001-of-00002-3bfa172e8818685a.parquet",
+    ],
+}
+PCAM_CLASSES = ["normal", "metastasis"]  # The dataset's labels False and True.
+CLASS_COUNTS = {
+    "eurosat": 10,
+    "rvl-cdip": 16,
+    "dtd": 47,
+    "pets": 37,
+    "flowers": FLOWERS_CLASSES,
+    "pcam": len(PCAM_CLASSES),
+}
+DATASET_REVISIONS = {"rvl-cdip": RVL_CDIP_REVISION, "pcam": PCAM_REVISION}
+DEFAULT_IMAGE_SIZE = {
+    "eurosat": 112,
+    "rvl-cdip": 224,
+    "dtd": 224,
+    "pets": 224,
+    "flowers": 224,
+    "pcam": 112,
+}
 DEFAULT_DATA_ROOT = Path(__file__).resolve().parents[1] / ".cache"  # Git-ignored.
 
 Split = list[tuple[Image.Image | Path, str]]
@@ -187,9 +234,166 @@ def _shrink(image: Image.Image) -> Image.Image:
     return image
 
 
+Source = tuple[np.ndarray, Callable[[int], Image.Image | Path]]  # Labels; the item at a position.
+
+
+def _up_to_per_class(labels: np.ndarray, count: int, rng: np.random.Generator) -> list[int]:
+    """Up to ``count`` random positions of every class, in class order; fewer if it has fewer."""
+    return [
+        position
+        for label in np.unique(labels)
+        for position in rng.permutation(np.flatnonzero(labels == label))[:count].tolist()
+    ]
+
+
+def _draw(
+    sources: dict[str, Source],
+    classes: list[str],
+    *,
+    pool: int,
+    evaluation: int,
+    evaluate_on: str,
+    seed: int,
+) -> dict[str, Split]:
+    """The pool and the evaluated split, each up to its count per class from its source."""
+    counts = {"pool": pool, "validation": evaluation, "test": evaluation}
+    splits = {}
+    for name in ("pool", evaluate_on):
+        labels, item = sources[name]
+        rng = np.random.default_rng([seed, list(counts).index(name)])  # Same whichever is loaded.
+        chosen = _up_to_per_class(labels, counts[name], rng)
+        splits[name] = [(item(position), classes[int(labels[position])]) for position in chosen]
+    return splits
+
+
+def _listing(source: Any) -> tuple[np.ndarray, list[Path]]:
+    """The labels and image files of a torchvision dataset, without decoding any image."""
+    # torchvision has no public list of a split's files; DTD and Flowers102 name it _image_files,
+    # OxfordIIITPet _images.
+    files = getattr(source, "_image_files", None) or source._images
+    return np.asarray(source._labels), list(files)
+
+
+def _files(labels: np.ndarray, files: list[Path], keep: np.ndarray) -> Source:
+    positions = np.flatnonzero(keep)
+    return labels[positions], [files[position] for position in positions].__getitem__
+
+
+def _carve(labels: np.ndarray, count: int, seed: int) -> np.ndarray:
+    """A mask of ``count`` random positions of every class, the validation carved off a split."""
+    rng = np.random.default_rng([seed, 3])
+    carved = np.zeros(len(labels), dtype=bool)
+    for label in np.unique(labels):
+        members = np.flatnonzero(labels == label)
+        if count >= len(members):
+            raise SystemExit(f"Class {label} has {len(members)} images, too few to carve {count}.")
+        carved[rng.choice(members, count, replace=False)] = True
+    return carved
+
+
+def dtd_splits(
+    root: Path, *, pool: int, evaluation: int, evaluate_on: str, seed: int
+) -> tuple[dict[str, Split], list[str]]:
+    from torchvision.datasets import DTD
+
+    sources: dict[str, Source] = {}
+    for name, split in (("pool", "train"), ("validation", "val"), ("test", "test")):
+        source = DTD(str(root), split=split, partition=DTD_PARTITION, download=True)
+        labels, files = _listing(source)
+        sources[name] = labels, files.__getitem__
+    classes = list(source.classes)
+    return _draw(
+        sources, classes, pool=pool, evaluation=evaluation, evaluate_on=evaluate_on, seed=seed
+    ), classes
+
+
+def pets_splits(
+    root: Path, *, pool: int, evaluation: int, evaluate_on: str, seed: int
+) -> tuple[dict[str, Split], list[str]]:
+    from torchvision.datasets import OxfordIIITPet
+
+    trainval = OxfordIIITPet(str(root), split="trainval", download=True)
+    labels, files = _listing(trainval)
+    carved = _carve(labels, CARVED_VALIDATION["pets"], seed)
+    test_labels, test_files = _listing(OxfordIIITPet(str(root), split="test", download=True))
+    sources = {
+        "pool": _files(labels, files, ~carved),
+        "validation": _files(labels, files, carved),
+        "test": (test_labels, test_files.__getitem__),
+    }
+    classes = list(trainval.classes)
+    return _draw(
+        sources, classes, pool=pool, evaluation=evaluation, evaluate_on=evaluate_on, seed=seed
+    ), classes
+
+
+def flowers_splits(
+    root: Path, *, pool: int, evaluation: int, evaluate_on: str, seed: int
+) -> tuple[dict[str, Split], list[str]]:
+    from torchvision.datasets import Flowers102
+
+    train, val, test = (
+        _listing(Flowers102(str(root), split=split, download=True))
+        for split in ("train", "val", "test")
+    )
+    labels, files = np.concatenate([train[0], val[0]]), train[1] + val[1]  # The pool.
+    test_labels, test_files = test
+    carved = _carve(test_labels, CARVED_VALIDATION["flowers"], seed)
+    sources = {
+        "pool": (labels, files.__getitem__),
+        "validation": _files(test_labels, test_files, carved),
+        "test": _files(test_labels, test_files, ~carved),
+    }
+    classes = [f"flower_{label + 1:03d}" for label in range(FLOWERS_CLASSES)]  # No names given.
+    return _draw(
+        sources, classes, pool=pool, evaluation=evaluation, evaluate_on=evaluate_on, seed=seed
+    ), classes
+
+
+def pcam_splits(
+    root: Path, *, pool: int, evaluation: int, evaluate_on: str, seed: int
+) -> tuple[dict[str, Split], list[str]]:
+    try:
+        from datasets import load_dataset
+    except ImportError:
+        raise SystemExit('pcam needs the datasets extra: pip install -e ".[datasets]"') from None
+
+    from huggingface_hub import hf_hub_download
+
+    # The parquet files of the pinned revision, fetched into the Hub cache (which a later run
+    # reads with HF_HUB_OFFLINE=1) and read directly: only these download, and the dataset
+    # card's split list, which names all three splits, is not checked against them.
+    wanted = {
+        name: [
+            hf_hub_download(PCAM_DATASET, path, repo_type="dataset", revision=PCAM_REVISION)
+            for path in PCAM_FILES[name]
+        ]
+        for name in ("pool", evaluate_on)
+    }
+    source = load_dataset("parquet", data_files=wanted, cache_dir=str(root / "pcam"))
+
+    def rows(name: str) -> Source:
+        data = source[name]
+        return np.asarray(data["label"], dtype=int), lambda i: data[i]["image"].convert("RGB")
+
+    sources = {name: rows(name) for name in wanted}
+    return _draw(
+        sources,
+        PCAM_CLASSES,
+        pool=pool,
+        evaluation=evaluation,
+        evaluate_on=evaluate_on,
+        seed=seed,
+    ), list(PCAM_CLASSES)
+
+
 LOADERS: dict[str, Callable[..., tuple[dict[str, Split], list[str]]]] = {
     "eurosat": eurosat_splits,
     "rvl-cdip": rvl_cdip_splits,
+    "dtd": dtd_splits,
+    "pets": pets_splits,
+    "flowers": flowers_splits,
+    "pcam": pcam_splits,
 }
 
 
@@ -544,7 +748,7 @@ def resume_configuration(args: argparse.Namespace) -> dict:
     if args.max_steps is not None:
         config["epochs"] = None  # Ignored under a step budget (ADR 0017).
     config["freeze_batch_norm"] = not args.train_mode_batch_norm
-    config["dataset_revision"] = RVL_CDIP_REVISION if args.dataset == "rvl-cdip" else None
+    config["dataset_revision"] = DATASET_REVISIONS.get(args.dataset)
     return config
 
 
