@@ -47,6 +47,37 @@ summary = evaluator.aggregate(records)
 
 **Metrics that match the problem.** `Trainer.evaluate` reports accuracy, balanced accuracy, and macro and weighted scores, plus precision, recall, and F1 of the positive class, ROC-AUC, PR-AUC, and the Brier score when the model has a `positive_label`. For rare events read PR-AUC and balanced accuracy, not accuracy. A metric that is undefined for a run (for example, no positives in the test set) is NaN in the records and is counted in `num_undefined` by `aggregate` rather than averaged.
 
+## Datasets
+
+`benchmarks/few_shot.py --dataset` and `benchmarks/embedding_quality.py --dataset` take one of six public datasets, chosen to cover domains near to and far from the backbones' pretraining data. Each downloads on first use into `--data-root` (by default the repository's git-ignored `.cache/`), under the folder in the last column. The torchvision downloads are verified against torchvision's MD5 checksums; the Hugging Face datasets are pinned to a revision, which is recorded as `dataset_revision` in the results file. Only aggregate metrics are committed, never images.
+
+| `--dataset` | Domain | Classes | Source images | Default `--image-size` | Licence or terms | Folder |
+|---|---|---|---|---|---|---|
+| `eurosat` | Sentinel-2 satellite land cover | 10 | 64 × 64 | 112 | MIT (Sentinel data under the Copernicus terms) | `eurosat/` |
+| `rvl-cdip` | scanned document pages | 16 | about 1000 px, grayscale | 224 | those of the Legacy Tobacco Document Library, the source of IIT-CDIP and RVL-CDIP | `huggingface/`, pages in `rvl-cdip/` |
+| `dtd` | textures | 47 | 300–640 px | 224 | made available for research purposes (the authors' page) | `dtd/` |
+| `pets` | cat and dog breeds | 37 | about 200–800 px | 224 | CC BY-SA 4.0; image copyright stays with the owners | `oxford-iiit-pet/` |
+| `flowers` | flower species, fine-grained | 102 | shorter side 500 px | 224 | no licence stated by the authors; published for research evaluation | `flowers-102/` |
+| `pcam` | lymph-node histopathology patches | 2 | 96 × 96 | 112 | CC0 1.0 | `pcam/` |
+
+The splits come from each dataset's official ones. A benchmark needs three: the *pool* that few-shot samples are drawn from, a *validation* split to tune on, and a *test* split to report on.
+
+| `--dataset` | Pool | Validation | Test |
+|---|---|---|---|
+| `eurosat` | `--pool-per-class` images per class | `--eval-per-class` per class | `--eval-per-class` per class |
+| `rvl-cdip` | from the train split | the validation split | the test split |
+| `dtd` | the train split of partition 1 (40 per class) | the val split (40 per class) | the test split (40 per class) |
+| `pets` | the trainval split less the validation images (73–80 per class) | 20 images per class carved off trainval | the test split (88–100 per class) |
+| `flowers` | the train and val splits together (20 per class) | 10 images per class carved off the test split | the rest of the test split (10–228 per class) |
+| `pcam` | the first of the 13 train shards (about 20,000 images) | the valid split (32,768) | the test split (32,768) |
+
+EuroSAT has no official split, so the three are disjoint random draws per class. For every other dataset, `--pool-per-class` and `--eval-per-class` images per class are drawn from the split; for `dtd`, `pets`, `flowers`, and `pcam` these counts are caps, and a class with fewer images in the split gives all of them (`rvl-cdip` exits instead). The carved validation images of `pets` and `flowers` are drawn with `--split-seed`, the same however `--evaluate-on` is set, so the pool and the test split do not change between tuning and reporting. Flowers-102 has only 10 training and 10 validation images per class, too few for 16 shots, so both form the pool and validation comes from the test split instead; the validation and test images stay disjoint. Evaluation images whose pixels match a pool image are dropped for every dataset.
+
+Some tasks need more than a dataset offers:
+
+- `open_set` holds `--unseen-classes` classes out and keeps at least two seen, so it needs `--unseen-classes` + 2 classes. On `pcam`, which has two, it exits before any training; run `--tasks rare_positive` there. It also needs `2 × shots` pool images of every seen class, so on `flowers` it runs up to 10 shots.
+- `rare_positive` draws all `--negatives` from the other classes. On `pcam` they all come from the one other class, so `--pool-per-class` must be at least `--negatives` (for example `--pool-per-class 200` with the default 200); otherwise the script exits with the counts. On a two-class dataset the evaluated split's prevalence is about 0.5: the positive class is rare in training only.
+
 ## Cost
 
 The number of training runs is `len(methods) × len(shots) × len(seeds)`, and each run builds a new model with `model_factory`. For a pretrained backbone that means reloading its weights every run, which is deliberate: a shared model would carry trained weights from one run into the next, and the evaluator rejects a factory that returns the same model or backbone twice.

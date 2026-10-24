@@ -189,6 +189,7 @@ The `triplet` training mode is deferred to v0.2; `Trainer` rejects an unavailabl
 - [EuroSAT with DINOv2-small](docs/benchmarks/eurosat-dinov2-small.md): a few-shot benchmark on real images, with the script to reproduce it in [`benchmarks/`](benchmarks/few_shot.py).
 - [EuroSAT with ResNet-50](docs/benchmarks/eurosat-resnet50.md): the same protocol with a batch-norm convolutional backbone.
 - [RVL-CDIP with DINOv2-small](docs/benchmarks/rvl-cdip-dinov2-small.md): the same evaluation protocol on scanned document pages.
+- Benchmark datasets: `benchmarks/few_shot.py` also downloads DTD textures, Oxford-IIIT Pets, Oxford Flowers-102, and PatchCamelyon histopathology ([datasets](docs/guides/benchmarking.md#datasets)).
 - [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Development

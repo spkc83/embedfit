@@ -13,6 +13,12 @@ All notable changes to EmbedFit are recorded here, following [Keep a Changelog](
 - `benchmarks/embedding_quality.py`: an embedding-quality benchmark with the data and training options of `benchmarks/few_shot.py`. The `open_set` task holds two or more classes out of training and measures retrieval, nearest-centroid accuracy, and novelty detection (against the training images and against a held-out reference) on them; the `rare_positive` task trains on a few positives among many negatives and ranks the evaluated split by the head's probability and by similarity to the known positives (`docs/guides/benchmarking.md`).
 - `benchmarks/few_shot.py --temperature` (`supcon`), `--device` (default `cpu`; part of the resume configuration), and `--disable-cudnn`, which runs CUDA convolutions without cuDNN for GPUs the installed cuDNN does not support.
 
+- `benchmarks/few_shot.py --dataset` (and `benchmarks/embedding_quality.py`) takes `dtd` (Describable Textures), `pets` (Oxford-IIIT Pets), `flowers` (Oxford Flowers-102), and `pcam` (PatchCamelyon), downloaded at run time; their pool, validation, and test splits come from the official ones (`docs/guides/benchmarking.md#datasets`). For these, `--pool-per-class` and `--eval-per-class` are caps per class.
+
+### Changed
+
+- `benchmarks/embedding_quality.py`: the `open_set` error for too few classes states how many classes the task needs.
+
 ## [0.1.0] - 2026-10-18
 
 The first release.

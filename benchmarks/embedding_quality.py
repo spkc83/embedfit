@@ -54,8 +54,9 @@ def partition_classes(
         )
     if len(classes) - unseen < 2:
         raise SystemExit(
-            f"--unseen-classes {unseen} of {len(classes)} classes leaves "
-            f"{len(classes) - unseen} seen; the open_set task needs at least 2 seen classes."
+            f"--unseen-classes {unseen} leaves {max(len(classes) - unseen, 0)} of the "
+            f"{len(classes)} classes seen; the open_set task needs at least 2 seen classes, so "
+            f"at least {unseen + 2} classes."
         )
     held_out = set(np.random.default_rng([seed, 0]).choice(len(classes), unseen, replace=False))
     seen = [name for position, name in enumerate(classes) if position not in held_out]
