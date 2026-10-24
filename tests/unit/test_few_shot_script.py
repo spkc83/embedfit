@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 import torch
+from PIL import Image
 from torch import nn
 
 from embedfit import (
@@ -44,6 +45,7 @@ CURRENT = {
     "temperature": 0.07,
     "device": "cpu",
     "interpolate": [],
+    "max_image_side": None,
 }
 
 
@@ -63,6 +65,7 @@ def write_results(path, config):
         ("temperature", 0.07, 0.2),
         ("device", "cpu", "cuda"),
         ("interpolate", [], [0.5]),
+        ("max_image_side", None, 224),
     ],
 )
 def test_a_file_from_before_an_option_resumes_with_its_default(
@@ -77,7 +80,13 @@ def test_a_file_from_before_an_option_resumes_with_its_default(
 
 @pytest.mark.parametrize(
     "option",
-    ["--unfreeze-last-blocks", "--max-steps", "--projection-dim", "--contrastive-views"],
+    [
+        "--unfreeze-last-blocks",
+        "--max-steps",
+        "--projection-dim",
+        "--contrastive-views",
+        "--max-image-side",
+    ],
 )
 @pytest.mark.parametrize("value", ["0", "-1", "x"])
 def test_count_options_must_be_positive_ints(few_shot, option, value, capsys):
@@ -395,3 +404,82 @@ def test_the_environment_stops_nnpack_warnings_where_it_cannot_run(
         assert "NNPACK" not in capfd.readouterr().err
     finally:
         torch.backends.nnpack.set_flags(enabled)
+
+
+# --max-image-side: images decoded once and shrunk in memory.
+
+
+@pytest.mark.parametrize(
+    ("size", "side", "expected"),
+    [
+        ((640, 480), 224, (299, 224)),  # Shorter side capped, aspect ratio kept.
+        ((300, 900), 224, (224, 672)),
+        ((200, 150), 224, (200, 150)),  # Never enlarged.
+        ((224, 300), 224, (224, 300)),
+    ],
+)
+def test_downscale_caps_the_shorter_side_and_keeps_the_aspect_ratio(few_shot, size, side, expected):
+    image = few_shot.downscale(Image.new("L", size, 90), side)
+    assert (image.mode, image.size) == ("RGB", expected)
+
+
+def test_downscale_decodes_files_like_the_library_and_keeps_small_images_exact(few_shot, tmp_path):
+    pixels = np.random.default_rng(0).integers(0, 256, (20, 30, 3), dtype=np.uint8)
+    path = tmp_path / "image.png"
+    Image.fromarray(pixels).save(path)
+    image = few_shot.downscale(path, 64)
+    assert np.array_equal(np.asarray(image), pixels)
+    shrunk = few_shot.downscale(path, 10)
+    assert shrunk.size == (15, 10)
+    # Antialiased: the shrunk image is close to an area average, not a sample of pixels.
+    area = Image.fromarray(pixels).resize((15, 10), Image.Resampling.BOX)
+    assert np.abs(np.asarray(shrunk, dtype=float) - np.asarray(area, dtype=float)).mean() < 40
+
+
+def fake_loader(tmp_path):
+    big = tmp_path / "big.png"
+    Image.new("RGB", (400, 300), (10, 20, 30)).save(big)
+    copy = Image.new("RGB", (400, 300), (10, 20, 30))  # The pixels of the pool image.
+
+    def loader(root, *, pool, evaluation, evaluate_on, seed):
+        splits = {
+            "pool": [(big, "a"), (Image.new("RGB", (50, 40), (1, 2, 3)), "b")],
+            evaluate_on: [(copy, "a"), (Image.new("RGB", (600, 200), (4, 5, 6)), "b")],
+        }
+        return splits, ["a", "b"]
+
+    return loader, big
+
+
+def splits_with(few_shot, monkeypatch, tmp_path, *options):
+    loader, big = fake_loader(tmp_path)
+    monkeypatch.setitem(few_shot.LOADERS, "eurosat", loader)
+    args = few_shot.parse_arguments([*REQUIRED, *options])
+    return few_shot.load_splits(args), big
+
+
+def test_max_image_side_shrinks_every_loaded_image_once(few_shot, monkeypatch, tmp_path):
+    (splits, labels, duplicates), _ = splits_with(
+        few_shot, monkeypatch, tmp_path, "--max-image-side", "100"
+    )
+    assert duplicates == 1  # Judged on the original pixels, before shrinking.
+    assert labels == ["a", "b"]
+    sizes = {name: [image.size for image in split.images] for name, split in splits.items()}
+    assert sizes == {"pool": [(133, 100), (50, 40)], "validation": [(300, 100)]}
+    assert all(
+        isinstance(image, Image.Image) and image.mode == "RGB"
+        for split in splits.values()
+        for image in split.images
+    )
+
+
+def test_without_max_image_side_the_loaded_items_are_unchanged(few_shot, monkeypatch, tmp_path):
+    (splits, _, duplicates), big = splits_with(few_shot, monkeypatch, tmp_path)
+    assert duplicates == 1
+    assert splits["pool"].images[0] == big  # Still a path, decoded at every use.
+    assert splits["validation"].images[0].size == (600, 200)
+
+
+def test_max_image_side_is_part_of_the_configuration(few_shot):
+    assert namespace(few_shot)["max_image_side"] is None
+    assert namespace(few_shot, "--max-image-side", "224")["max_image_side"] == 224
