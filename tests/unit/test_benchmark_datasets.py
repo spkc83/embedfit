@@ -61,7 +61,7 @@ def fake_torchvision(per_split: dict[str, int], files_attribute: str, *, duplica
             folder.mkdir(parents=True, exist_ok=True)
             files, labels = [], []
             for position in range(per_split[split] * len(NAMES)):
-                path = folder / f"{position}.png"
+                path = folder / f"{position}_{position % len(NAMES)}.png"  # Its label.
                 code = offset + position
                 if duplicate and duplicate[0] == split and position == 0:
                     code = 1000 * list(per_split).index(duplicate[1])
@@ -80,6 +80,12 @@ def load(few_shot, name, root, *, pool=100, evaluation=100, evaluate_on="test", 
     return few_shot.LOADERS[name](
         root, pool=pool, evaluation=evaluation, evaluate_on=evaluate_on, seed=seed
     )
+
+
+def check_labels(items, classes):
+    """Every drawn file's label is the class its file name records."""
+    for path, label in items:
+        assert label == classes[int(path.stem.split("_")[1])]
 
 
 def counts(items):
@@ -125,6 +131,8 @@ def test_dtd_uses_its_official_partition_and_splits(few_shot, dtd, tmp_path):
     assert all(call["download"] and call["root"] == str(tmp_path) for call in dtd.calls)
     assert all(path.parent.name == "train" for path in paths(splits["pool"]))
     assert all(isinstance(path, Path) for path in paths(splits["validation"]))  # Not decoded.
+    for items in splits.values():
+        check_labels(items, NAMES)
 
 
 def test_counts_cap_every_class_and_the_draw_is_seeded(few_shot, dtd, tmp_path):
@@ -157,6 +165,8 @@ def test_pets_carves_validation_off_trainval(few_shot, pets, tmp_path):
     assert all(path.parent.name == "test" for path in paths(test["test"]))
     assert counts(test["test"]) == dict.fromkeys(NAMES, 6)
     assert test["pool"] == validation["pool"]
+    for items in (*validation.values(), test["test"]):
+        check_labels(items, NAMES)
 
 
 def test_the_carved_validation_follows_the_split_seed(few_shot, pets, tmp_path):
@@ -186,51 +196,77 @@ def test_flowers_pools_train_and_val_and_splits_test(few_shot, flowers, tmp_path
     assert counts(test["test"]) == {name: 13 - carved for name in classes[:3]}
     assert not paths(validation["validation"]) & paths(test["test"])
     assert all(path.parent.name == "test" for path in paths(validation["validation"]))
+    for items in (*validation.values(), test["test"]):
+        check_labels(items, classes)
 
 
 # PCam: a pinned Hugging Face dataset; only the needed splits download.
 
 
+PCAM_LABELS = [position % 3 == 0 for position in range(18)]  # 6 True, 12 False.
+
+
+def code(image):
+    red, green, blue = image.getpixel((0, 0))
+    return red + 256 * green + 65536 * blue
+
+
 class FakeRows:
+    """Parquet rows whose images record their row position in their pixels."""
+
     def __init__(self, labels, offset):
         self.labels, self.offset = labels, offset
 
     def __getitem__(self, key):
         if key == "label":
             return list(self.labels)
-        return {"image": picture(self.offset + key).convert("L"), "label": self.labels[key]}
+        return {"image": picture(self.offset + key).convert("RGBA"), "label": self.labels[key]}
 
 
 @pytest.fixture
 def pcam(monkeypatch):
     datasets = pytest.importorskip("datasets")
-    calls = []
+    hub = pytest.importorskip("huggingface_hub")
+    calls, fetched = [], []
+
+    def hf_hub_download(repo_id, filename, **options):
+        fetched.append({"repo_id": repo_id, "filename": filename, **options})
+        return f"cached/{filename}"
 
     def load_dataset(name, **options):
         calls.append({"name": name, **options})
         return {
-            split: FakeRows([position % 2 == 1 for position in range(12)], 1000 * index)
+            split: FakeRows(PCAM_LABELS, 1000 * index)
             for index, split in enumerate(options["data_files"])
         }
 
+    monkeypatch.setattr(hub, "hf_hub_download", hf_hub_download)
     monkeypatch.setattr(datasets, "load_dataset", load_dataset)
-    return calls
+    return calls, fetched
 
 
 def test_pcam_downloads_the_pinned_pool_and_evaluated_split_only(few_shot, pcam, tmp_path):
-    splits, classes = load(few_shot, "pcam", tmp_path, pool=4, evaluation=5, evaluate_on="test")
+    splits, classes = load(few_shot, "pcam", tmp_path, pool=4, evaluation=8, evaluate_on="test")
     assert classes == few_shot.PCAM_CLASSES == ["normal", "metastasis"]
-    (call,) = pcam
+    calls, fetched = pcam
+    wanted = [path for split in ("pool", "test") for path in few_shot.PCAM_FILES[split]]
+    assert [entry["filename"] for entry in fetched] == wanted
+    for entry in fetched:
+        assert entry["repo_id"] == few_shot.PCAM_DATASET
+        assert (entry["repo_type"], entry["revision"]) == ("dataset", few_shot.PCAM_REVISION)
+    (call,) = calls
     assert call["name"] == "parquet"
     assert call["cache_dir"] == str(tmp_path / "pcam")
-    repository = f"hf://datasets/{few_shot.PCAM_DATASET}@{few_shot.PCAM_REVISION}/"
     assert call["data_files"] == {
-        split: [repository + path for path in few_shot.PCAM_FILES[split]]
+        split: [f"cached/{path}" for path in few_shot.PCAM_FILES[split]]
         for split in ("pool", "test")
     }
     assert counts(splits["pool"]) == {"normal": 4, "metastasis": 4}
-    assert counts(splits["test"]) == {"normal": 5, "metastasis": 5}
-    assert all(image.mode == "RGB" for image, _ in splits["test"])
+    assert counts(splits["test"]) == {"normal": 8, "metastasis": 6}  # Capped; 6 of True exist.
+    for offset, items in ((0, splits["pool"]), (1000, splits["test"])):
+        for image, label in items:  # Label True is metastasis.
+            assert image.mode == "RGB"
+            assert label == ("metastasis" if PCAM_LABELS[code(image) - offset] else "normal")
 
 
 def test_the_dataset_revision_is_part_of_the_configuration(few_shot):
@@ -282,6 +318,18 @@ def test_open_set_on_two_classes_exits_with_the_classes_needed(quality):
         quality.partition_classes(["normal", "metastasis"], 2, seed=0)
     with pytest.raises(SystemExit, match="at least 5 classes"):
         quality.partition_classes(["normal", "metastasis"], 3, seed=0)
+
+
+def test_open_set_on_pcam_is_rejected_before_any_download(quality, capsys):
+    required = ["--dataset", "pcam", "--evaluate-on", "test", "--output", "results.json"]
+    with pytest.raises(SystemExit):
+        quality.parse_arguments(required)
+    assert "needs at least 5 classes" in capsys.readouterr().err
+    assert quality.parse_arguments([*required, "--tasks", "rare_positive"]).dataset == "pcam"
+
+
+def test_every_loader_has_a_class_count(few_shot):
+    assert set(few_shot.CLASS_COUNTS) == set(few_shot.LOADERS)
 
 
 def test_rare_positive_runs_on_two_classes(quality):

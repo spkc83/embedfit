@@ -31,10 +31,12 @@ Fixed before the runs. Every dataset runs at `--image-size 112` with DINOv2-smal
 
 **Lift on a metric at a shot count.** Over 5 seeds, every method trains on the same few-shot sample per seed (paired seeds). A method has lift on a primary metric at a shot count when both hold:
 
-- its mean over the 5 seeds is higher than the means of `end_to_end` and of `frozen`;
-- its paired difference against `end_to_end` is positive in at least 4 of the 5 seeds.
+- its mean over the 5 seeds is strictly higher than the means of `end_to_end` and of `frozen` (a tie is no lift);
+- its paired difference against `end_to_end` is strictly positive in at least 4 of the 5 seeds.
 
-**Lift on a dataset.** A method has lift on a dataset for a metric when it has lift on that metric at 2 or more of the 3 shot counts (4, 8, 16). Classification lift and embedding lift are reported separately and are not pooled.
+If the metric is undefined (NaN) for any of the three methods in any seed, there is no lift at that shot count.
+
+**Lift on a dataset.** A method has lift on a dataset for a metric when it has lift on that metric at 2 or more of the 3 shot counts (4, 8, 16). Flowers-102 has 20 pool images per class and `open_set` needs twice the shot count per seen class, so its `open_set` metrics (`unseen_map`, `novelty_heldout_pr_auc`) run at 4 and 8 shots only, and lift on them needs lift at both. Classification lift and embedding lift are reported separately and are not pooled.
 
 **Tuning.** The learning rate and the step budget are tuned per dataset on its validation split, with the same small grid for every method; the test split is used once, with the chosen settings. Weight-interpolated (WiSE-FT) variants are reported at every interpolation weight run, but a variant counts for lift only if its weight was chosen on the validation split before the test run.
 

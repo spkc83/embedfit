@@ -101,6 +101,14 @@ PCAM_FILES = {  # The pool comes from the first of the 13 training shards (about
     ],
 }
 PCAM_CLASSES = ["normal", "metastasis"]  # The dataset's labels False and True.
+CLASS_COUNTS = {
+    "eurosat": 10,
+    "rvl-cdip": 16,
+    "dtd": 47,
+    "pets": 37,
+    "flowers": FLOWERS_CLASSES,
+    "pcam": len(PCAM_CLASSES),
+}
 DATASET_REVISIONS = {"rvl-cdip": RVL_CDIP_REVISION, "pcam": PCAM_REVISION}
 DEFAULT_IMAGE_SIZE = {
     "eurosat": 112,
@@ -350,11 +358,16 @@ def pcam_splits(
     except ImportError:
         raise SystemExit('pcam needs the datasets extra: pip install -e ".[datasets]"') from None
 
-    # The parquet files of the pinned revision, read directly: only these download, and the
-    # dataset card's split list, which names all three splits, is not checked against them.
-    repository = f"hf://datasets/{PCAM_DATASET}@{PCAM_REVISION}"
+    from huggingface_hub import hf_hub_download
+
+    # The parquet files of the pinned revision, fetched into the Hub cache (which a later run
+    # reads with HF_HUB_OFFLINE=1) and read directly: only these download, and the dataset
+    # card's split list, which names all three splits, is not checked against them.
     wanted = {
-        name: [f"{repository}/{path}" for path in PCAM_FILES[name]]
+        name: [
+            hf_hub_download(PCAM_DATASET, path, repo_type="dataset", revision=PCAM_REVISION)
+            for path in PCAM_FILES[name]
+        ]
         for name in ("pool", evaluate_on)
     }
     source = load_dataset("parquet", data_files=wanted, cache_dir=str(root / "pcam"))

@@ -56,7 +56,7 @@ The pretrained state is copied to the CPU before training, and the trained state
 
 ## Datasets
 
-`benchmarks/few_shot.py --dataset` and `benchmarks/embedding_quality.py --dataset` take one of six public datasets, chosen to cover domains near to and far from the backbones' pretraining data. Each downloads on first use into `--data-root` (by default the repository's git-ignored `.cache/`), under the folder in the last column. The torchvision downloads are verified against torchvision's MD5 checksums; the Hugging Face datasets are pinned to a revision, which is recorded as `dataset_revision` in the results file. Only aggregate metrics are committed, never images.
+`benchmarks/few_shot.py --dataset` and `benchmarks/embedding_quality.py --dataset` take one of six public datasets, chosen to cover domains near to and far from the backbones' pretraining data. Each downloads on first use into `--data-root` (by default the repository's git-ignored `.cache/`), under the folder in the last column. The torchvision downloads are verified against torchvision's MD5 checksums; the Hugging Face datasets are pinned to a revision, which is recorded as `dataset_revision` in the results file. Once `pcam` is downloaded, it also loads with `HF_HUB_OFFLINE=1`. Only aggregate metrics are committed, never images.
 
 | `--dataset` | Domain | Classes | Source images | Default `--image-size` | Licence or terms | Folder |
 |---|---|---|---|---|---|---|
@@ -65,7 +65,7 @@ The pretrained state is copied to the CPU before training, and the trained state
 | `dtd` | textures | 47 | 300–640 px | 224 | made available for research purposes (the authors' page) | `dtd/` |
 | `pets` | cat and dog breeds | 37 | about 200–800 px | 224 | CC BY-SA 4.0; image copyright stays with the owners | `oxford-iiit-pet/` |
 | `flowers` | flower species, fine-grained | 102 | shorter side 500 px | 224 | no licence stated by the authors; published for research evaluation | `flowers-102/` |
-| `pcam` | lymph-node histopathology patches | 2 | 96 × 96 | 112 | CC0 1.0 | `pcam/` |
+| `pcam` | lymph-node histopathology patches | 2 | 96 × 96 | 112 | CC0 1.0 | `huggingface/`, Arrow copies in `pcam/` |
 
 The default `--image-size` suits each dataset on its own. The cross-domain suite in the [experiment matrix](../research/EXPERIMENT_MATRIX.md#lift-rule) runs every dataset at `--image-size 112` instead, the size of the EuroSAT runs, so that the comparison is consistent and each benchmark costs about the same. This is a known limitation: at 112 px the fine texture of DTD and the fine-grained detail of Flowers-102 are reduced, which can lower every method's scores on them.
 
@@ -84,7 +84,7 @@ EuroSAT has no official split, so the three are disjoint random draws per class.
 
 Some tasks need more than a dataset offers:
 
-- `open_set` holds `--unseen-classes` classes out and keeps at least two seen, so it needs `--unseen-classes` + 2 classes. On `pcam`, which has two, it exits before any training; run `--tasks rare_positive` there. It also needs `2 × shots` pool images of every seen class, so on `flowers` it runs up to 10 shots.
+- `open_set` holds `--unseen-classes` classes out and keeps at least two seen, so it needs `--unseen-classes` + 2 classes. On `pcam`, which has two, `benchmarks/embedding_quality.py` rejects it before any download; run `--tasks rare_positive` there. It also needs `2 × shots` pool images of every seen class, so on `flowers` it runs up to 10 shots.
 - `rare_positive` draws all `--negatives` from the other classes. On `pcam` they all come from the one other class, so `--pool-per-class` must be at least `--negatives` (for example `--pool-per-class 200` with the default 200); otherwise the script exits with the counts. On a two-class dataset the evaluated split's prevalence is about 0.5: the positive class is rare in training only.
 
 ## Cost
