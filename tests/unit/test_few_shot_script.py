@@ -375,3 +375,23 @@ def test_interpolation_needs_states_of_the_backbone(few_shot):
     for initial, trained in ((partial, state), (state, partial), (state, {**state, "x": 1})):
         with pytest.raises(ConfigurationError, match="exactly the backbone's parameters"):
             few_shot.interpolate_backbone(module, initial, trained, 0.5)
+
+
+def test_the_environment_stops_nnpack_warnings_where_it_cannot_run(
+    few_shot, monkeypatch, tmp_path, capfd
+):
+    torch = few_shot.torch
+    for name in ("HF_HOME", "TORCH_HOME", "TMPDIR"):  # setdefault then keeps these.
+        monkeypatch.setenv(name, str(tmp_path))
+    monkeypatch.setattr(torch.backends.nnpack, "is_available", lambda: False)
+    enabled, threads = torch._C._get_nnpack_enabled(), torch.get_num_threads()
+    try:
+        args = few_shot.parse_arguments([*REQUIRED, "--threads", str(threads)])
+        args.data_root = tmp_path
+        few_shot.prepare_environment(args)
+        assert not torch._C._get_nnpack_enabled()
+        capfd.readouterr()
+        torch.nn.Conv2d(3, 4, 3)(torch.rand(1, 3, 8, 8))
+        assert "NNPACK" not in capfd.readouterr().err
+    finally:
+        torch.backends.nnpack.set_flags(enabled)

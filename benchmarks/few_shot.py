@@ -559,6 +559,11 @@ def prepare_environment(args: argparse.Namespace) -> None:
     torch.set_num_threads(args.threads)
     if args.disable_cudnn:
         torch.backends.cudnn.enabled = False
+    # Where NNPACK cannot run, every convolution that considers it (on the CPU, and on CUDA
+    # without cuDNN) logs "Could not initialize NNPACK"; switching it off stops that and changes
+    # no result, as it is never used there. The availability check logs the message once.
+    if not torch.backends.nnpack.is_available():
+        torch.backends.nnpack.set_flags(False)
     if args.image_size is None:
         args.image_size = DEFAULT_IMAGE_SIZE[args.dataset]
 

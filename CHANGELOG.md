@@ -14,6 +14,10 @@ All notable changes to EmbedFit are recorded here, following [Keep a Changelog](
 - `benchmarks/few_shot.py --interpolate` and `benchmarks/embedding_quality.py --interpolate`: WiSE-FT weight interpolation. After training, every trained method is also scored with its backbone at `(1 − α) × pretrained + α × trained` for each given α in [0, 1), with a new head fitted; at α 0 the `supcon` and `pair` scores equal the `frozen` ones, and `end_to_end` is exactly its linear probe. Records gain an `alpha` key (`null` for the trained model).
 - `benchmarks/few_shot.py --temperature` (`supcon`), `--device` (default `cpu`; part of the resume configuration), and `--disable-cudnn`, which runs CUDA convolutions without cuDNN for GPUs the installed cuDNN does not support.
 
+### Fixed
+
+- `benchmarks/few_shot.py` and `benchmarks/embedding_quality.py` switch NNPACK off where it cannot run, so that convolutions on the CPU, or on CUDA with `--disable-cudnn`, no longer log "Could not initialize NNPACK" on every call. Results do not change: NNPACK is never used there.
+
 ## [0.1.0] - 2026-10-18
 
 The first release.
