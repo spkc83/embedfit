@@ -25,14 +25,18 @@ Each domain is a public dataset that `benchmarks/few_shot.py` and `benchmarks/em
 
 ## Lift rule
 
-Fixed before the runs. A method *adds lift* on a dataset only if, against both `end_to_end` and `frozen`:
+Fixed before the runs. Every dataset runs at `--image-size 112` with DINOv2-small, the size of the EuroSAT runs. The published RVL-CDIP run used 224 px, so RVL-CDIP enters the suite only through a run at 112 px.
 
-- its mean over 5 paired seeds is higher, and
-- the paired difference (the same few-shot sample for both methods) is positive in at least 4 of the 5 seeds,
+**Primary metrics.** Classification: test `accuracy` from `benchmarks/few_shot.py`. Embedding: `unseen_map`, `novelty_heldout_pr_auc` (`open_set` task), and `knn_pr_auc` (`rare_positive` task) from `benchmarks/embedding_quality.py`. A dataset with too few classes for `open_set` (PCam) uses `accuracy` and `knn_pr_auc` only. Every other metric is secondary and descriptive only.
 
-on the classification test split (`benchmarks/few_shot.py`) and on the embedding-quality tasks (`benchmarks/embedding_quality.py`).
+**Lift on a metric at a shot count.** Over 5 seeds, every method trains on the same few-shot sample per seed (paired seeds). A method has lift on a primary metric at a shot count when both hold:
 
-The learning rate and the step budget are tuned per dataset on its validation split, with the same small grid for every method; the test split is used once, with the chosen settings.
+- its mean over the 5 seeds is higher than the means of `end_to_end` and of `frozen`;
+- its paired difference against `end_to_end` is positive in at least 4 of the 5 seeds.
+
+**Lift on a dataset.** A method has lift on a dataset for a metric when it has lift on that metric at 2 or more of the 3 shot counts (4, 8, 16). Classification lift and embedding lift are reported separately and are not pooled.
+
+**Tuning.** The learning rate and the step budget are tuned per dataset on its validation split, with the same small grid for every method; the test split is used once, with the chosen settings. Weight-interpolated (WiSE-FT) variants are reported at every interpolation weight run, but a variant counts for lift only if its weight was chosen on the validation split before the test run.
 
 ## Backbone matrix
 

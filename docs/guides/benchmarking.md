@@ -60,6 +60,8 @@ summary = evaluator.aggregate(records)
 | `flowers` | flower species, fine-grained | 102 | shorter side 500 px | 224 | no licence stated by the authors; published for research evaluation | `flowers-102/` |
 | `pcam` | lymph-node histopathology patches | 2 | 96 × 96 | 112 | CC0 1.0 | `pcam/` |
 
+The default `--image-size` suits each dataset on its own. The cross-domain suite in the [experiment matrix](../research/EXPERIMENT_MATRIX.md#lift-rule) runs every dataset at `--image-size 112` instead, the size of the EuroSAT runs, so that the comparison is consistent and each benchmark costs about the same. This is a known limitation: at 112 px the fine texture of DTD and the fine-grained detail of Flowers-102 are reduced, which can lower every method's scores on them.
+
 The splits come from each dataset's official ones. A benchmark needs three: the *pool* that few-shot samples are drawn from, a *validation* split to tune on, and a *test* split to report on.
 
 | `--dataset` | Pool | Validation | Test |
