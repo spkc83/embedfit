@@ -9,7 +9,8 @@ tasks that a head trained on the known classes cannot answer by itself:
   ``shots`` positives and ``--negatives`` negatives from the other classes, and ranks the whole
   evaluated split by the head's positive probability and by similarity to the known positives.
 
-Data, training options, resuming, and the environment record are those of ``few_shot.py``; see
+Data, training options (``--interpolate`` among them), resuming, and the environment record are
+those of ``few_shot.py``; see
 its documentation and ``docs/guides/benchmarking.md`` for every metric.
 
     python benchmarks/embedding_quality.py --dataset eurosat --evaluate-on validation \\
@@ -383,19 +384,21 @@ def main(argv: list[str] | None = None) -> None:
                 labels, positive_label, train, evaluate = draw(task, shots, seed)
                 for method in args.methods:
                     model = model_factory(labels, positive_label)
-                    Trainer(model, options(method, seed), train).train()
-                    for metric, value in evaluate(model).items():
-                        records.append(
-                            {
-                                "task": task,
-                                "method": method,
-                                "backbone": model.backbone.identifier,
-                                "shots": shots,
-                                "seed": seed,
-                                "metric": metric,
-                                "value": float(value),
-                            }
-                        )
+                    trainer = Trainer(model, options(method, seed), train)
+                    for alpha in few_shot.trained_weights(trainer, args.interpolate):
+                        for metric, value in evaluate(model).items():
+                            records.append(
+                                {
+                                    "task": task,
+                                    "method": method,
+                                    "alpha": alpha,
+                                    "backbone": model.backbone.identifier,
+                                    "shots": shots,
+                                    "seed": seed,
+                                    "metric": metric,
+                                    "value": float(value),
+                                }
+                            )
                     logger.info("Scored %s at %d shots, seed %d", method, shots, seed)
                 session["elapsed_seconds"] = round(
                     session["elapsed_seconds"] + time.perf_counter() - started, 1
@@ -407,19 +410,25 @@ def main(argv: list[str] | None = None) -> None:
 
     print(f"\n{args.evaluate_on} (mean ± std over {len(args.seeds)} seeds), {elapsed / 60:.1f} min")
     for task in args.tasks:
-        summary = FewShotEvaluator.aggregate([r for r in records if r["task"] == task])
+        summary = FewShotEvaluator.aggregate(
+            [
+                {**r, "method": few_shot.row_name(r["method"], r["alpha"])}
+                for r in records
+                if r["task"] == task
+            ]
+        )
         metrics = list(dict.fromkeys(row["metric"] for row in summary))
         print(f"\n{task}")
-        print(f"{'metric':26s}{'method':12s}" + "".join(f"{f'{n} shots':>16s}" for n in args.shots))
+        print(f"{'metric':26s}{'method':20s}" + "".join(f"{f'{n} shots':>16s}" for n in args.shots))
         for metric in metrics:
-            for method in args.methods:
+            for name in few_shot.row_names(args.methods, args.interpolate):
                 cells = [
                     f"{row['mean']:.3f} ± {row['std']:.3f}"
                     + (f" ({row['num_undefined']} undefined)" if row["num_undefined"] else "")
                     for row in summary
-                    if row["method"] == method and row["metric"] == metric
+                    if row["method"] == name and row["metric"] == metric
                 ]
-                print(f"{metric:26s}{method:12s}" + "".join(f"{cell:>16s}" for cell in cells))
+                print(f"{metric:26s}{name:20s}" + "".join(f"{cell:>16s}" for cell in cells))
 
 
 if __name__ == "__main__":

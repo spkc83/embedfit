@@ -1,6 +1,8 @@
 """Few-shot benchmark on a public image dataset with a pretrained backbone.
 
-Compares training modes with ``FewShotEvaluator``. Two datasets are supported, both downloaded
+Compares training modes as ``FewShotEvaluator`` does, and with ``--interpolate`` also scores
+every trained backbone with its weights interpolated toward the pretrained ones (WiSE-FT;
+``docs/guides/benchmarking.md``). Two datasets are supported, both downloaded
 on first use. Everything the run downloads or derives (datasets, pretrained weights, the page
 cache) goes under ``--data-root``, by default the git-ignored ``.cache/`` folder of the
 repository; the ``datasets`` library, Hugging Face Hub, and torch hub caches and the temporary
@@ -33,6 +35,7 @@ until it is ready to commit.
 
 import argparse
 import contextlib
+import copy
 import hashlib
 import json
 import logging
@@ -41,20 +44,25 @@ import os
 import platform
 import tempfile
 import time
-from collections.abc import Callable, Collection
+from collections.abc import Callable, Collection, Iterator, Sequence
 from dataclasses import replace
+from itertools import chain
 from pathlib import Path
 
 import numpy as np
 import torch
 from PIL import Image
+from torch import nn
 
 import embedfit
 from embedfit import EmbedFitModel, FewShotEvaluator, ImageDataset, Trainer, TrainingArguments
 from embedfit.augmentation import available_augmentations
 from embedfit.exceptions import ConfigurationError
+from embedfit.heads import LinearHead
 from embedfit.sampling import sample_few_shot
 from embedfit.utils.device import resolve_device
+
+logger = logging.getLogger(__name__)
 
 TRAINED_METHODS = ("end_to_end", "supcon", "pair")
 DOCUMENT_SHORT_SIDE = 512
@@ -215,6 +223,8 @@ def read_previous(output: Path, config: dict, measured: Collection[str] = MEASUR
         previous = json.loads(output.read_text())
         previous["environment"]["sessions"]
         {(int(record["shots"]), int(record["seed"])) for record in previous["records"]}
+        for record in previous["records"]:
+            record.setdefault("alpha", None)  # Records from before --interpolate.
         saved = previous["config"]
         saved.setdefault("gradient_accumulation_steps", 1)  # Files from before the option.
         saved.setdefault("dataset_revision", None)
@@ -225,6 +235,7 @@ def read_previous(output: Path, config: dict, measured: Collection[str] = MEASUR
         saved.setdefault("contrastive_views", 1)
         saved.setdefault("temperature", 0.07)
         saved.setdefault("device", "cpu")
+        saved.setdefault("interpolate", [])
     except (json.JSONDecodeError, KeyError, TypeError, ValueError):
         raise SystemExit(f"{output} is not a results file written by this script.") from None
     if set(saved) - set(measured) != set(config) or any(
@@ -248,6 +259,106 @@ def positive_float(value: str) -> float:
     if not number > 0 or math.isinf(number):
         raise argparse.ArgumentTypeError(f"expected a positive number, got {value!r}")
     return number
+
+
+def interpolation_weight(value: str) -> float:
+    try:
+        number = float(value)
+    except ValueError:
+        number = math.nan
+    if not 0 <= number < 1:
+        raise argparse.ArgumentTypeError(f"expected a number in [0, 1), got {value!r}")
+    return number + 0.0  # -0 becomes 0, so that it has one summary row.
+
+
+def backbone_state(backbone: nn.Module, device: torch.device | str) -> dict[str, torch.Tensor]:
+    """A copy of every parameter and buffer of ``backbone`` on ``device``, by name."""
+    return {
+        name: tensor.detach().to(device, copy=True)
+        for name, tensor in chain(backbone.named_parameters(), backbone.named_buffers())
+    }
+
+
+def interpolate_backbone(
+    backbone: nn.Module,
+    initial: dict[str, torch.Tensor],
+    trained: dict[str, torch.Tensor],
+    alpha: float,
+) -> None:
+    """Set ``backbone`` to ``(1 - alpha) * initial + alpha * trained`` in place (WiSE-FT).
+
+    Floating-point parameters and buffers are interpolated on the backbone's device; every
+    other tensor (e.g. a batch-norm batch count) is copied from ``trained``. ``alpha`` 0 gives
+    ``initial`` exactly.
+
+    Raises:
+        ConfigurationError: If ``initial`` or ``trained`` does not name exactly the backbone's
+            parameters and buffers.
+    """
+    tensors = dict(chain(backbone.named_parameters(), backbone.named_buffers()))
+    if not set(initial) == set(trained) == set(tensors):
+        raise ConfigurationError(
+            "The initial and trained states must hold exactly the backbone's parameters and "
+            "buffers."
+        )
+    with torch.no_grad():
+        for name, tensor in tensors.items():
+            if tensor.is_floating_point():
+                start = initial[name].to(tensor.device)  # One tensor at a time on the device.
+                tensor.copy_(torch.lerp(start, trained[name], alpha))
+            else:
+                tensor.copy_(trained[name])
+
+
+def trained_weights(trainer: Trainer, alphas: Sequence[float]) -> Iterator[float | None]:
+    """Train, yield ``None``, then set the model to each weight in ``alphas`` and yield it.
+
+    Score the model at every yield; the next one changes it. ``frozen`` yields ``None`` only.
+    At every weight the backbone is ``(1 - alpha) * initial + alpha * trained`` and a new head
+    is fitted on the training set, so a weight's result does not depend on the others:
+    ``end_to_end`` gets a ``LinearHead`` seeded and configured as its linear probe (ADR 0012),
+    so that at ``alpha`` 0 it is that probe; every other mode gets a copy of its head as it was
+    before training, refitted. The initial state is kept on the CPU and the trained one on the
+    model's device.
+    """
+    model = trainer.model
+    interpolate = bool(alphas) and trainer.args.training_mode != "frozen"
+    initial = backbone_state(model.backbone, "cpu") if interpolate else {}
+    untrained_head = copy.deepcopy(model.head)
+    trainer.train()
+    yield None
+    if not interpolate:
+        return
+    trained = backbone_state(model.backbone, model.device)  # The one extra state on the device.
+    for alpha in alphas:
+        interpolate_backbone(model.backbone, initial, trained, alpha)
+        if trainer.args.training_mode == "end_to_end":
+            model.head = LinearHead(seed=trainer.args.seed)
+        else:
+            model.head = copy.deepcopy(untrained_head)
+        model.fit_head(
+            trainer.train_dataset.images,
+            trainer.train_dataset.labels,
+            batch_size=trainer.args.eval_batch_size,
+        )
+        yield alpha
+
+
+def row_name(method: str, alpha: float | None) -> str:
+    """The summary row of a method's records at an interpolation weight (``None``: as trained).
+
+    ``repr`` gives distinct weights distinct names.
+    """
+    return method if alpha is None else f"{method} α={alpha!r}"
+
+
+def row_names(methods: Sequence[str], alphas: Sequence[float]) -> list[str]:
+    """The summary rows of ``methods``: each, followed by its interpolations if it is trained."""
+    return [
+        row_name(method, alpha)
+        for method in methods
+        for alpha in (None, *(alphas if method in TRAINED_METHODS else ()))
+    ]
 
 
 def parse_learning_rates(values: list[str], default: float) -> dict[str, float]:
@@ -349,6 +460,16 @@ def training_parser(description: str) -> argparse.ArgumentParser:
         help="supcon: temperature of the supervised contrastive loss",
     )
     parser.add_argument(
+        "--interpolate",
+        nargs="+",
+        type=interpolation_weight,
+        default=[],
+        metavar="ALPHA",
+        help="trained methods: also score each trained backbone at the weights "
+        "(1 - ALPHA) * pretrained + ALPHA * trained (WiSE-FT), with the head refitted, for "
+        "every ALPHA in [0, 1); the training is not repeated",
+    )
+    parser.add_argument(
         "--device",
         default="cpu",
         help="device for encoding and training, e.g. cpu or cuda; no fallback to another device",
@@ -380,6 +501,11 @@ def check_arguments(parser: argparse.ArgumentParser, args: argparse.Namespace) -
         parser.error("--unfreeze-last-blocks applies to trained methods only, and none is selected")
     if args.max_steps is not None and not set(args.methods) & set(TRAINED_METHODS):
         parser.error("--max-steps applies to trained methods only, and none is selected")
+    if args.interpolate and not set(args.methods) & set(TRAINED_METHODS):
+        parser.error("--interpolate applies to trained methods only, and none is selected")
+    if len(set(args.interpolate)) != len(args.interpolate):
+        parser.error("--interpolate names a weight twice")
+    args.interpolate = sorted(args.interpolate)  # One order, so that resuming compares alike.
     for option, value, default in (
         ("--projection-dim", args.projection_dim, None),
         ("--contrastive-views", args.contrastive_views, 1),
@@ -561,13 +687,25 @@ def main(argv: list[str] | None = None) -> None:
             if (shots, seed) in done:
                 continue
             started = time.perf_counter()
-            records += FewShotEvaluator(shots=[shots], seeds=[seed]).run(
-                splits["pool"],
-                test_dataset=splits[args.evaluate_on],
-                methods=args.methods,
-                model_factory=model_factory,
-                training_arguments=arguments,
-            )
+            sample = sample_few_shot(splits["pool"], shots=shots, seed=seed)
+            for method in args.methods:
+                model = model_factory()
+                options = arguments.get(method, TrainingArguments(training_mode=method))
+                trainer = Trainer(model, replace(options, seed=seed), sample)
+                for alpha in trained_weights(trainer, args.interpolate):
+                    records += [
+                        {
+                            "method": method,
+                            "alpha": alpha,
+                            "backbone": model.backbone.identifier,
+                            "shots": shots,
+                            "seed": seed,
+                            "metric": metric,
+                            "value": float(value),
+                        }
+                        for metric, value in trainer.evaluate(splits[args.evaluate_on]).items()
+                    ]
+                logger.info("Benchmarked %s at %d shots, seed %d", method, shots, seed)
             session["elapsed_seconds"] = round(
                 session["elapsed_seconds"] + time.perf_counter() - started, 1
             )
@@ -576,20 +714,21 @@ def main(argv: list[str] | None = None) -> None:
             payload = {"config": config, "environment": environment, "records": records}
             write_results(args.output, payload)
 
-    evaluator = FewShotEvaluator(shots=args.shots, seeds=args.seeds)
-    summary = evaluator.aggregate(records)
+    summary = FewShotEvaluator.aggregate(
+        [{**r, "method": row_name(r["method"], r["alpha"])} for r in records]
+    )
     print(
         f"\n{args.evaluate_on} accuracy (mean ± std over {len(args.seeds)} seeds), "
         f"{elapsed / 60:.1f} min"
     )
-    print(f"{'method':12s}" + "".join(f"{f'{n} shots':>16s}" for n in args.shots))
-    for method in args.methods:
+    print(f"{'method':20s}" + "".join(f"{f'{n} shots':>16s}" for n in args.shots))
+    for name in row_names(args.methods, args.interpolate):
         cells = [
             f"{row['mean']:.3f} ± {row['std']:.3f}"
             for row in summary
-            if row["method"] == method and row["metric"] == "accuracy"
+            if row["method"] == name and row["metric"] == "accuracy"
         ]
-        print(f"{method:12s}" + "".join(f"{cell:>16s}" for cell in cells))
+        print(f"{name:20s}" + "".join(f"{cell:>16s}" for cell in cells))
 
 
 if __name__ == "__main__":
