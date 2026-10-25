@@ -71,6 +71,7 @@ from torch import nn
 import embedfit
 from embedfit import EmbedFitModel, FewShotEvaluator, ImageDataset, Trainer, TrainingArguments
 from embedfit.augmentation import available_augmentations
+from embedfit.data import to_rgb_tensor
 from embedfit.exceptions import ConfigurationError
 from embedfit.heads import LinearHead
 from embedfit.sampling import sample_few_shot
@@ -403,6 +404,19 @@ def digest(item: Image.Image | Path) -> str:
         return hashlib.sha256(f"{image.mode}{image.size}".encode() + image.tobytes()).hexdigest()
 
 
+def downscale(item: Image.Image | Path, side: int) -> Image.Image:
+    """``item`` decoded as the library decodes it, as 8-bit RGB with its shorter side at most
+    ``side``: shrunk with antialiased bicubic resampling, keeping the aspect ratio, never enlarged.
+    """
+    pixels = (to_rgb_tensor(item) * 255).round().to(torch.uint8)  # Exact for 8-bit sources.
+    image = Image.fromarray(pixels.permute(1, 2, 0).numpy())  # [H, W, 3] uint8: RGB.
+    scale = side / min(image.size)
+    if scale < 1:
+        size = (max(1, round(image.width * scale)), max(1, round(image.height * scale)))
+        image = image.resize(size, Image.Resampling.BICUBIC)
+    return image
+
+
 def drop_pool_duplicates(splits: dict[str, Split], evaluate_on: str) -> int:
     """Remove evaluation images whose pixels match a pool image; return how many."""
     pool = {digest(image) for image, _ in splits["pool"]}
@@ -440,6 +454,7 @@ def read_previous(output: Path, config: dict, measured: Collection[str] = MEASUR
         saved.setdefault("temperature", 0.07)
         saved.setdefault("device", "cpu")
         saved.setdefault("interpolate", [])
+        saved.setdefault("max_image_side", None)
     except (json.JSONDecodeError, KeyError, TypeError, ValueError):
         raise SystemExit(f"{output} is not a results file written by this script.") from None
     if set(saved) - set(measured) != set(config) or any(
@@ -684,6 +699,13 @@ def training_parser(description: str) -> argparse.ArgumentParser:
         help="run CUDA convolutions without cuDNN, for GPUs that the installed cuDNN does not "
         "support",
     )
+    parser.add_argument(
+        "--max-image-side",
+        type=positive_int,
+        default=None,
+        help="decode every loaded image once and keep it in memory as RGB with its shorter side "
+        "shrunk to at most this (never enlarged); default: decode from the source at every use",
+    )
     parser.add_argument("--evaluate-on", choices=["validation", "test"], required=True)
     parser.add_argument("--pool-per-class", type=int, default=100)
     parser.add_argument("--eval-per-class", type=int, default=100)
@@ -818,7 +840,12 @@ def load_splits(args: argparse.Namespace) -> tuple[dict[str, ImageDataset], list
         evaluate_on=args.evaluate_on,
         seed=args.split_seed,
     )
-    duplicates = drop_pool_duplicates(loaded, args.evaluate_on)
+    duplicates = drop_pool_duplicates(loaded, args.evaluate_on)  # On the original pixels.
+    if args.max_image_side is not None:  # Decoded once here, not at every training draw.
+        loaded = {
+            name: [(downscale(image, args.max_image_side), label) for image, label in items]
+            for name, items in loaded.items()
+        }
     splits = {
         name: ImageDataset.from_lists([image for image, _ in items], [label for _, label in items])
         for name, items in loaded.items()
