@@ -243,12 +243,16 @@ def test_rare_positive_metrics_of_separated_embeddings_are_perfect(quality):
 
 def test_repeated_evaluation_images_are_dropped_after_the_first(quality):
     images, labels = bars(3, seed=0)
-    repeated = ImageDataset.from_lists(
-        [*images, images[1], images[4], images[1]], [*labels, labels[1], labels[4], labels[1]]
+    repeated = list(
+        zip(
+            [*images, images[1], images[4], images[1]],
+            [*labels, labels[1], labels[4], labels[1]],
+            strict=True,
+        )
     )
-    kept, dropped = quality.drop_repeated_images(repeated)
+    kept, dropped = quality.few_shot.drop_repeats(repeated)
     assert dropped == 3
-    assert kept.images == images and kept.labels == labels
+    assert kept == list(zip(images, labels, strict=True))
 
 
 # The command line.

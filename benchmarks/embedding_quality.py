@@ -250,21 +250,6 @@ def rare_positive_evaluation(
     return evaluate
 
 
-def drop_repeated_images(dataset: ImageDataset) -> tuple[ImageDataset, int]:
-    """Keep the first of every set of images with identical pixels; return how many were dropped.
-
-    A repeated image would retrieve its copy at rank 1 and inflate the retrieval metrics.
-    """
-    seen: set[str] = set()
-    kept = []
-    for position, image in enumerate(dataset.images):
-        digest = few_shot.digest(image)
-        if digest not in seen:
-            seen.add(digest)
-            kept.append(position)
-    return dataset.subset(kept), len(dataset) - len(kept)
-
-
 def read_previous(output: Path, config: dict) -> dict | None:
     """``few_shot.read_previous``, also requiring a known task in every record."""
     previous = few_shot.read_previous(output, config, measured=MEASURED)
@@ -336,9 +321,11 @@ def main(argv: list[str] | None = None) -> None:
     done = {(r["task"], r["shots"], r["seed"]) for r in records}
     elapsed = sum(entry["elapsed_seconds"] for entry in sessions)
 
-    splits, classes, duplicates = few_shot.load_splits(args)
-    pool = splits["pool"]
-    evaluation, repeats = drop_repeated_images(splits[args.evaluate_on])
+    few_shot.check_image_side(args)
+    # A repeated evaluation image would retrieve its copy at rank 1 and inflate the retrieval
+    # metrics, so all but the first of each are dropped.
+    splits, classes, duplicates, repeats = few_shot.load_splits(args, drop_repeated=True)
+    pool, evaluation = splits["pool"], splits[args.evaluate_on]
     config["evaluation_duplicates_dropped"] = duplicates
     config["evaluation_repeats_dropped"] = repeats
     config["evaluation_size"] = len(evaluation)

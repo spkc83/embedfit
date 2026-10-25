@@ -298,7 +298,7 @@ def test_an_evaluation_image_that_matches_the_pool_is_dropped(few_shot, monkeypa
         split_seed=0,
         max_image_side=None,
     )
-    splits, labels, duplicates = few_shot.load_splits(args)
+    splits, labels, duplicates, _ = few_shot.load_splits(args)
     assert (duplicates, len(splits["test"]), labels) == (1, 8, NAMES)
 
 

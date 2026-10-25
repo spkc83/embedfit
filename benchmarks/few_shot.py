@@ -831,8 +831,50 @@ def training_arguments(
     return arguments
 
 
-def load_splits(args: argparse.Namespace) -> tuple[dict[str, ImageDataset], list[str], int]:
-    """The pool and the evaluated split, the class names, and the duplicates dropped."""
+def drop_repeats(items: Split) -> tuple[Split, int]:
+    """Keep the first of every set of images with identical pixels; return how many were dropped."""
+    seen: set[str] = set()
+    kept = []
+    for image, label in items:
+        key = digest(image)
+        if key not in seen:
+            seen.add(key)
+            kept.append((image, label))
+    return kept, len(items) - len(kept)
+
+
+def check_image_side(args: argparse.Namespace) -> None:
+    """Exit if ``--max-image-side`` is below the shorter side the backbone resizes images to.
+
+    Below it, the backbone would enlarge the shrunk images again. Builds the backbone once, on
+    the CPU, so that this fails before any data is loaded.
+    """
+    if args.max_image_side is None:
+        return
+    backbone = EmbedFitModel.from_pretrained(
+        args.backbone, image_size=args.image_size, device="cpu"
+    ).backbone
+    edge = getattr(backbone, "resize_size", None) or getattr(backbone, "image_size", None)
+    if isinstance(edge, tuple):
+        edge = min(edge)
+    if isinstance(edge, int) and args.max_image_side < edge:
+        raise SystemExit(
+            f"--max-image-side {args.max_image_side} is below {edge}, the shorter side "
+            f"{args.backbone} resizes images to at --image-size {args.image_size}; use at least "
+            f"{edge}, and about twice --image-size to leave room for augmentation crops."
+        )
+
+
+def load_splits(
+    args: argparse.Namespace, *, drop_repeated: bool = False
+) -> tuple[dict[str, ImageDataset], list[str], int, int]:
+    """The pool and the evaluated split, the class names, and the duplicates dropped.
+
+    The last two are the evaluation images dropped because their pixels match a pool image, and,
+    with ``drop_repeated``, those dropped because their pixels match an earlier evaluation image
+    (0 otherwise). Both are judged on the original pixels, before ``--max-image-side`` shrinks
+    them, so that they do not depend on it.
+    """
     loaded, labels = LOADERS[args.dataset](
         args.data_root,
         pool=args.pool_per_class,
@@ -841,6 +883,9 @@ def load_splits(args: argparse.Namespace) -> tuple[dict[str, ImageDataset], list
         seed=args.split_seed,
     )
     duplicates = drop_pool_duplicates(loaded, args.evaluate_on)  # On the original pixels.
+    repeats = 0
+    if drop_repeated:
+        loaded[args.evaluate_on], repeats = drop_repeats(loaded[args.evaluate_on])
     if args.max_image_side is not None:  # Decoded once here, not at every training draw.
         loaded = {
             name: [(downscale(image, args.max_image_side), label) for image, label in items]
@@ -850,7 +895,7 @@ def load_splits(args: argparse.Namespace) -> tuple[dict[str, ImageDataset], list
         name: ImageDataset.from_lists([image for image, _ in items], [label for _, label in items])
         for name, items in loaded.items()
     }
-    return splits, labels, duplicates
+    return splits, labels, duplicates, repeats
 
 
 def new_session(args: argparse.Namespace) -> dict:
@@ -897,7 +942,8 @@ def main(argv: list[str] | None = None) -> None:
     done = {(r["shots"], r["seed"]) for r in records}
     elapsed = sum(entry["elapsed_seconds"] for entry in sessions)
 
-    splits, labels, duplicates = load_splits(args)
+    check_image_side(args)
+    splits, labels, duplicates, _ = load_splits(args)
     config["evaluation_duplicates_dropped"] = duplicates
     config["evaluation_size"] = len(splits[args.evaluate_on])
     if previous and previous["config"] != config:
