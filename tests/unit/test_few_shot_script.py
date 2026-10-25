@@ -436,36 +436,76 @@ def test_downscale_decodes_files_like_the_library_and_keeps_small_images_exact(f
     assert np.abs(np.asarray(shrunk, dtype=float) - np.asarray(area, dtype=float)).mean() < 40
 
 
+def uniform(value, odd=None):
+    """A 400x300 image of one grey, with optionally one pixel one level brighter."""
+    image = Image.new("RGB", (400, 300), (value,) * 3)
+    if odd is not None:
+        image.putpixel(odd, (value + 1,) * 3)
+    return image
+
+
 def fake_loader(tmp_path):
+    """Exact copies, and near copies that differ in one pixel: equal only once shrunk to 100."""
     big = tmp_path / "big.png"
     Image.new("RGB", (400, 300), (10, 20, 30)).save(big)
     copy = Image.new("RGB", (400, 300), (10, 20, 30))  # The pixels of the pool image.
 
     def loader(root, *, pool, evaluation, evaluate_on, seed):
         splits = {
-            "pool": [(big, "a"), (Image.new("RGB", (50, 40), (1, 2, 3)), "b")],
-            evaluate_on: [(copy, "a"), (Image.new("RGB", (600, 200), (4, 5, 6)), "b")],
+            "pool": [(big, "a"), (Image.new("RGB", (50, 40), (1, 2, 3)), "b"), (uniform(90), "b")],
+            evaluate_on: [
+                (copy, "a"),
+                (Image.new("RGB", (600, 200), (4, 5, 6)), "b"),
+                (uniform(90, odd=(7, 7)), "b"),  # Near copy of a pool image.
+                (uniform(150), "a"),
+                (uniform(150, odd=(200, 100)), "a"),  # Near copy of the image before.
+                (uniform(150), "a"),  # Exact repeat.
+            ],
         }
         return splits, ["a", "b"]
 
     return loader, big
 
 
-def splits_with(few_shot, monkeypatch, tmp_path, *options):
+def splits_with(few_shot, monkeypatch, tmp_path, *options, drop_repeated=False):
     loader, big = fake_loader(tmp_path)
     monkeypatch.setitem(few_shot.LOADERS, "eurosat", loader)
     args = few_shot.parse_arguments([*REQUIRED, *options])
-    return few_shot.load_splits(args), big
+    return few_shot.load_splits(args, drop_repeated=drop_repeated), big
+
+
+def test_the_near_copies_only_collide_once_shrunk(few_shot):
+    for value, odd in ((90, (7, 7)), (150, (200, 100))):
+        assert few_shot.digest(uniform(value)) != few_shot.digest(uniform(value, odd))
+        shrunk = [few_shot.downscale(image, 100) for image in (uniform(value), uniform(value, odd))]
+        assert few_shot.digest(shrunk[0]) == few_shot.digest(shrunk[1])
+
+
+@pytest.mark.parametrize("side", [None, "100"])
+def test_duplicates_and_repeats_are_judged_on_the_original_pixels(
+    few_shot, monkeypatch, tmp_path, side
+):
+    options = [] if side is None else ["--max-image-side", side]
+    (splits, _, duplicates, repeats), _ = splits_with(
+        few_shot, monkeypatch, tmp_path, *options, drop_repeated=True
+    )
+    assert (duplicates, repeats) == (1, 1)  # The exact copy and the exact repeat only.
+    assert len(splits["validation"]) == 4
+    (_, _, _, repeats), _ = splits_with(few_shot, monkeypatch, tmp_path, *options)
+    assert repeats == 0  # Not asked for.
 
 
 def test_max_image_side_shrinks_every_loaded_image_once(few_shot, monkeypatch, tmp_path):
-    (splits, labels, duplicates), _ = splits_with(
+    (splits, labels, duplicates, _), _ = splits_with(
         few_shot, monkeypatch, tmp_path, "--max-image-side", "100"
     )
     assert duplicates == 1  # Judged on the original pixels, before shrinking.
     assert labels == ["a", "b"]
     sizes = {name: [image.size for image in split.images] for name, split in splits.items()}
-    assert sizes == {"pool": [(133, 100), (50, 40)], "validation": [(300, 100)]}
+    assert sizes == {
+        "pool": [(133, 100), (50, 40), (133, 100)],
+        "validation": [(300, 100), *[(133, 100)] * 4],
+    }
     assert all(
         isinstance(image, Image.Image) and image.mode == "RGB"
         for split in splits.values()
@@ -474,7 +514,7 @@ def test_max_image_side_shrinks_every_loaded_image_once(few_shot, monkeypatch, t
 
 
 def test_without_max_image_side_the_loaded_items_are_unchanged(few_shot, monkeypatch, tmp_path):
-    (splits, _, duplicates), big = splits_with(few_shot, monkeypatch, tmp_path)
+    (splits, _, duplicates, _), big = splits_with(few_shot, monkeypatch, tmp_path)
     assert duplicates == 1
     assert splits["pool"].images[0] == big  # Still a path, decoded at every use.
     assert splits["validation"].images[0].size == (600, 200)
@@ -483,3 +523,35 @@ def test_without_max_image_side_the_loaded_items_are_unchanged(few_shot, monkeyp
 def test_max_image_side_is_part_of_the_configuration(few_shot):
     assert namespace(few_shot)["max_image_side"] is None
     assert namespace(few_shot, "--max-image-side", "224")["max_image_side"] == 224
+
+
+def test_downscale_applies_the_exif_orientation_like_the_library(few_shot, tmp_path):
+    path = tmp_path / "rotated.jpg"
+    exif = Image.Exif()
+    exif[0x0112] = 6  # Orientation: displayed rotated by 90 degrees.
+    Image.new("RGB", (40, 20), (200, 30, 30)).save(path, exif=exif.tobytes())
+    assert Image.open(path).size == (40, 20)  # As stored.
+    assert few_shot.downscale(path, 100).size == (20, 40)  # As displayed.
+    assert few_shot.downscale(path, 10).size == (10, 20)
+
+
+@pytest.mark.parametrize(("side", "fails"), [(None, False), ("31", True), ("32", False)])
+def test_max_image_side_must_reach_the_backbone_resize_edge(few_shot, side, fails, monkeypatch):
+    built = []
+    real = few_shot.EmbedFitModel.from_pretrained
+    monkeypatch.setattr(
+        few_shot.EmbedFitModel,
+        "from_pretrained",
+        lambda *a, **k: built.append(k) or real(*a, **k),
+    )
+    options = ["--backbone", "dummy/tiny", "--image-size", "32"]
+    args = few_shot.parse_arguments(
+        [*REQUIRED, *options, *([] if side is None else ["--max-image-side", side])]
+    )
+    if fails:
+        with pytest.raises(SystemExit, match="--max-image-side 31 is below 32"):
+            few_shot.check_image_side(args)
+    else:
+        few_shot.check_image_side(args)
+    assert len(built) == (0 if side is None else 1)
+    assert all(k["device"] == "cpu" for k in built)
