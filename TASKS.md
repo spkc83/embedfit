@@ -151,6 +151,7 @@ Legend:
 - [x] `end_to_end` as linear probe then fine-tune (LP-FT, ADR 0012)
 - [x] batch-norm statistics fixed during representation training, `freeze_batch_norm` (ADR 0013)
 - [x] partial unfreezing of the last backbone blocks, `unfreeze_last_blocks` (ADR 0015)
+- [x] normalisation-layer-only and bias-only training, `trainable_parameters` (ADR 0021)
 - [x] augmentation profiles `none` / `natural` / `document` and the augmentation-pipeline registry (ADR 0014)
 - [x] batch-sampler and metric registries (`register_sampler`, `register_metric`; SPEC §26)
 - [x] EuroSAT few-shot benchmark with DINOv2-small (`benchmarks/few_shot.py`, `docs/benchmarks/eurosat-dinov2-small.md`)

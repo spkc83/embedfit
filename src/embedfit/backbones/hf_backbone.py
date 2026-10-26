@@ -302,6 +302,17 @@ class HFBackbone(ImageBackbone):
         ]
         return [self._names_of(*entries) for entries in zip(*parallel, strict=True)]
 
+    def is_normalization(self, module: nn.Module) -> bool:
+        """Torch's normalisation layers, and classes whose name ends in ``LayerNorm`` or
+        ``RMSNorm``.
+
+        Most Transformers vision models use torch's norms; the few of its own (``VitDetLayerNorm``,
+        ``Aimv2RMSNorm``) share no base class, so they are recognised by name.
+        """
+        return super().is_normalization(module) or type(module).__name__.endswith(
+            ("LayerNorm", "RMSNorm")
+        )
+
     def save_pretrained(self, path: str | Path) -> None:
         """Write ``config.json`` (pooling and preprocessing) and the model in ``model/``.
 
