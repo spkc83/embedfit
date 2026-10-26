@@ -82,6 +82,7 @@ Legend:
 - [x] Representation checkpoints on disk, best and last epoch (`checkpoint_dir`, ADR 0016)
 - [x] Step budget, `max_steps`, for every trained mode (ADR 0017)
 - [x] SupCon projection head (`projection_dim`) and several augmented views per image (`contrastive_views`) (ADR 0018)
+- [x] Per-part learning rates: `head_learning_rate` and layer-wise decay `layer_lr_decay` (ADR 0020)
 - [x] Freeze + head fit transition
 - [x] Integration test demonstrating encoder weights change
 

@@ -173,6 +173,8 @@ checkpoint_dir: str | None = None         # best and last epoch written as bundl
 max_steps: int | None = None              # budget in optimizer steps; replaces num_epochs (ADR 0017)
 projection_dim: int | None = None         # supcon: loss on a discarded projection head (ADR 0018)
 contrastive_views: int = 1                # supcon: augmented views per drawn image (ADR 0018)
+head_learning_rate: float | None = None   # end_to_end classifier / supcon projection head (ADR 0020)
+layer_lr_decay: float | None = None       # backbone block i of n at decay ** (n - 1 - i) (ADR 0020)
 ```
 
 ## 6. Input data
