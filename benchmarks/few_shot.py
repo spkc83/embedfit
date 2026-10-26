@@ -2,7 +2,8 @@
 
 Compares training modes as ``FewShotEvaluator`` does, and with ``--interpolate`` also scores
 every trained backbone with its weights interpolated toward the pretrained ones (WiSE-FT;
-``docs/guides/benchmarking.md``). Six datasets are supported, all downloaded
+``docs/guides/benchmarking.md``). With ``--heads``, every method is scored with each named head
+instead of its own (ADR 0019). Six datasets are supported, all downloaded
 on first use. Everything the run downloads or derives (datasets, pretrained weights, the page
 cache) goes under ``--data-root``, by default the git-ignored ``.cache/`` folder of the
 repository; the ``datasets`` library, Hugging Face Hub, and torch hub caches and the temporary
@@ -55,10 +56,12 @@ import logging
 import math
 import os
 import platform
+import subprocess
 import tempfile
 import time
 from collections.abc import Callable, Collection, Iterator, Sequence
 from dataclasses import replace
+from importlib import metadata
 from itertools import chain
 from pathlib import Path
 from typing import Any
@@ -73,13 +76,15 @@ from embedfit import EmbedFitModel, FewShotEvaluator, ImageDataset, Trainer, Tra
 from embedfit.augmentation import available_augmentations
 from embedfit.data import to_rgb_tensor
 from embedfit.exceptions import ConfigurationError
-from embedfit.heads import LinearHead
+from embedfit.heads import LinearHead, create_head
 from embedfit.sampling import sample_few_shot
 from embedfit.utils.device import resolve_device
+from embedfit.utils.seed import set_seed
 
 logger = logging.getLogger(__name__)
 
 TRAINED_METHODS = ("end_to_end", "supcon", "pair")
+HEADS = ("linear", "logistic_regression")
 DOCUMENT_SHORT_SIDE = 512
 RVL_CDIP_DATASET = "jinhybr/rvl_cdip_400_train_val_test"
 RVL_CDIP_REVISION = (
@@ -119,7 +124,9 @@ DEFAULT_IMAGE_SIZE = {
     "flowers": 224,
     "pcam": 112,
 }
-DEFAULT_DATA_ROOT = Path(__file__).resolve().parents[1] / ".cache"  # Git-ignored.
+REPOSITORY = Path(__file__).resolve().parents[1]
+DEFAULT_DATA_ROOT = REPOSITORY / ".cache"  # Git-ignored.
+RECORDED_PACKAGES = ("torchvision", "transformers", "timm", "scikit-learn")
 
 Split = list[tuple[Image.Image | Path, str]]
 
@@ -270,9 +277,24 @@ def _draw(
 def _listing(source: Any) -> tuple[np.ndarray, list[Path]]:
     """The labels and image files of a torchvision dataset, without decoding any image."""
     # torchvision has no public list of a split's files; DTD and Flowers102 name it _image_files,
-    # OxfordIIITPet _images.
-    files = getattr(source, "_image_files", None) or source._images
-    return np.asarray(source._labels), list(files)
+    # OxfordIIITPet _images, and all three name the labels _labels.
+    files = getattr(source, "_image_files", None)
+    if files is None:
+        files = getattr(source, "_images", None)
+    labels = getattr(source, "_labels", None)
+    name = type(source).__name__
+    if files is None or labels is None:
+        raise SystemExit(
+            f"This torchvision version's {name} does not list its image files and labels as "
+            "the benchmark expects (_image_files or _images, and _labels); use a version "
+            "the benchmark supports."
+        )
+    if len(files) != len(labels):
+        raise SystemExit(
+            f"This torchvision version's {name} lists {len(files)} image files and "
+            f"{len(labels)} labels; they must correspond one to one."
+        )
+    return np.asarray(labels), list(files)
 
 
 def _files(labels: np.ndarray, files: list[Path], keep: np.ndarray) -> Source:
@@ -444,6 +466,10 @@ def read_previous(output: Path, config: dict, measured: Collection[str] = MEASUR
         for record in previous["records"]:
             record.setdefault("alpha", None)  # Records from before --interpolate.
         saved = previous["config"]
+        if "heads" in config:  # An option of this script only, not of embedding_quality.py.
+            saved.setdefault("heads", None)
+            for record in previous["records"]:  # Records from before --heads.
+                record.setdefault("head", own_head(record["method"]))
         saved.setdefault("gradient_accumulation_steps", 1)  # Files from before the option.
         saved.setdefault("dataset_revision", None)
         saved.setdefault("augmentation", "none")
@@ -478,6 +504,15 @@ def positive_float(value: str) -> float:
     if not number > 0 or math.isinf(number):
         raise argparse.ArgumentTypeError(f"expected a positive number, got {value!r}")
     return number
+
+
+def own_head(method: str) -> str:
+    """The head ``method`` is scored with by default: ``linear`` for ``end_to_end``, whose jointly
+    trained classifier becomes a ``LinearHead`` (ADR 0011), and the default
+    ``TrainingArguments.head`` for every other method."""
+    if method == "end_to_end":
+        return "linear"
+    return str(TrainingArguments.__dataclass_fields__["head"].default)
 
 
 def interpolation_weight(value: str) -> float:
@@ -563,20 +598,55 @@ def trained_weights(trainer: Trainer, alphas: Sequence[float]) -> Iterator[float
         yield alpha
 
 
-def row_name(method: str, alpha: float | None) -> str:
-    """The summary row of a method's records at an interpolation weight (``None``: as trained).
+def fitted_heads(trainer: Trainer, heads: Sequence[str]) -> Iterator[str]:
+    """Give the trainer's model each head in ``heads``, fitted, and yield its name.
+
+    Score the model at every yield; the next one replaces its head. Call it at every yield of
+    ``trained_weights``. The head the model has then, the method's own (``own_head``), is used
+    as it is. Every other head is new and fitted on the training embeddings of the backbone as
+    it is, encoded once: ``linear`` a ``LinearHead`` seeded and configured as the linear probe
+    of ``end_to_end`` (ADR 0012), ``logistic_regression`` one with the default settings, as the
+    other methods' own head. The backbone is not changed.
+    """
+    model = trainer.model
+    own, fitted = model.head_name, model.head
+    embeddings = None
+    for name in heads:
+        if name == own:
+            model.head = fitted
+        else:
+            if embeddings is None:
+                embeddings = model.encode(
+                    trainer.train_dataset.images, batch_size=trainer.args.eval_batch_size
+                )
+                assert isinstance(embeddings, np.ndarray)
+            model.head = (
+                LinearHead(seed=trainer.args.seed) if name == "linear" else create_head(name)
+            )
+            model.fit_head(labels=trainer.train_dataset.labels, embeddings=embeddings)
+        yield name
+
+
+def row_name(method: str, alpha: float | None, head: str | None = None) -> str:
+    """The summary row of a method's records at an interpolation weight (``None``: as trained),
+    scored with ``head`` (``None``: the head is not named).
 
     ``repr`` gives distinct weights distinct names.
     """
-    return method if alpha is None else f"{method} α={alpha!r}"
+    name = method if head is None else f"{method} {head}"
+    return name if alpha is None else f"{name} α={alpha!r}"
 
 
-def row_names(methods: Sequence[str], alphas: Sequence[float]) -> list[str]:
-    """The summary rows of ``methods``: each, followed by its interpolations if it is trained."""
+def row_names(
+    methods: Sequence[str], alphas: Sequence[float], heads: Sequence[str | None] = (None,)
+) -> list[str]:
+    """The summary rows of ``methods``: each, followed by its interpolations if it is trained,
+    once per head in ``heads``."""
     return [
-        row_name(method, alpha)
+        row_name(method, alpha, head)
         for method in methods
         for alpha in (None, *(alphas if method in TRAINED_METHODS else ()))
+        for head in heads
     ]
 
 
@@ -727,6 +797,11 @@ def check_arguments(parser: argparse.ArgumentParser, args: argparse.Namespace) -
         parser.error("--unfreeze-last-blocks applies to trained methods only, and none is selected")
     if args.max_steps is not None and not set(args.methods) & set(TRAINED_METHODS):
         parser.error("--max-steps applies to trained methods only, and none is selected")
+    for option, values, lowest in (("--shots", args.shots, 1), ("--seeds", args.seeds, 0)):
+        if len(set(values)) != len(values):
+            parser.error(f"{option} names a value twice")
+        if min(values) < lowest:
+            parser.error(f"{option} must be at least {lowest}, got {min(values)}")
     if args.interpolate and not set(args.methods) & set(TRAINED_METHODS):
         parser.error("--interpolate applies to trained methods only, and none is selected")
     if len(set(args.interpolate)) != len(args.interpolate):
@@ -755,8 +830,21 @@ def check_arguments(parser: argparse.ArgumentParser, args: argparse.Namespace) -
 def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
     """The command line, with every check that needs no data; exits on an error."""
     parser = training_parser(__doc__.splitlines()[0])
+    parser.add_argument(
+        "--heads",
+        nargs="+",
+        choices=HEADS,
+        default=None,
+        help="score every method with each of these heads, fitted on the training embeddings of "
+        "its final backbone (ADR 0019); default: each method's own head, linear for end_to_end "
+        "and logistic_regression for the others",
+    )
     args = parser.parse_args(argv)
     check_arguments(parser, args)
+    if args.heads is not None:
+        if len(set(args.heads)) != len(args.heads):
+            parser.error("--heads names a head twice")
+        args.heads = sorted(args.heads)  # One order, so that resuming compares alike.
     return args
 
 
@@ -898,11 +986,38 @@ def load_splits(
     return splits, labels, duplicates, repeats
 
 
+def git_commit() -> str | None:
+    """The commit checked out in the repository, or ``None`` outside a git checkout."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=REPOSITORY,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    commit = result.stdout.strip()
+    return commit if result.returncode == 0 and commit else None
+
+
+def package_version(name: str) -> str | None:
+    """The installed version of the distribution ``name``, or ``None`` if it is not installed."""
+    try:
+        return metadata.version(name)
+    except metadata.PackageNotFoundError:
+        return None
+
+
 def new_session(args: argparse.Namespace) -> dict:
     """The environment of this session; ``elapsed_seconds`` grows as groups finish."""
     return {
         "embedfit": embedfit.__version__,
+        "git_commit": git_commit(),
         "torch": torch.__version__,
+        **{name: package_version(name) for name in RECORDED_PACKAGES},
         "device": args.device,
         "cudnn": torch.backends.cudnn.enabled,
         "threads": args.threads,
@@ -971,22 +1086,25 @@ def main(argv: list[str] | None = None) -> None:
             started = time.perf_counter()
             sample = sample_few_shot(splits["pool"], shots=shots, seed=seed)
             for method in args.methods:
+                set_seed(seed)  # For any randomly initialised part of the backbone.
                 model = model_factory()
                 options = arguments.get(method, TrainingArguments(training_mode=method))
                 trainer = Trainer(model, replace(options, seed=seed), sample)
                 for alpha in trained_weights(trainer, args.interpolate):
-                    records += [
-                        {
-                            "method": method,
-                            "alpha": alpha,
-                            "backbone": model.backbone.identifier,
-                            "shots": shots,
-                            "seed": seed,
-                            "metric": metric,
-                            "value": float(value),
-                        }
-                        for metric, value in trainer.evaluate(splits[args.evaluate_on]).items()
-                    ]
+                    for head in fitted_heads(trainer, args.heads or [own_head(method)]):
+                        records += [
+                            {
+                                "method": method,
+                                "alpha": alpha,
+                                "head": head,
+                                "backbone": model.backbone.identifier,
+                                "shots": shots,
+                                "seed": seed,
+                                "metric": metric,
+                                "value": float(value),
+                            }
+                            for metric, value in trainer.evaluate(splits[args.evaluate_on]).items()
+                        ]
                 logger.info("Benchmarked %s at %d shots, seed %d", method, shots, seed)
             session["elapsed_seconds"] = round(
                 session["elapsed_seconds"] + time.perf_counter() - started, 1
@@ -996,21 +1114,27 @@ def main(argv: list[str] | None = None) -> None:
             payload = {"config": config, "environment": environment, "records": records}
             write_results(args.output, payload)
 
+    named = args.heads is not None  # Rows name the head only when it is chosen.
     summary = FewShotEvaluator.aggregate(
-        [{**r, "method": row_name(r["method"], r["alpha"])} for r in records]
+        [
+            {**r, "method": row_name(r["method"], r["alpha"], r["head"] if named else None)}
+            for r in records
+        ]
     )
     print(
         f"\n{args.evaluate_on} accuracy (mean ± std over {len(args.seeds)} seeds), "
         f"{elapsed / 60:.1f} min"
     )
-    print(f"{'method':20s}" + "".join(f"{f'{n} shots':>16s}" for n in args.shots))
-    for name in row_names(args.methods, args.interpolate):
+    names = row_names(args.methods, args.interpolate, args.heads or [None])
+    width = max(20, *(len(name) + 2 for name in names))
+    print(f"{'method':{width}s}" + "".join(f"{f'{n} shots':>16s}" for n in args.shots))
+    for name in names:
         cells = [
             f"{row['mean']:.3f} ± {row['std']:.3f}"
             for row in summary
             if row["method"] == name and row["metric"] == "accuracy"
         ]
-        print(f"{name:20s}" + "".join(f"{cell:>16s}" for cell in cells))
+        print(f"{name:{width}s}" + "".join(f"{cell:>16s}" for cell in cells))
 
 
 if __name__ == "__main__":

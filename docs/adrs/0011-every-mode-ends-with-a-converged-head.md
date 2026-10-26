@@ -1,6 +1,6 @@
 # ADR 0011 — Every Training Mode Ends with a Converged Head
 
-Status: Accepted. Amended by ADR 0012: `end_to_end` now starts from a linear probe, so the measurements below describe the earlier, randomly initialised baseline.
+Status: Accepted. Amended by ADR 0012: `end_to_end` now starts from a linear probe, so the measurements below describe the earlier, randomly initialised baseline. ADR 0019 corrects the rationale: the modes get converged heads of different kinds, not the same head.
 
 ## Decision
 
@@ -19,7 +19,9 @@ Separately, the validation batches of `end_to_end` were reshuffled every epoch. 
 
 ## Rationale
 
-`docs/research/BASELINES.md` makes strong baselines a precondition for any claim about sample efficiency. A comparison in which one arm is scored with a classifier that may not have converged measures the head-training procedure, not the representation. Giving every arm the same converged head isolates the variable the project is about: how the backbone was adapted.
+`docs/research/BASELINES.md` makes strong baselines a precondition for any claim about sample efficiency. A comparison in which one arm is scored with a classifier that may not have converged measures the head-training procedure, not the representation. Giving every arm a converged head removes that variable.
+
+It does not give every arm the same head. `end_to_end` is scored with a `LinearHead` (weight decay 1e-4), and the other modes with `args.head`, by default a `LogisticRegressionHead` with `C=1.0`, whose L2 penalty is 60 to 250 times larger at 40 to 160 training samples. A comparison between `end_to_end` and the other modes therefore still includes a difference of head. `benchmarks/few_shot.py --heads` scores every mode with the same head (ADR 0019).
 
 With a converged head, a learning rate too small to train the backbone degrades every mode to the frozen baseline instead of sending one of them to chance.
 

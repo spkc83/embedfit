@@ -355,3 +355,36 @@ def test_rare_positive_on_two_classes_exits_when_the_pool_is_short(quality):
 def test_every_loader_has_a_default_image_size(few_shot):
     assert set(few_shot.DEFAULT_IMAGE_SIZE) == set(few_shot.LOADERS)
     assert np.all([size % 14 == 0 for size in few_shot.DEFAULT_IMAGE_SIZE.values()])
+
+
+class Listed:
+    """A stand-in torchvision dataset with the given private attributes."""
+
+    def __init__(self, **attributes):
+        self.__dict__.update(attributes)
+
+
+@pytest.mark.parametrize("attribute", ["_image_files", "_images"])
+def test_a_listing_reads_the_files_and_labels(few_shot, attribute):
+    files = [Path("a.png"), Path("b.png")]
+    labels, listed = few_shot._listing(Listed(**{attribute: files, "_labels": [1, 0]}))
+    assert listed == files and labels.tolist() == [1, 0]
+
+
+def test_an_empty_listing_is_not_mistaken_for_a_missing_one(few_shot):
+    labels, files = few_shot._listing(Listed(_image_files=[], _images=[Path("x")], _labels=[]))
+    assert files == [] and labels.tolist() == []
+
+
+@pytest.mark.parametrize(
+    ("attributes", "message"),
+    [
+        ({"_labels": [0]}, "does not list its image files and labels"),
+        ({"_images": [Path("secret/a.png")]}, "does not list its image files and labels"),
+        ({"_images": [Path("secret/a.png")], "_labels": [0, 1]}, "1 image files and 2 labels"),
+    ],
+)
+def test_an_unexpected_listing_fails_without_naming_a_path(few_shot, attributes, message):
+    with pytest.raises(SystemExit, match=message) as failure:
+        few_shot._listing(Listed(**attributes))
+    assert "Listed" in str(failure.value) and "secret" not in str(failure.value)

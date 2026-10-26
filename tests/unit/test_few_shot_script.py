@@ -3,7 +3,10 @@
 import importlib.util
 import json
 import math
+import re
+import subprocess
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -46,6 +49,7 @@ CURRENT = {
     "device": "cpu",
     "interpolate": [],
     "max_image_side": None,
+    "heads": None,
 }
 
 
@@ -66,6 +70,7 @@ def write_results(path, config):
         ("device", "cpu", "cuda"),
         ("interpolate", [], [0.5]),
         ("max_image_side", None, 224),
+        ("heads", None, ["linear"]),
     ],
 )
 def test_a_file_from_before_an_option_resumes_with_its_default(
@@ -182,6 +187,96 @@ def test_a_record_from_before_interpolation_has_no_weight(few_shot, tmp_path):
     results = {"config": OLD, "environment": {"sessions": []}, "records": [record]}
     output.write_text(json.dumps(results))
     assert few_shot.read_previous(output, CURRENT)["records"][0]["alpha"] is None
+
+
+def test_a_record_from_before_heads_names_its_methods_own_head(few_shot, tmp_path):
+    output = tmp_path / "results.json"
+    records = [
+        {"method": method, "shots": 2, "seed": 0, "metric": "accuracy", "value": 0.5}
+        for method in ("frozen", "end_to_end", "supcon", "pair")
+    ]
+    output.write_text(
+        json.dumps({"config": OLD, "environment": {"sessions": []}, "records": records})
+    )
+    heads = [r["head"] for r in few_shot.read_previous(output, CURRENT)["records"]]
+    assert heads == ["logistic_regression", "linear", "logistic_regression", "logistic_regression"]
+
+
+# Checks of the shots and seeds.
+
+
+@pytest.mark.parametrize(
+    ("option", "message"),
+    [
+        (["--shots", "2", "4", "2"], "--shots names a value twice"),
+        (["--seeds", "1", "1"], "--seeds names a value twice"),
+        (["--shots", "0", "2"], "--shots must be at least 1, got 0"),
+        (["--seeds", "-1"], "--seeds must be at least 0, got -1"),
+    ],
+)
+def test_shots_and_seeds_are_distinct_and_in_range(few_shot, option, message, capsys):
+    with pytest.raises(SystemExit):
+        few_shot.parse_arguments([*REQUIRED, *option])
+    assert message in capsys.readouterr().err
+
+
+# The environment record.
+
+
+def test_the_session_records_the_commit_and_the_package_versions(few_shot):
+    args = few_shot.parse_arguments(REQUIRED)
+    session = few_shot.new_session(args)
+    for name in ("embedfit", "git_commit", "torch", "torchvision", "transformers", "timm"):
+        assert name in session
+    assert session["scikit-learn"] == few_shot.metadata.version("scikit-learn")
+    assert session["torchvision"] == few_shot.metadata.version("torchvision")
+    commit = session["git_commit"]
+    assert commit is None or re.fullmatch("[0-9a-f]{40}", commit)
+    assert few_shot.package_version("no-such-distribution-embedfit") is None
+
+
+@pytest.mark.parametrize(
+    "outcome",
+    [
+        OSError("no git"),
+        subprocess.TimeoutExpired("git", 30),
+        SimpleNamespace(returncode=128, stdout=""),
+    ],
+)
+def test_the_commit_is_none_outside_a_git_checkout(few_shot, monkeypatch, outcome):
+    def fake(*args, **kwargs):
+        if isinstance(outcome, BaseException):
+            raise outcome
+        return outcome
+
+    monkeypatch.setattr(few_shot.subprocess, "run", fake)
+    assert few_shot.git_commit() is None
+
+
+# The head every method is scored with.
+
+
+def test_heads_default_to_none_and_are_configuration_in_one_order(few_shot):
+    assert namespace(few_shot)["heads"] is None
+    config = namespace(few_shot, "--heads", "logistic_regression", "linear")
+    assert config["heads"] == ["linear", "logistic_regression"]
+    assert namespace(few_shot, "--heads", "linear", "logistic_regression") == config
+
+
+@pytest.mark.parametrize(
+    ("heads", "message"),
+    [(["linear", "linear"], "--heads names a head twice"), (["mlp"], "invalid choice")],
+)
+def test_heads_are_known_and_given_once(few_shot, heads, message, capsys):
+    with pytest.raises(SystemExit):
+        few_shot.parse_arguments([*REQUIRED, "--heads", *heads])
+    assert message in capsys.readouterr().err
+
+
+def test_each_method_has_its_own_head(few_shot):
+    assert few_shot.own_head("end_to_end") == "linear"
+    for method in ("frozen", "supcon", "pair"):
+        assert few_shot.own_head(method) == "logistic_regression"
 
 
 # WiSE-FT interpolation.
@@ -305,7 +400,8 @@ def test_the_plain_records_are_those_of_the_few_shot_evaluator(few_shot, run):
         ),
         training_arguments=few_shot.training_arguments(args, rates),
     )
-    assert [{k: v for k, v in r.items() if k != "alpha"} for r in records] == expected
+    assert [{k: v for k, v in r.items() if k not in {"alpha", "head"}} for r in records] == expected
+    assert all(r["head"] == few_shot.own_head(r["method"]) for r in records)
 
 
 def test_interpolation_at_zero_is_the_frozen_baseline(run, capsys):
@@ -322,6 +418,56 @@ def test_interpolation_at_zero_is_the_frozen_baseline(run, capsys):
     }
     printed = capsys.readouterr().out
     assert "supcon α=0" in printed and "pair α=0.5" in printed
+
+
+def scores(records, method, alpha, head):
+    return {
+        r["metric"]: r["value"]
+        for r in records
+        if (r["method"], r["alpha"], r["head"]) == (method, alpha, head)
+    }
+
+
+def test_every_method_is_scored_with_every_requested_head(few_shot, run, capsys):
+    methods = ("--methods", "frozen", "end_to_end", "supcon", "--interpolate", "0")
+    both = run(*methods, "--heads", "logistic_regression", "linear", output="both.json")
+    records = both["records"]
+    heads = ("linear", "logistic_regression")
+    assert {(r["method"], r["alpha"], r["head"]) for r in records} == {
+        *(("frozen", None, head) for head in heads),
+        *(
+            (method, alpha, head)
+            for method in ("end_to_end", "supcon")
+            for alpha in (None, 0.0)
+            for head in heads
+        ),
+    }
+    # At alpha 0 every trained method is the pretrained backbone, so with the same head it
+    # scores exactly as frozen does: the heads are the same whichever method they follow.
+    for head in heads:
+        frozen = scores(records, "frozen", None, head)
+        for method in ("end_to_end", "supcon"):
+            assert scores(records, method, 0.0, head) == frozen
+    assert scores(records, "frozen", None, "linear") != scores(
+        records, "frozen", None, "logistic_regression"
+    )
+    printed = capsys.readouterr().out
+    assert "end_to_end logistic_regression α=0.0" in printed and "frozen linear " in printed
+    # Without --heads, each method's records are those of its own head.
+    own = run(*methods, output="own.json")["records"]
+    assert own == [r for r in records if r["head"] == few_shot.own_head(r["method"])]
+
+
+def test_the_backbone_is_seeded_before_it_is_built(few_shot, run, monkeypatch):
+    seeds = []
+    real = few_shot.EmbedFitModel.from_pretrained
+    monkeypatch.setattr(
+        few_shot.EmbedFitModel,
+        "from_pretrained",
+        lambda *a, **k: seeds.append(torch.initial_seed()) or real(*a, **k),
+    )
+    run("--methods", "frozen", "supcon", "--seeds", "3", "5")
+    assert seeds[-4:] == [3, 3, 5, 5]  # After the checks before training.
 
 
 def end_to_end_trainer():
