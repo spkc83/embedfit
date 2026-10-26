@@ -503,3 +503,57 @@ def test_interpolation_at_zero_is_the_frozen_baseline(run, capsys):
     assert results["config"]["interpolate"] == [0.0, 0.5]
     printed = capsys.readouterr().out
     assert "supcon α=0.5" in printed
+
+
+def test_the_pool_is_checked_for_every_seed_before_training(run, quality, monkeypatch):
+    def refuse(*args, **kwargs):
+        raise AssertionError("trained before the check")
+
+    real = quality.rare_positive_sample
+
+    def failing(pool, classes, *, shots, negatives, seed):
+        if seed == 1:
+            raise SystemExit("too few images for seed 1")
+        return real(pool, classes, shots=shots, negatives=negatives, seed=seed)
+
+    monkeypatch.setattr(quality.Trainer, "train", refuse)
+    monkeypatch.setattr(quality, "rare_positive_sample", failing)
+    with pytest.raises(SystemExit, match="seed 1"):
+        run(
+            "--methods",
+            "frozen",
+            "--tasks",
+            "rare_positive",
+            "--negatives",
+            "6",
+            "--seeds",
+            "0",
+            "1",
+        )
+
+
+def test_the_backbone_is_seeded_before_it_is_built(run, quality, monkeypatch):
+    seeds = []
+    real = quality.EmbedFitModel.from_pretrained
+    monkeypatch.setattr(
+        quality.EmbedFitModel,
+        "from_pretrained",
+        lambda *a, **k: seeds.append(quality.few_shot.torch.initial_seed()) or real(*a, **k),
+    )
+    run("--methods", "frozen", "--tasks", "rare_positive", "--negatives", "6", "--seeds", "3", "5")
+    assert seeds[-2:] == [3, 5]  # After the checks before training.
+
+
+def test_seeds_are_checked_as_in_few_shot(quality, capsys):
+    with pytest.raises(SystemExit):
+        quality.parse_arguments([*REQUIRED, "--seeds", "2", "2"])
+    assert "--seeds names a value twice" in capsys.readouterr().err
+
+
+def test_records_and_configuration_gain_no_head(run, quality, tmp_path):
+    options = ("--methods", "frozen", "--tasks", "rare_positive", "--negatives", "6")
+    results = run(*options)
+    assert "heads" not in results["config"]
+    config = {k: v for k, v in results["config"].items() if k not in quality.MEASURED}
+    previous = quality.read_previous(tmp_path / "results.json", config)
+    assert all("head" not in record for record in previous["records"])

@@ -157,4 +157,5 @@ Legend:
 - [x] RVL-CDIP document-image benchmark with DINOv2-small (`docs/benchmarks/rvl-cdip-dinov2-small.md`)
 - [x] embedding-quality benchmark script, open-set and rare-positive tasks (`benchmarks/embedding_quality.py`)
 - [x] benchmark loaders for DTD, Oxford-IIIT Pets, Oxford Flowers-102, and PatchCamelyon (`docs/guides/benchmarking.md#datasets`)
+- [x] the same head for every method in `benchmarks/few_shot.py`, `--heads` (ADR 0019)
 - [ ] further real-image benchmarks (`docs/research/EXPERIMENT_MATRIX.md`)

@@ -34,6 +34,7 @@ from embedfit import EmbedFitModel, FewShotEvaluator, ImageDataset, Trainer, Tra
 from embedfit.evaluation import get_metric, recall_at_fpr
 from embedfit.retrieval import RetrievalIndex, mean_average_precision, retrieval_precision_at_k
 from embedfit.sampling import sample_few_shot
+from embedfit.utils.seed import set_seed
 
 logger = logging.getLogger(__name__)
 
@@ -360,10 +361,11 @@ def main(argv: list[str] | None = None) -> None:
             device=args.device,
         )
 
-    # Fail before any training: the pool must cover the largest shot count and every method
-    # must accept the smallest, for every task.
+    # Fail before any training: the pool must cover the largest shot count for every seed (the
+    # classes drawn depend on it) and every method must accept the smallest, for every task.
     for task in args.tasks:
-        draw(task, max(args.shots), args.seeds[0])
+        for seed in args.seeds:
+            draw(task, max(args.shots), seed)
         labels, positive_label, smallest, _ = draw(task, min(args.shots), args.seeds[0])
         for method in args.methods:
             Trainer(model_factory(labels, positive_label), options(method, args.seeds[0]), smallest)
@@ -378,6 +380,7 @@ def main(argv: list[str] | None = None) -> None:
                 started = time.perf_counter()
                 labels, positive_label, train, evaluate = draw(task, shots, seed)
                 for method in args.methods:
+                    set_seed(seed)  # For any randomly initialised part of the backbone.
                     model = model_factory(labels, positive_label)
                     trainer = Trainer(model, options(method, seed), train)
                     for alpha in few_shot.trained_weights(trainer, args.interpolate):
