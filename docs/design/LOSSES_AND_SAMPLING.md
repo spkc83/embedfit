@@ -29,6 +29,10 @@ Embeddings are L2-normalised inside the loss by default, so the result does not 
 
 `[B, V, D]` input is flattened to `[B·V, D]` with labels repeated per view, so views of one sample are positives of each other. `supcon` training passes `[B, V, D]` when `TrainingArguments.contrastive_views` is above 1 (ADR 0018).
 
+### Joint objective with cross-entropy
+
+`end_to_end` training with `TrainingArguments.contrastive_weight = w` above 0 adds the loss to the cross-entropy of its linear classifier, `CE + w · SupCon`, on every training and validation batch (ADR 0022). The loss is applied as in `supcon`: to the embeddings, or to the projection head with `projection_dim`, with the same `temperature` and `[B, V, D]` input with several views; cross-entropy is averaged over every view. A batch with no positive raises `ConfigurationError` here too, which the default `balanced` sampler prevents. Gunel et al. (2021) and Core-tuning (Zhang et al., 2021) train this joint objective in fine-tuning; the ADR gives the weights they report.
+
 ## Balanced class batches
 
 With the default `balanced` sampler, `Trainer` derives the batch shape from `TrainingArguments.batch_size` with `batch_shape`:
@@ -52,7 +56,7 @@ samples_per_class = batch_size // classes_per_batch
 
 ## Batch-sampler registry
 
-`supcon` and `end_to_end` training draw their batches from a registered batch sampler, selected with `TrainingArguments.sampler`. `None` selects the mode's default: `"balanced"` (`BalancedClassBatchSampler` shaped by `batch_shape`) for `supcon`, `"random"` (uniform shuffling, reshuffled every epoch from the seed) for `end_to_end`. The option is rejected in `frozen` and `pair` mode; `pair` batches come from `PairSampler`, which is not pluggable.
+`supcon` and `end_to_end` training draw their batches from a registered batch sampler, selected with `TrainingArguments.sampler`. `None` selects the mode's default: `"balanced"` (`BalancedClassBatchSampler` shaped by `batch_shape`) for `supcon` and for `end_to_end` with a `contrastive_weight` above 0, `"random"` (uniform shuffling, reshuffled every epoch from the seed) for `end_to_end` without one. The option is rejected in `frozen` and `pair` mode; `pair` batches come from `PairSampler`, which is not pluggable.
 
 ```python
 from embedfit.sampling import register_sampler
@@ -63,7 +67,7 @@ args = TrainingArguments(training_mode="supcon", sampler="my_sampler")
 
 The factory is called as `factory(targets, *, batch_size, seed)`, where `targets` is the integer class index of every sample in dataset order; it never sees images or metadata. It returns a `BatchSampler`: an object with `__iter__` yielding lists of dataset positions, `__len__` equal to the number of batches one iteration yields, and `set_epoch(epoch)`, which training calls before every epoch. Options of a custom sampler go in a closure or `functools.partial`.
 
-The same sampler, with a separate seed, serves the validation batches: validation always uses the batches of epoch 0. Batches must depend only on the seed and the epoch, because the `Trainer` checks them before training: it iterates a separate instance for every training epoch (with `max_steps`, every epoch needed to take that many steps; ADR 0017) and epoch 0 for validation on positions only, and rejects an epoch with no batches, an empty batch, a position outside the data, a sampler whose length differs from its batch count or from one epoch to the next (the learning-rate schedule is sized from it once), and, for `supcon`, a batch without two samples of one class (for training batches only with one view: with `contrastive_views` above 1 the views of an image are positives of each other, ADR 0018). A sampler therefore cannot fail part-way through training. The check costs one pass over the positions per epoch. The built-in `balanced` sampler is valid by construction (every class has at least two samples, and each batch draws at least two per class), so it is not iterated; a sampler registered over the name `balanced` is.
+The same sampler, with a separate seed, serves the validation batches: validation always uses the batches of epoch 0. Batches must depend only on the seed and the epoch, because the `Trainer` checks them before training: it iterates a separate instance for every training epoch (with `max_steps`, every epoch needed to take that many steps; ADR 0017) and epoch 0 for validation on positions only, and rejects an epoch with no batches, an empty batch, a position outside the data, a sampler whose length differs from its batch count or from one epoch to the next (the learning-rate schedule is sized from it once), and, for `supcon` and `end_to_end` with a `contrastive_weight`, a batch without two samples of one class (for training batches only with one view: with `contrastive_views` above 1 the views of an image are positives of each other, ADR 0018). A sampler therefore cannot fail part-way through training. The check costs one pass over the positions per epoch. The built-in `balanced` sampler is valid by construction (every class has at least two samples, and each batch draws at least two per class), so it is not iterated; a sampler registered over the name `balanced` is.
 
 ## Pairwise loss
 

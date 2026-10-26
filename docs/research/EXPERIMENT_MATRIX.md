@@ -1,6 +1,6 @@
 # Research Experiment Matrix
 
-EmbedFit is a generic framework for few-shot adaptation of image embeddings. The experiments ask where supervised contrastive adaptation (`supcon`, `pair`) improves on the two baselines any practitioner would try, the frozen backbone and end-to-end fine-tuning, and on which kinds of images.
+EmbedFit is a generic framework for few-shot adaptation of image embeddings. The experiments ask where supervised contrastive adaptation (`supcon`, `pair`, and `ce_supcon`, which trains it jointly with cross-entropy) improves on the two baselines any practitioner would try, the frozen backbone and end-to-end fine-tuning, and on which kinds of images.
 
 ## Research questions
 
@@ -52,9 +52,10 @@ Initial candidates:
 ## Training methods
 
 - frozen + logistic regression
-- end-to-end cross-entropy
+- end-to-end cross-entropy (`end_to_end`; the baseline of the lift rule)
 - SupCon + logistic regression
 - pair contrastive + logistic regression
+- joint cross-entropy + SupCon (`ce_supcon`: `end_to_end` with a `contrastive_weight`, ADR 0022), with the weight tuned on validation like the learning rate
 
 ## Shots
 

@@ -83,6 +83,7 @@ Legend:
 - [x] Step budget, `max_steps`, for every trained mode (ADR 0017)
 - [x] SupCon projection head (`projection_dim`) and several augmented views per image (`contrastive_views`) (ADR 0018)
 - [x] Per-part learning rates: `head_learning_rate` and layer-wise decay `layer_lr_decay` (ADR 0020)
+- [x] Joint cross-entropy and SupCon training, `end_to_end` with `contrastive_weight`, and the `ce_supcon` benchmark method (ADR 0022)
 - [x] Freeze + head fit transition
 - [x] Integration test demonstrating encoder weights change
 

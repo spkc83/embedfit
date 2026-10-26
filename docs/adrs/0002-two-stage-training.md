@@ -1,6 +1,6 @@
 # ADR 0002 — Two-Stage Training Is the Default
 
-Status: Accepted
+Status: Accepted. Amended by ADR 0022: `end_to_end` with a `contrastive_weight` is a representation-learning method under test; with the weight at 0 it is the baseline described here.
 
 ## Decision
 

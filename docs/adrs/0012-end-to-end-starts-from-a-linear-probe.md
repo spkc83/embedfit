@@ -1,6 +1,6 @@
 # ADR 0012 — The End-to-End Baseline Starts from a Linear Probe
 
-Status: Accepted. Amends ADR 0011, whose measurements describe the earlier, randomly initialised baseline.
+Status: Accepted. Amends ADR 0011, whose measurements describe the earlier, randomly initialised baseline. Amended by ADR 0022: `contrastive_weight` adds a supervised contrastive term, which uses `temperature`; at its default of 0 the baseline is unchanged.
 
 ## Decision
 

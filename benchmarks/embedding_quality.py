@@ -350,7 +350,7 @@ def main(argv: list[str] | None = None) -> None:
         return [NEGATIVE, POSITIVE], POSITIVE, train, evaluate
 
     def options(method: str, seed: int) -> TrainingArguments:
-        return replace(arguments.get(method, TrainingArguments(training_mode=method)), seed=seed)
+        return replace(arguments.get(method, TrainingArguments(training_mode="frozen")), seed=seed)
 
     def model_factory(labels: list[str], positive_label: str | None) -> EmbedFitModel:
         return EmbedFitModel.from_pretrained(
