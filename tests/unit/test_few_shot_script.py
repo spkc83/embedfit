@@ -199,6 +199,11 @@ def test_a_sampler_is_configuration_and_a_default_one_is_left_out(few_shot):
         "ce_supcon": None,
         "supcon": "random",
     }
+    combined = few_shot.parse_arguments(
+        [*REQUIRED, *methods, "--sampler", "end_to_end=balanced", "--trainable-parameters", "bias"]
+    )
+    joint = few_shot.training_arguments(combined, rates)["end_to_end"]
+    assert (joint.sampler, joint.trainable_parameters) == ("balanced", "bias")
 
 
 def test_the_default_methods_leave_ce_supcon_out(few_shot):
