@@ -212,6 +212,7 @@ def test_a_record_from_before_heads_names_its_methods_own_head(few_shot, tmp_pat
         (["--seeds", "1", "1"], "--seeds names a value twice"),
         (["--shots", "0", "2"], "--shots must be at least 1, got 0"),
         (["--seeds", "-1"], "--seeds must be at least 0, got -1"),
+        (["--seeds", "0", str(2**32)], f"--seeds must be at most 2**32 - 1, got {2**32}"),
     ],
 )
 def test_shots_and_seeds_are_distinct_and_in_range(few_shot, option, message, capsys):
@@ -226,12 +227,14 @@ def test_shots_and_seeds_are_distinct_and_in_range(few_shot, option, message, ca
 def test_the_session_records_the_commit_and_the_package_versions(few_shot):
     args = few_shot.parse_arguments(REQUIRED)
     session = few_shot.new_session(args)
-    for name in ("embedfit", "git_commit", "torch", "torchvision", "transformers", "timm"):
+    names = ("embedfit", "git_commit", "git_dirty", "torch", "torchvision", "transformers", "timm")
+    for name in names:
         assert name in session
     assert session["scikit-learn"] == few_shot.metadata.version("scikit-learn")
     assert session["torchvision"] == few_shot.metadata.version("torchvision")
     commit = session["git_commit"]
     assert commit is None or re.fullmatch("[0-9a-f]{40}", commit)
+    assert session["git_dirty"] in (None, True, False)
     assert few_shot.package_version("no-such-distribution-embedfit") is None
 
 
@@ -251,6 +254,28 @@ def test_the_commit_is_none_outside_a_git_checkout(few_shot, monkeypatch, outcom
 
     monkeypatch.setattr(few_shot.subprocess, "run", fake)
     assert few_shot.git_commit() is None
+    assert few_shot.git_dirty() is None
+
+
+@pytest.mark.parametrize(("status", "dirty"), [("", False), (" M benchmarks/few_shot.py\n", True)])
+def test_a_checkout_is_dirty_with_any_change(few_shot, monkeypatch, status, dirty):
+    result = SimpleNamespace(returncode=0, stdout=status)
+    monkeypatch.setattr(few_shot.subprocess, "run", lambda *args, **kwargs: result)
+    assert few_shot.git_dirty() is dirty
+
+
+def test_the_largest_seed_is_accepted(few_shot):
+    assert few_shot.parse_arguments([*REQUIRED, "--seeds", str(2**32 - 1)]).seeds == [2**32 - 1]
+
+
+def test_a_head_is_only_reused_if_it_is_the_methods_own(few_shot):
+    train = ImageDataset.from_lists(*bars(3, seed=1))
+    model = EmbedFitModel.from_pretrained("dummy/tiny", labels=CLASSES, image_size=16)
+    trainer = Trainer(model, TrainingArguments(training_mode="frozen"), train)
+    trainer.train()
+    model.head_name = "linear"  # Not the head the records would name for frozen.
+    with pytest.raises(AssertionError):
+        next(few_shot.fitted_heads(trainer, ["linear"]))
 
 
 # The head every method is scored with.
