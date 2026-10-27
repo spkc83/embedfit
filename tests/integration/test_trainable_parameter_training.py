@@ -165,3 +165,18 @@ def test_a_saved_model_holds_the_full_weights(tmp_path):
     assert reloaded.backbone.state_dict().keys() == state.keys()
     for name, value in reloaded.backbone.state_dict().items():
         assert torch.equal(value, state[name]), name
+
+
+def test_bias_only_training_keeps_batch_norm_statistics_fixed_by_default():
+    model = make_model()
+    with torch.random.fork_rng(devices=[]):
+        torch.manual_seed(0)
+        model.backbone.features.insert(1, nn.BatchNorm2d(8))
+    layer = model.backbone.features[1]
+    statistics = {name: value.clone() for name, value in layer.named_buffers()}
+    bias, weight = layer.bias.detach().clone(), layer.weight.detach().clone()
+    train_representation(model, dataset(6, 0), None, args("supcon", trainable_parameters="bias"))
+    assert not torch.equal(layer.bias, bias)  # Its shift trains,
+    assert torch.equal(layer.weight, weight)  # its scale does not,
+    for name, value in layer.named_buffers():  # and neither do its statistics.
+        assert torch.equal(value, statistics[name]), name

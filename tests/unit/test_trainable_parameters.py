@@ -212,3 +212,31 @@ def test_transformers_norms_of_its_own_are_recognised_by_name():
 
     assert backbone.is_normalization(CustomLayerNorm())
     assert not DummyBackbone().is_normalization(CustomLayerNorm())
+
+
+def test_timm_global_response_norm_is_a_norm():
+    pytest.importorskip("timm")
+    from timm.layers.grn import GlobalResponseNorm
+
+    from embedfit.backbones import TimmBackbone
+
+    backbone = TimmBackbone("resnet10t", pretrained=False)
+    assert backbone.is_normalization(GlobalResponseNorm(4))
+
+
+def test_transformers_convnext_v2_grn_is_a_norm():
+    transformers = pytest.importorskip("transformers")
+    from transformers.models.convnextv2.modeling_convnextv2 import ConvNextV2GRN
+
+    from embedfit.backbones import HFBackbone
+
+    config = transformers.ViTConfig(
+        hidden_size=16,
+        num_hidden_layers=1,
+        num_attention_heads=2,
+        intermediate_size=32,
+        image_size=32,
+        patch_size=8,
+    )
+    backbone = HFBackbone("local/tiny-vit", config=config)
+    assert backbone.is_normalization(ConvNextV2GRN(4))

@@ -123,11 +123,11 @@ class TrainingArguments:
             backbone parameter at ``learning_rate``. Rejected in ``frozen`` mode.
         trainable_parameters: Which backbone parameters train, in every mode that trains the
             backbone (ADR 0021): ``"all"``; ``"layernorm"``, only the parameters of
-            normalisation layers (layer, group, and batch norm, the latter's running statistics
-            still governed by ``freeze_batch_norm``); or ``"bias"``, only bias terms (BitFit).
-            With ``unfreeze_last_blocks`` it selects among the parameters of those blocks.
-            The ``end_to_end`` classifier and the ``supcon`` projection head always train.
-            Must be ``"all"`` in ``frozen`` mode.
+            normalisation layers (layer, group, RMS, instance, and batch norm, the latter's
+            running statistics still governed by ``freeze_batch_norm``); or ``"bias"``, only
+            bias terms (BitFit). With ``unfreeze_last_blocks`` it selects among the parameters
+            of those blocks. The ``end_to_end`` classifier and the ``supcon`` projection head
+            always train. Must be ``"all"`` in ``frozen`` mode.
 
     Raises:
         ConfigurationError: If any value is invalid. Raised at construction, never mid-training.

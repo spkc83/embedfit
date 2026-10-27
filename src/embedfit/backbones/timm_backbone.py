@@ -46,6 +46,7 @@ _TIMM_NORMALIZATION_NAMES = (
     "EvoNorm2dS2",
     "FilterResponseNormAct2d",
     "FilterResponseNormTlu2d",
+    "GlobalResponseNorm",
 )
 
 
