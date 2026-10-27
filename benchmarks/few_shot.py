@@ -126,6 +126,7 @@ DEFAULT_IMAGE_SIZE = {
 }
 REPOSITORY = Path(__file__).resolve().parents[1]
 DEFAULT_DATA_ROOT = REPOSITORY / ".cache"  # Git-ignored.
+MAX_SEED = 2**32 - 1  # The largest seed set_seed accepts.
 RECORDED_PACKAGES = ("torchvision", "transformers", "timm", "scikit-learn")
 
 Split = list[tuple[Image.Image | Path, str]]
@@ -610,6 +611,8 @@ def fitted_heads(trainer: Trainer, heads: Sequence[str]) -> Iterator[str]:
     """
     model = trainer.model
     own, fitted = model.head_name, model.head
+    # The records name the head after own_head, so it must be the one the method was given.
+    assert own == own_head(trainer.args.training_mode), (own, trainer.args.training_mode)
     embeddings = None
     for name in heads:
         if name == own:
@@ -802,6 +805,8 @@ def check_arguments(parser: argparse.ArgumentParser, args: argparse.Namespace) -
             parser.error(f"{option} names a value twice")
         if min(values) < lowest:
             parser.error(f"{option} must be at least {lowest}, got {min(values)}")
+    if max(args.seeds) > MAX_SEED:
+        parser.error(f"--seeds must be at most 2**32 - 1, got {max(args.seeds)}")
     if args.interpolate and not set(args.methods) & set(TRAINED_METHODS):
         parser.error("--interpolate applies to trained methods only, and none is selected")
     if len(set(args.interpolate)) != len(args.interpolate):
@@ -986,11 +991,11 @@ def load_splits(
     return splits, labels, duplicates, repeats
 
 
-def git_commit() -> str | None:
-    """The commit checked out in the repository, or ``None`` outside a git checkout."""
+def _git(*arguments: str) -> str | None:
+    """The output of a git command in the repository, or ``None`` if it fails (outside git)."""
     try:
         result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
+            ["git", *arguments],
             cwd=REPOSITORY,
             capture_output=True,
             text=True,
@@ -999,8 +1004,20 @@ def git_commit() -> str | None:
         )
     except (OSError, subprocess.SubprocessError):
         return None
-    commit = result.stdout.strip()
-    return commit if result.returncode == 0 and commit else None
+    return result.stdout if result.returncode == 0 else None
+
+
+def git_commit() -> str | None:
+    """The commit checked out in the repository, or ``None`` outside a git checkout."""
+    commit = (_git("rev-parse", "HEAD") or "").strip()
+    return commit or None
+
+
+def git_dirty() -> bool | None:
+    """Whether the checkout has uncommitted changes or untracked files, or ``None`` outside a
+    git checkout. Only the answer is recorded, never the files."""
+    status = _git("status", "--porcelain")
+    return None if status is None else bool(status.strip())
 
 
 def package_version(name: str) -> str | None:
@@ -1016,6 +1033,7 @@ def new_session(args: argparse.Namespace) -> dict:
     return {
         "embedfit": embedfit.__version__,
         "git_commit": git_commit(),
+        "git_dirty": git_dirty(),
         "torch": torch.__version__,
         **{name: package_version(name) for name in RECORDED_PACKAGES},
         "device": args.device,

@@ -4,7 +4,7 @@ Status: Accepted. Corrects the rationale of ADR 0011, which said that every arm 
 
 ## Decision
 
-`benchmarks/few_shot.py --heads HEAD [HEAD ...]`, with `HEAD` one of `logistic_regression` and `linear`, scores every method with each named head. For every method, interpolation weight (`--interpolate`), shot count, and seed, the backbone is trained once. Each head is then fitted to convergence on the training embeddings of the final backbone and the model is scored with it. Every record has a `head` key that names the head it was scored with.
+`benchmarks/few_shot.py --heads HEAD [HEAD ...]`, with `HEAD` one of `logistic_regression` and `linear`, scores every method with each named head. For every method, shot count, and seed, the backbone is trained once. At the trained weights and at each interpolation weight (`--interpolate`), which only sets the backbone between the pretrained and the trained weights, each head is then fitted to convergence on the training embeddings of that backbone and the model is scored with it. Every record has a `head` key that names the head it was scored with.
 
 - The head the method was already given is used as it is: for `end_to_end` the `LinearHead` warm-started from the jointly trained classifier (ADR 0011), for the other methods the default `logistic_regression` head.
 - Every other head is new: `linear` is a `LinearHead` seeded and configured like the linear probe of `end_to_end` (ADR 0012), and `logistic_regression` has the default settings, like the other methods' own head. The training embeddings are encoded once for all new heads.
@@ -31,7 +31,7 @@ With 40 to 160 training samples (4 to 16 shots of 10 classes), the logistic-regr
 ## Consequences
 
 - With `--heads`, differences between methods at the same head come from the backbone only. At `--interpolate 0` every trained method is the pretrained backbone, so with the same head it scores exactly as `frozen` does.
-- Every additional head costs one fit on embeddings of the training set and one encoding pass over the evaluated split, for every method and weight. The training is not repeated.
+- For every method and weight, the additional heads together cost one encoding pass over the training set, and each costs one fit on those embeddings and one encoding pass over the evaluated split. The training is not repeated.
 - The trained `end_to_end` model's `linear` head is warm-started from the jointly trained classifier, and other methods' `linear` heads start from a seeded initialisation. Both are fitted with L-BFGS to the same convex objective, so they reach about the same optimum.
 - `benchmarks/embedding_quality.py` has no `--heads` option. Most of its metrics use the embeddings only. Its head-based metrics (`seen_accuracy` and the `rare_positive` ranking by the head's probability) still use each method's own head.
 - Results files from before the option are unchanged and resume as before.
