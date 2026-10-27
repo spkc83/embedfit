@@ -5,7 +5,7 @@ import json
 import pytest
 import torch
 
-from embedfit import EmbedFitModel, ImageDataset, Trainer, TrainingArguments
+from embedfit import EmbedFitModel, ImageDataset, Trainer, TrainingArguments, representation
 from embedfit.exceptions import ConfigurationError
 from embedfit.representation import _schedule, train_representation
 from embedfit.testing import BAR_CLASSES, make_bar_images
@@ -68,12 +68,25 @@ def test_by_default_one_group_trains_everything_at_the_learning_rate(mode, optim
 
 
 @pytest.mark.parametrize("mode", ["supcon", "end_to_end"])
-def test_neutral_values_train_exactly_like_the_defaults(mode):
+def test_neutral_values_train_exactly_like_the_defaults(mode, monkeypatch):
+    projections = []
+    build = representation._projection_head
+
+    def recording(*arguments):
+        projections.append(build(*arguments))
+        return projections[-1]
+
+    monkeypatch.setattr(representation, "_projection_head", recording)
     trained = []
     for options in ({}, {"head_learning_rate": RATE, "layer_lr_decay": 1.0}):
         model = make_model()
-        train_representation(model, dataset(), None, args(mode, **options))
-        trained.append(snapshot(model))
+        result = train_representation(model, dataset(), None, args(mode, **options))
+        # The classifier (end_to_end) or the projection head (supcon) trained alongside.
+        extra = result.classifier if mode == "end_to_end" else projections[-1]
+        states = {f"extra.{name}": value for name, value in extra.state_dict().items()}
+        trained.append({**snapshot(model), **states})
+    assert any(name.startswith("extra.") for name in trained[0])
+    assert trained[0].keys() == trained[1].keys()
     for name, value in trained[0].items():
         assert torch.equal(value, trained[1][name]), name
 

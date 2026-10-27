@@ -45,8 +45,8 @@ class TrainingArguments:
             ignored when ``max_steps`` is set.
         batch_size: Representation-training batch size (>= 1). Unused in ``frozen`` mode.
         eval_batch_size: Images per forward pass when encoding for head fitting and prediction.
-        learning_rate: Backbone learning rate (> 0); with ``layer_lr_decay``, that of the last
-            block and the parameters after it.
+        learning_rate: Backbone learning rate (finite, > 0); with ``layer_lr_decay``, that of the
+            last block and the parameters after it.
         weight_decay: Weight decay (>= 0).
         warmup_ratio: Fraction of steps used for learning-rate warm-up, in [0, 1).
         temperature: Contrastive-loss temperature (> 0).
@@ -115,9 +115,9 @@ class TrainingArguments:
             ``end_to_end`` cross-entropy applies to every view (ADR 0022). Above 1 it needs an
             ``augmentation`` other than ``"none"``. Validation batches use one view of the
             original images. Must be 1 in other modes.
-        head_learning_rate: Learning rate (> 0) of the parameters that representation training
-            creates besides the backbone: the ``end_to_end`` classifier and the projection head
-            of ``projection_dim`` (ADR 0020, ADR 0022). ``None`` trains them at
+        head_learning_rate: Learning rate (finite, > 0) of the parameters that representation
+            training creates besides the backbone: the ``end_to_end`` classifier and the
+            projection head of ``projection_dim`` (ADR 0020, ADR 0022). ``None`` trains them at
             ``learning_rate``. Rejected when training creates no such parameters (``frozen``,
             ``pair``, ``triplet``, and ``supcon`` without ``projection_dim``).
         layer_lr_decay: Layer-wise learning-rate decay of the backbone, in (0, 1] (ADR 0020):
@@ -227,6 +227,10 @@ class TrainingArguments:
         for name in ("learning_rate", "temperature"):
             value = getattr(self, name)
             _require(_is_number(value) and value > 0, f"{name} must be > 0, got {value!r}.")
+        _require(
+            math.isfinite(self.learning_rate),
+            f"learning_rate must be finite, got {self.learning_rate!r}.",
+        )
         for name in ("weight_decay", "triplet_margin"):
             value = getattr(self, name)
             _require(_is_number(value) and value >= 0, f"{name} must be >= 0, got {value!r}.")
@@ -326,8 +330,12 @@ class TrainingArguments:
         )
         _require(
             self.head_learning_rate is None
-            or (_is_number(self.head_learning_rate) and self.head_learning_rate > 0),
-            f"head_learning_rate must be > 0 or None, got {self.head_learning_rate!r}.",
+            or (
+                _is_number(self.head_learning_rate)
+                and self.head_learning_rate > 0
+                and math.isfinite(self.head_learning_rate)
+            ),
+            f"head_learning_rate must be finite and > 0, or None, got {self.head_learning_rate!r}.",
         )
         _require(
             self.head_learning_rate is None

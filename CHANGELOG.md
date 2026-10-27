@@ -31,6 +31,9 @@ All notable changes to EmbedFit are recorded here, following [Keep a Changelog](
 - `benchmarks/few_shot.py` exits with a clear message when the installed torchvision does not list a dataset's image files and labels as expected, or lists different numbers of them.
 - ADR 0011 no longer says that every mode is scored with the same head: `end_to_end` gets a `LinearHead`, the others logistic regression (ADR 0019).
 - `benchmarks/embedding_quality.py`: the `open_set` error for too few classes states how many classes the task needs.
+- `benchmarks/few_shot.py` and `benchmarks/embedding_quality.py`: `--learning-rate`, `--head-learning-rate`, and `--layer-lr-decay` can be repeated and their values add up; a method named twice in one of them is refused instead of the last value winning.
+- `TrainingArguments` refuses an infinite `learning_rate` or `head_learning_rate`.
+- `ImageBackbone.block_positions()` is public: the block of every parameter, as partial unfreezing and layer-wise learning-rate decay count them.
 
 ### Fixed
 

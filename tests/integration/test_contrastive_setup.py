@@ -367,10 +367,17 @@ def test_one_view_trains_exactly_like_before(monkeypatch):
     assert plain.train_losses == single.train_losses
 
 
-# Worker processes are forked from the threaded test process; the warning is about the test
-# runner, not about the code under test.
-@pytest.mark.filterwarnings("ignore:This process .* is multi-threaded:DeprecationWarning")
-def test_views_are_reproducible_and_independent_of_workers():
+def test_views_are_reproducible_and_independent_of_workers(monkeypatch):
+    # Worker processes forked from the multi-threaded test process can deadlock; spawned
+    # workers start clean. Spawning changes how workers start, not what they compute.
+    loader = representation.DataLoader
+
+    def spawning(*arguments, **options):
+        if options.get("num_workers"):
+            options["multiprocessing_context"] = "spawn"
+        return loader(*arguments, **options)
+
+    monkeypatch.setattr(representation, "DataLoader", spawning)
     test_data = dataset(4, 2)
     runs = [
         train(contrastive_views=2, augmentation="natural", num_workers=workers)

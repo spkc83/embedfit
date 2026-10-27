@@ -713,12 +713,17 @@ def training_parser(description: str) -> argparse.ArgumentParser:
         "batch 32 at half the memory, but a supcon or pair batch then holds 16 samples, not 32",
     )
     parser.add_argument(
-        "--learning-rate", nargs="*", default=[], help="per-method rates, e.g. supcon=1e-5"
+        "--learning-rate",
+        nargs="*",
+        action="extend",
+        default=[],
+        help="per-method rates, e.g. supcon=1e-5",
     )
     parser.add_argument("--default-learning-rate", type=float, default=2e-5)
     parser.add_argument(
         "--head-learning-rate",
         nargs="*",
+        action="extend",
         default=[],
         help="per-method rates of the end_to_end and ce_supcon classifier and of the projection "
         "head (supcon, ce_supcon), e.g. end_to_end=1e-3 (ADR 0020); default: the method's "
@@ -727,6 +732,7 @@ def training_parser(description: str) -> argparse.ArgumentParser:
     parser.add_argument(
         "--layer-lr-decay",
         nargs="*",
+        action="extend",
         default=[],
         help="per-method layer-wise learning-rate decay of the backbone in (0, 1], e.g. "
         "supcon=0.8 (ADR 0020); default: none",
@@ -843,6 +849,10 @@ def training_parser(description: str) -> argparse.ArgumentParser:
 
 def check_arguments(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
     """Every check of the ``training_parser`` options that needs no data; exits on an error."""
+    for option in ("--learning-rate", "--head-learning-rate", "--layer-lr-decay"):
+        methods = [value.partition("=")[0] for value in getattr(args, option[2:].replace("-", "_"))]
+        if len(set(methods)) != len(methods):
+            parser.error(f"{option} names a method twice")
     try:  # Before loading any data, so that a typo fails at once.
         parse_learning_rates(args.learning_rate, args.default_learning_rate)
     except ValueError:
