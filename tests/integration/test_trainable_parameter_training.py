@@ -180,3 +180,37 @@ def test_bias_only_training_keeps_batch_norm_statistics_fixed_by_default():
     assert torch.equal(layer.weight, weight)  # its scale does not,
     for name, value in layer.named_buffers():  # and neither do its statistics.
         assert torch.equal(value, statistics[name]), name
+
+
+def test_the_selection_combines_with_per_part_learning_rates(monkeypatch):
+    groups = []
+    adamw = torch.optim.AdamW
+
+    def spy(params, *rest, **kwargs):
+        params = list(params)
+        groups.extend(params)
+        return adamw(params, *rest, **kwargs)
+
+    monkeypatch.setattr(torch.optim, "AdamW", spy)
+    model = make_model(norm=True)
+    before = snapshot(model)
+    options = {"trainable_parameters": "layernorm", "layer_lr_decay": 0.5}
+    result = train_representation(
+        model,
+        dataset(6, 0),
+        None,
+        args("end_to_end", head_learning_rate=1e-3, **options),
+    )
+    assert changed(model, before) == NORM
+    names = {id(p): n for n, p in model.backbone.named_parameters()}
+    # initial_lr: by the end of training the schedule has decayed lr to zero.
+    rates = {names.get(id(p), "classifier"): g["initial_lr"] for g in groups for p in g["params"]}
+    assert all(p.requires_grad for g in groups for p in g["params"])
+    # The norm is the second of four blocks: decayed twice. The classifier keeps its own rate.
+    assert rates == {
+        "features.1.weight": 1e-2 * 0.5**2,
+        "features.1.bias": 1e-2 * 0.5**2,
+        "classifier": 1e-3,
+    }
+    assert sum(len(g["params"]) for g in groups) == 4
+    assert result.classifier is not None
