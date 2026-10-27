@@ -41,6 +41,7 @@ OLD = {"dataset": "eurosat", "gradient_accumulation_steps": 1, "dataset_revision
 CURRENT = {
     **OLD,
     "unfreeze_last_blocks": None,
+    "trainable_parameters": "all",
     "augmentation": "none",
     "max_steps": None,
     "projection_dim": None,
@@ -64,6 +65,7 @@ def write_results(path, config):
     ("key", "default", "other"),
     [
         ("unfreeze_last_blocks", None, 2),
+        ("trainable_parameters", "all", "layernorm"),
         ("augmentation", "none", "natural"),
         ("max_steps", None, 100),
         ("projection_dim", None, 128),
@@ -122,7 +124,12 @@ def test_an_unknown_augmentation_is_rejected(few_shot, capsys):
 
 @pytest.mark.parametrize(
     "option",
-    [["--augmentation", "natural"], ["--unfreeze-last-blocks", "1"], ["--max-steps", "50"]],
+    [
+        ["--augmentation", "natural"],
+        ["--unfreeze-last-blocks", "1"],
+        ["--trainable-parameters", "bias"],
+        ["--max-steps", "50"],
+    ],
 )
 def test_training_options_need_a_trained_method(few_shot, option, capsys):
     with pytest.raises(SystemExit):
@@ -534,6 +541,32 @@ def test_the_backbone_is_seeded_before_it_is_built(few_shot, run, monkeypatch):
     )
     run("--methods", "frozen", "supcon", "--seeds", "3", "5")
     assert seeds[-4:] == [3, 3, 5, 5]  # After the checks before training.
+
+
+def test_bias_only_training_is_recorded_and_interpolates_only_the_biases(few_shot, run):
+    results = run(
+        "--methods", "frozen", "supcon", "--trainable-parameters", "bias", "--interpolate", "0"
+    )
+    assert results["config"]["trainable_parameters"] == "bias"
+    records = results["records"]
+    assert values(records, "supcon", 0.0) == values(records, "frozen", None)
+    args = few_shot.parse_arguments(
+        [*REQUIRED, "--methods", "supcon", "--trainable-parameters", "bias"]
+    )
+    rates = few_shot.parse_learning_rates(args.learning_rate, args.default_learning_rate)
+    assert few_shot.training_arguments(args, rates)["supcon"].trainable_parameters == "bias"
+
+
+def test_interpolating_a_bias_only_run_leaves_the_other_weights_pretrained(few_shot):
+    train = ImageDataset.from_lists(*bars(3, seed=1))
+    model = EmbedFitModel.from_pretrained("dummy/tiny", labels=CLASSES, image_size=16)
+    initial = few_shot.backbone_state(model.backbone, "cpu")
+    budget = {"batch_size": 8, "num_workers": 0, "max_steps": 2, "learning_rate": 1e-2}
+    arguments = TrainingArguments(training_mode="supcon", trainable_parameters="bias", **budget)
+    trainer = Trainer(model, arguments, train)
+    for alpha in few_shot.trained_weights(trainer, [0.5]):  # As trained, then at 0.5.
+        for name, tensor in model.backbone.state_dict().items():
+            assert torch.equal(tensor, initial[name]) != name.endswith(".bias"), (alpha, name)
 
 
 def end_to_end_trainer():

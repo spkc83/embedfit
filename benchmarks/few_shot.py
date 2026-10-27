@@ -74,6 +74,7 @@ from torch import nn
 import embedfit
 from embedfit import EmbedFitModel, FewShotEvaluator, ImageDataset, Trainer, TrainingArguments
 from embedfit.augmentation import available_augmentations
+from embedfit.backbones.base import TRAINABLE_PARAMETERS
 from embedfit.data import to_rgb_tensor
 from embedfit.exceptions import ConfigurationError
 from embedfit.heads import LinearHead, create_head
@@ -475,6 +476,7 @@ def read_previous(output: Path, config: dict, measured: Collection[str] = MEASUR
         saved.setdefault("dataset_revision", None)
         saved.setdefault("augmentation", "none")
         saved.setdefault("unfreeze_last_blocks", None)
+        saved.setdefault("trainable_parameters", "all")
         saved.setdefault("max_steps", None)
         saved.setdefault("projection_dim", None)
         saved.setdefault("contrastive_views", 1)
@@ -743,6 +745,13 @@ def training_parser(description: str) -> argparse.ArgumentParser:
         help="trained methods: train only the backbone's last N blocks (ADR 0015)",
     )
     parser.add_argument(
+        "--trainable-parameters",
+        choices=TRAINABLE_PARAMETERS,
+        default="all",
+        help="trained methods: train only the backbone's normalisation-layer ('layernorm') or "
+        "bias ('bias') parameters, within the --unfreeze-last-blocks if given (ADR 0021)",
+    )
+    parser.add_argument(
         "--max-steps",
         type=positive_int,
         default=None,
@@ -814,6 +823,8 @@ def check_arguments(parser: argparse.ArgumentParser, args: argparse.Namespace) -
         parser.error("--augmentation applies to trained methods only, and none is selected")
     if args.unfreeze_last_blocks is not None and not set(args.methods) & set(TRAINED_METHODS):
         parser.error("--unfreeze-last-blocks applies to trained methods only, and none is selected")
+    if args.trainable_parameters != "all" and not set(args.methods) & set(TRAINED_METHODS):
+        parser.error("--trainable-parameters applies to trained methods only, and none is selected")
     if args.max_steps is not None and not set(args.methods) & set(TRAINED_METHODS):
         parser.error("--max-steps applies to trained methods only, and none is selected")
     for option, values, lowest in (("--shots", args.shots, 1), ("--seeds", args.seeds, 0)):
@@ -933,6 +944,7 @@ def training_arguments(
         "freeze_batch_norm": not args.train_mode_batch_norm,
         "augmentation": args.augmentation,
         "unfreeze_last_blocks": args.unfreeze_last_blocks,
+        "trainable_parameters": args.trainable_parameters,
         "max_steps": args.max_steps,
     }
     arguments = {

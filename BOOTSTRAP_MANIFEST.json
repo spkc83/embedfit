@@ -30,7 +30,8 @@
     "docs/adrs/0015-partial-unfreezing-counts-provider-blocks.md",
     "docs/adrs/0016-representation-checkpoints-are-model-bundles.md",
     "docs/adrs/0017-step-budget-for-representation-training.md",
-    "docs/adrs/0018-supcon-projection-head-and-views.md"
+    "docs/adrs/0018-supcon-projection-head-and-views.md",
+    "docs/adrs/0021-normalisation-or-bias-only-training.md"
   ],
   "agent_entrypoints": [
     "AGENTS.md",

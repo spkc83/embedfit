@@ -175,6 +175,7 @@ projection_dim: int | None = None         # supcon: loss on a discarded projecti
 contrastive_views: int = 1                # supcon: augmented views per drawn image (ADR 0018)
 head_learning_rate: float | None = None   # end_to_end classifier / supcon projection head (ADR 0020)
 layer_lr_decay: float | None = None       # backbone block i of n at decay ** (n - 1 - i) (ADR 0020)
+trainable_parameters: str = "all"         # "all", "layernorm", or "bias" backbone parameters (ADR 0021)
 ```
 
 ## 6. Input data
@@ -234,12 +235,13 @@ def embedding_dim(self) -> int: ...
 def preprocess(self, image): ...
 def forward_features(self, pixel_values): ...
 def freeze(self): ...
-def unfreeze(self, last_blocks=None): ...
+def unfreeze(self, last_blocks=None, trainable_parameters="all"): ...
 def parameter_blocks(self): ...       # parameter names per block, input side first; default none
+def is_normalization(self, module): ...   # normalisation layer? default: torch norm types
 def save_pretrained(self, path): ...
 ```
 
-`parameter_blocks` defines the blocks that `unfreeze(last_blocks=N)` counts for partial unfreezing (ADR 0015); a backbone that defines none supports only whole-backbone training.
+`parameter_blocks` defines the blocks that `unfreeze(last_blocks=N)` counts for partial unfreezing (ADR 0015); a backbone that defines none supports only whole-backbone training. `unfreeze(trainable_parameters=...)` restricts training to the parameters of normalisation layers (`"layernorm"`, recognised by `is_normalization`) or to bias terms (`"bias"`), within the last blocks when both are given (ADR 0021).
 
 `preprocess` takes one image in any accepted input form and returns a float tensor `[3, H, W]` with a fixed `H` and `W` per backbone instance, so outputs can be stacked. Input-format handling is shared (`embedfit.data.to_rgb_tensor`); resizing and normalisation are the adapter's.
 

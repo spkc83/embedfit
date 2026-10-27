@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from embedfit.augmentation.registry import NO_AUGMENTATION, available_augmentations
+from embedfit.backbones.base import TRAINABLE_PARAMETERS
 from embedfit.exceptions import ConfigurationError
 from embedfit.heads.registry import available_heads
 from embedfit.sampling.pairs import hard_negative_quota
@@ -120,6 +121,13 @@ class TrainingArguments:
             block at ``layer_lr_decay ** n`` times it, and the parameters after the last block
             at ``learning_rate``. Needs a backbone that defines blocks. ``None`` trains every
             backbone parameter at ``learning_rate``. Rejected in ``frozen`` mode.
+        trainable_parameters: Which backbone parameters train, in every mode that trains the
+            backbone (ADR 0021): ``"all"``; ``"layernorm"``, only the parameters of
+            normalisation layers (layer, group, RMS, instance, and batch norm, the latter's
+            running statistics still governed by ``freeze_batch_norm``); or ``"bias"``, only
+            bias terms (BitFit). With ``unfreeze_last_blocks`` it selects among the parameters
+            of those blocks. The ``end_to_end`` classifier and the ``supcon`` projection head
+            always train. Must be ``"all"`` in ``frozen`` mode.
 
     Raises:
         ConfigurationError: If any value is invalid. Raised at construction, never mid-training.
@@ -158,6 +166,7 @@ class TrainingArguments:
     contrastive_views: int = 1
     head_learning_rate: float | None = None
     layer_lr_decay: float | None = None
+    trainable_parameters: str = "all"
 
     def __post_init__(self) -> None:
         _require(
@@ -307,6 +316,15 @@ class TrainingArguments:
             self.layer_lr_decay is None
             or (_is_number(self.layer_lr_decay) and 0 < self.layer_lr_decay <= 1),
             f"layer_lr_decay must be in (0, 1] or None, got {self.layer_lr_decay!r}.",
+        )
+        _require(
+            self.trainable_parameters in TRAINABLE_PARAMETERS,
+            f"trainable_parameters must be one of {list(TRAINABLE_PARAMETERS)}, "
+            f"got {self.trainable_parameters!r}.",
+        )
+        _require(
+            self.trainable_parameters == "all" or self.training_mode != "frozen",
+            "trainable_parameters only applies to modes that train the backbone, not 'frozen'.",
         )
         for name in ("unfreeze_last_blocks", "checkpoint_dir", "max_steps", "layer_lr_decay"):
             _require(

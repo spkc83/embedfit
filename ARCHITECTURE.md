@@ -136,7 +136,7 @@ fit LinearHead probe on embeddings of the untouched backbone
 → evaluate
 ```
 
-In every path that trains the encoder, batch-norm layers stay in eval mode by default (`freeze_batch_norm=True`, ADR 0013). `unfreeze_last_blocks` restricts training to the encoder's last blocks; the frozen part, including its batch-norm statistics, does not change (ADR 0015).
+In every path that trains the encoder, batch-norm layers stay in eval mode by default (`freeze_batch_norm=True`, ADR 0013). `unfreeze_last_blocks` restricts training to the encoder's last blocks; the frozen part, including its batch-norm statistics, does not change (ADR 0015). `trainable_parameters` restricts it further to the parameters of normalisation layers or to bias terms (ADR 0021).
 
 ## Embedding contract
 

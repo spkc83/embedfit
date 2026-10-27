@@ -1,6 +1,9 @@
 """Adapter for ``timm`` image models used as feature extractors."""
 
+import contextlib
 import difflib
+import functools
+import importlib
 import json
 import math
 import re
@@ -9,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import torch
+from torch import nn
 
 from embedfit.backbones._preprocess import (
     channel_stats,
@@ -25,6 +29,27 @@ from embedfit.exceptions import BackboneProviderError, ConfigurationError, Embed
 
 _CONFIG_FILE = "config.json"
 _WEIGHTS_FILE = "weights.pt"
+# timm normalisation layers that subclass no torch norm; looked up by name because the set
+# differs between timm versions.
+_TIMM_NORMALIZATION_NAMES = (
+    "RmsNorm",
+    "RmsNorm2d",
+    "RmsNormFp32",
+    "RmsNorm2dFp32",
+    "SimpleNorm",
+    "SimpleNorm2d",
+    "SimpleNormFp32",
+    "SimpleNorm2dFp32",
+    "EvoNorm2dB0",
+    "EvoNorm2dB1",
+    "EvoNorm2dB2",
+    "EvoNorm2dS0",
+    "EvoNorm2dS1",
+    "EvoNorm2dS2",
+    "FilterResponseNormAct2d",
+    "FilterResponseNormTlu2d",
+    "GlobalResponseNorm",
+)
 
 
 def _import_timm() -> Any:
@@ -36,6 +61,23 @@ def _import_timm() -> Any:
             "Install it with: pip install 'embedfit[timm]'"
         ) from exc
     return timm
+
+
+@functools.cache
+def _timm_normalization_types() -> tuple[type[nn.Module], ...]:
+    layers = _import_timm().layers
+    # timm.layers does not re-export every class: GlobalResponseNorm lives only in its module.
+    modules = [layers]
+    with contextlib.suppress(ImportError):
+        modules.append(importlib.import_module("timm.layers.grn"))
+    return tuple(
+        {
+            getattr(m, name)
+            for name in _TIMM_NORMALIZATION_NAMES
+            for m in modules
+            if hasattr(m, name)
+        }
+    )
 
 
 class TimmBackbone(ImageBackbone):
@@ -226,6 +268,11 @@ class TimmBackbone(ImageBackbone):
             if match is not None and match.groups() and match.group(1) is not None:
                 blocks.setdefault(int(match.group(1)), []).append(f"model.{name}")
         return [blocks[number] for number in sorted(blocks)]
+
+    def is_normalization(self, module: nn.Module) -> bool:
+        """Torch's normalisation layers, and timm's own RMS, simple, EvoNorm, and filter-response
+        norms, which subclass none of them (timm's layer, group, and batch norms do)."""
+        return super().is_normalization(module) or isinstance(module, _timm_normalization_types())
 
     def save_pretrained(self, path: str | Path) -> None:
         """Write ``config.json`` (name, pooling, preprocessing, dtype) and ``weights.pt``.

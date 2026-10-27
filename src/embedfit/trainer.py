@@ -170,7 +170,8 @@ class Trainer:
         """Run both phases and leave the model ready for prediction.
 
         Representation training first unfreezes the whole backbone, or only its last
-        ``args.unfreeze_last_blocks`` blocks, so any freezing applied beforehand is discarded;
+        ``args.unfreeze_last_blocks`` blocks, and within them only the parameters that
+        ``args.trainable_parameters`` selects, so any freezing applied beforehand is discarded;
         ``freeze_backbone_before_head`` decides the state afterwards.
 
         Returns:
@@ -201,7 +202,9 @@ class Trainer:
                 )
             if self.args.checkpoint_dir is not None:
                 checkpoint_model(self.model, self.args)  # A used directory changes nothing.
-            self.model.unfreeze_backbone(self.args.unfreeze_last_blocks)
+            self.model.unfreeze_backbone(
+                self.args.unfreeze_last_blocks, self.args.trainable_parameters
+            )
             result = train_representation(
                 self.model,
                 self.train_dataset,
