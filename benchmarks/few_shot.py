@@ -482,6 +482,8 @@ def read_previous(output: Path, config: dict, measured: Collection[str] = MEASUR
         saved.setdefault("device", "cpu")
         saved.setdefault("interpolate", [])
         saved.setdefault("max_image_side", None)
+        saved.setdefault("head_learning_rate", {})
+        saved.setdefault("layer_lr_decay", {})
     except (json.JSONDecodeError, KeyError, TypeError, ValueError):
         raise SystemExit(f"{output} is not a results file written by this script.") from None
     if set(saved) - set(measured) != set(config) or any(
@@ -704,6 +706,20 @@ def training_parser(description: str) -> argparse.ArgumentParser:
     )
     parser.add_argument("--default-learning-rate", type=float, default=2e-5)
     parser.add_argument(
+        "--head-learning-rate",
+        nargs="*",
+        default=[],
+        help="per-method rates of the end_to_end classifier and the supcon projection head, "
+        "e.g. end_to_end=1e-3 (ADR 0020); default: the method's learning rate",
+    )
+    parser.add_argument(
+        "--layer-lr-decay",
+        nargs="*",
+        default=[],
+        help="per-method layer-wise learning-rate decay of the backbone in (0, 1], e.g. "
+        "supcon=0.8 (ADR 0020); default: none",
+    )
+    parser.add_argument(
         "--pairs-per-example",
         type=int,
         default=1,
@@ -830,6 +846,24 @@ def check_arguments(parser: argparse.ArgumentParser, args: argparse.Namespace) -
     args.device = str(device)  # One spelling per device, so that resuming compares like with like.
     if args.contrastive_views > 1 and args.augmentation == "none":
         parser.error("--contrastive-views above 1 needs --augmentation: the views would be equal")
+    for option in ("--head-learning-rate", "--layer-lr-decay"):
+        name = option[2:].replace("-", "_")
+        values = {}
+        for value in getattr(args, name):
+            method, _, number = value.partition("=")
+            if method not in set(args.methods) & set(TRAINED_METHODS):
+                parser.error(f"{option} expects METHOD=VALUE with METHOD a selected trained method")
+            try:
+                values[method] = float(number)
+            except ValueError:
+                parser.error(f"{option} expects METHOD=VALUE with a number as VALUE")
+        setattr(args, name, values)  # A map, so that resuming compares values, not spellings.
+    try:  # Every combination TrainingArguments rejects, such as a head rate without a head.
+        training_arguments(
+            args, parse_learning_rates(args.learning_rate, args.default_learning_rate)
+        )
+    except ConfigurationError as error:
+        parser.error(str(error))
 
 
 def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
@@ -902,7 +936,12 @@ def training_arguments(
         "max_steps": args.max_steps,
     }
     arguments = {
-        method: TrainingArguments(training_mode=method, learning_rate=rates[method], **budget)
+        method: TrainingArguments(
+            training_mode=method,
+            learning_rate=rates[method],
+            layer_lr_decay=args.layer_lr_decay.get(method),
+            **budget,
+        )
         for method in args.methods
         if method in TRAINED_METHODS
     }
@@ -919,9 +958,13 @@ def training_arguments(
             learning_rate=rates["pair"],
             positives_per_example=args.pairs_per_example,
             negatives_per_example=args.pairs_per_example,
+            layer_lr_decay=args.layer_lr_decay.get("pair"),
             **budget,
         )
-    return arguments
+    return {
+        method: replace(options, head_learning_rate=args.head_learning_rate.get(method))
+        for method, options in arguments.items()
+    }
 
 
 def drop_repeats(items: Split) -> tuple[Split, int]:

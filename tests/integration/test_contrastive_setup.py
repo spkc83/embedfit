@@ -246,7 +246,8 @@ def test_the_projection_is_optimised_with_the_backbone(monkeypatch):
     class Recording(adamw):
         def __init__(self, params, **kwargs):
             params = list(params)
-            sizes.append(len(params))
+            (group,) = params  # One group without per-part learning rates (ADR 0020).
+            sizes.append(len(group["params"]))
             super().__init__(params, **kwargs)
 
     monkeypatch.setattr(torch.optim, "AdamW", Recording)

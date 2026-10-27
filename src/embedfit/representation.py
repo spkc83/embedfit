@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from embedfit.augmentation.pipeline import Augmentation, augment_image, probe_augmentation
 from embedfit.augmentation.registry import create_augmentation
-from embedfit.backbones.base import check_last_blocks
+from embedfit.backbones.base import ImageBackbone, check_last_blocks
 from embedfit.checkpoints import RepresentationCheckpoints, checkpoint_model
 from embedfit.data.dataset import ImageDataset
 from embedfit.data.image import to_rgb_tensor
@@ -464,6 +464,39 @@ def _projection_head(model: EmbedFitModel, args: TrainingArguments) -> nn.Module
     return head.to(device=model.device, dtype=first.dtype if first is not None else torch.float32)
 
 
+def _parameter_groups(
+    backbone: ImageBackbone, extra: Sequence[nn.Module], args: TrainingArguments
+) -> list[dict[str, Any]]:
+    """The optimizer's parameter groups: every trainable parameter, grouped by learning rate.
+
+    A backbone parameter trains at ``args.learning_rate``, scaled under ``args.layer_lr_decay``
+    by ``decay ** (n - 1 - i)`` in block ``i`` of ``n``, ``decay ** n`` in the stem, and 1 in
+    the tail (block positions as for partial unfreezing, ADR 0015). The parameters of ``extra``
+    (the modules training creates besides the backbone) train at ``args.head_learning_rate``,
+    or ``args.learning_rate`` if it is unset (ADR 0020). Frozen parameters are left out.
+    Groups appear in the order of their first parameter, backbone first; with both options
+    unset there is one group, of every trainable parameter in the order of ``parameters()``.
+    """
+    decay = args.layer_lr_decay
+    positions, num_blocks = backbone._block_positions() if decay is not None else ({}, 0)
+    rated: list[tuple[float, nn.Parameter]] = []
+    for name, parameter in backbone.named_parameters():
+        if parameter.requires_grad:
+            rate = args.learning_rate
+            if decay is not None:
+                rate *= decay ** max(0, num_blocks - 1 - positions[name])
+            rated.append((rate, parameter))
+    head_rate = args.learning_rate if args.head_learning_rate is None else args.head_learning_rate
+    seen = {id(parameter) for _, parameter in rated}
+    for parameter in nn.ModuleList(extra).parameters():
+        if parameter.requires_grad and id(parameter) not in seen:
+            rated.append((head_rate, parameter))
+    groups: dict[float, list[nn.Parameter]] = {}
+    for rate, parameter in rated:
+        groups.setdefault(rate, []).append(parameter)
+    return [{"params": parameters, "lr": rate} for rate, parameters in groups.items()]
+
+
 def validate_representation_setup(
     model: EmbedFitModel,
     train_dataset: ImageDataset,
@@ -487,7 +520,8 @@ def validate_representation_setup(
             epochs),
             relationship rules are given for a mode other than ``pair``, the backbone
             has no trainable parameters, ``unfreeze_last_blocks`` exceeds the backbone's
-            blocks, checkpoints cannot be written (see ``checkpoint_model``), the
+            blocks, ``layer_lr_decay`` is set for a backbone without blocks, checkpoints
+            cannot be written (see ``checkpoint_model``), the
             mixed-precision mode is not supported on the device, or ``args.augmentation``
             is not registered or its pipeline returns a malformed image when probed with a
             synthetic one.
@@ -529,6 +563,11 @@ def validate_representation_setup(
     if args.unfreeze_last_blocks is not None:
         backbone = model.backbone
         check_last_blocks(args.unfreeze_last_blocks, backbone.num_blocks, backbone.identifier)
+    if args.layer_lr_decay is not None and model.backbone.num_blocks == 0:
+        raise ConfigurationError(
+            f"Backbone '{model.backbone.identifier}' defines no blocks, so layer-wise learning-"
+            "rate decay is not available for it; leave layer_lr_decay at None."
+        )
     if args.checkpoint_dir is not None:
         checkpoint_model(model, args)
     if args.mixed_precision == "fp16" and device.type != "cuda":
@@ -655,6 +694,11 @@ def train_representation(
     otherwise the caller decides which parameters train. With ``args.checkpoint_dir`` set, the
     best and the last epoch are written there as model bundles (ADR 0016).
 
+    ``args.head_learning_rate`` sets the learning rate of the classifier and the projection head,
+    and ``args.layer_lr_decay`` lowers the learning rate of each backbone block below the last
+    (ADR 0020). Every parameter group follows the same warm-up and decay, relative to its own
+    learning rate.
+
     This function only updates backbone weights. Freezing the backbone and switching the
     model to eval mode afterwards is the caller's job. Without ``eval_dataset`` the model is
     returned in train mode, with its batch-norm layers in eval mode if
@@ -665,7 +709,8 @@ def train_representation(
         train_dataset: Training samples.
         eval_dataset: Optional validation samples for checkpoint selection.
         args: Hyperparameters: ``num_epochs`` or ``max_steps``, ``batch_size``, ``learning_rate``,
-            ``weight_decay``, ``warmup_ratio``, ``temperature``,
+            ``head_learning_rate``, ``layer_lr_decay``, ``weight_decay``, ``warmup_ratio``,
+            ``temperature``,
             ``gradient_accumulation_steps``, ``max_grad_norm``, ``mixed_precision``,
             ``num_workers``, ``seed``, ``augmentation``, for ``supcon`` ``projection_dim`` and
             ``contrastive_views``, and for pairs ``positives_per_example`` and
@@ -741,7 +786,11 @@ def train_representation(
         raise ConfigurationError(
             "Every backbone parameter is frozen; call unfreeze_backbone() before training."
         )
-    optimizer = torch.optim.AdamW(parameters, lr=args.learning_rate, weight_decay=args.weight_decay)
+    groups = _parameter_groups(model.backbone, extra, args)
+    if len(groups) > 1:
+        logger.info("Training %d parameter groups at different learning rates", len(groups))
+    # Each group's schedule scales its own rate; clipping and weight decay apply to all alike.
+    optimizer = torch.optim.AdamW(groups, lr=args.learning_rate, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.LambdaLR(
         optimizer, _schedule(total_steps, args.warmup_ratio)
     )

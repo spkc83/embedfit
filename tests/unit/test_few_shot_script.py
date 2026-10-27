@@ -50,6 +50,8 @@ CURRENT = {
     "interpolate": [],
     "max_image_side": None,
     "heads": None,
+    "head_learning_rate": {},
+    "layer_lr_decay": {},
 }
 
 
@@ -71,6 +73,8 @@ def write_results(path, config):
         ("interpolate", [], [0.5]),
         ("max_image_side", None, 224),
         ("heads", None, ["linear"]),
+        ("head_learning_rate", {}, {"end_to_end": 1e-3}),
+        ("layer_lr_decay", {}, {"supcon": 0.8}),
     ],
 )
 def test_a_file_from_before_an_option_resumes_with_its_default(
@@ -156,6 +160,43 @@ def test_a_step_budget_does_not_record_the_ignored_epochs(few_shot):
     assert (config["max_steps"], config["epochs"]) == (100, None)
     assert namespace(few_shot, "--max-steps", "100", "--epochs", "7") == config
     assert namespace(few_shot, "--epochs", "3")["epochs"] == 3
+
+
+def test_per_part_rates_are_configuration_by_value_and_reach_the_methods(few_shot):
+    options = ["--projection-dim", "8", "--head-learning-rate", "end_to_end=1e-3"]
+    config = namespace(few_shot, *options, "supcon=0.001", "--layer-lr-decay", "pair=.5")
+    assert config["head_learning_rate"] == {"end_to_end": 1e-3, "supcon": 1e-3}
+    assert config["layer_lr_decay"] == {"pair": 0.5}
+    respelled = namespace(few_shot, *options, "supcon=1e-3", "--layer-lr-decay", "pair=0.5")
+    assert respelled == config
+    args = few_shot.parse_arguments([*REQUIRED, *options, "--layer-lr-decay", "pair=0.5"])
+    rates = few_shot.parse_learning_rates(args.learning_rate, args.default_learning_rate)
+    arguments = few_shot.training_arguments(args, rates)
+    assert {m: (a.head_learning_rate, a.layer_lr_decay) for m, a in arguments.items()} == {
+        "end_to_end": (1e-3, None),
+        "supcon": (None, None),
+        "pair": (None, 0.5),
+    }
+    assert namespace(few_shot)["head_learning_rate"] == {}
+
+
+@pytest.mark.parametrize(
+    ("options", "message"),
+    [
+        (["--head-learning-rate", "frozen=1e-3"], "METHOD a selected trained method"),
+        (["--methods", "supcon", "--layer-lr-decay", "pair=0.5"], "a selected trained method"),
+        (["--layer-lr-decay", "0.5"], "METHOD a selected trained method"),
+        (["--head-learning-rate", "end_to_end=x"], "with a number as VALUE"),
+        (["--head-learning-rate", "pair=1e-3"], "trains neither"),
+        (["--head-learning-rate", "supcon=1e-3"], "trains neither"),
+        (["--head-learning-rate", "end_to_end=0"], "head_learning_rate must be > 0"),
+        (["--layer-lr-decay", "supcon=1.5"], "layer_lr_decay must be in"),
+    ],
+)
+def test_invalid_per_part_rates_are_rejected(few_shot, options, message, capsys):
+    with pytest.raises(SystemExit):
+        few_shot.main([*REQUIRED, *options])
+    assert message in capsys.readouterr().err
 
 
 def test_the_device_is_part_of_the_configuration_and_cudnn_is_not(few_shot, monkeypatch):

@@ -43,7 +43,8 @@ class TrainingArguments:
             ignored when ``max_steps`` is set.
         batch_size: Representation-training batch size (>= 1). Unused in ``frozen`` mode.
         eval_batch_size: Images per forward pass when encoding for head fitting and prediction.
-        learning_rate: Backbone learning rate (> 0).
+        learning_rate: Backbone learning rate (> 0); with ``layer_lr_decay``, that of the last
+            block and the parameters after it.
         weight_decay: Weight decay (>= 0).
         warmup_ratio: Fraction of steps used for learning-rate warm-up, in [0, 1).
         temperature: Contrastive-loss temperature (> 0).
@@ -108,6 +109,17 @@ class TrainingArguments:
             with its own augmentation seed; the views of one image are positives of each other
             (ADR 0018). Above 1 it needs an ``augmentation`` other than ``"none"``. Validation
             batches use one view of the original images. Must be 1 in other modes.
+        head_learning_rate: Learning rate (> 0) of the parameters that representation training
+            creates besides the backbone: the ``end_to_end`` classifier and the ``supcon``
+            projection head (ADR 0020). ``None`` trains them at ``learning_rate``. Rejected when
+            training creates no such parameters (``frozen``, ``pair``, ``triplet``, and
+            ``supcon`` without ``projection_dim``).
+        layer_lr_decay: Layer-wise learning-rate decay of the backbone, in (0, 1] (ADR 0020):
+            block ``i`` of ``n`` (``ImageBackbone.parameter_blocks``, input side first) trains
+            at ``learning_rate * layer_lr_decay ** (n - 1 - i)``, the stem before the first
+            block at ``layer_lr_decay ** n`` times it, and the parameters after the last block
+            at ``learning_rate``. Needs a backbone that defines blocks. ``None`` trains every
+            backbone parameter at ``learning_rate``. Rejected in ``frozen`` mode.
 
     Raises:
         ConfigurationError: If any value is invalid. Raised at construction, never mid-training.
@@ -144,6 +156,8 @@ class TrainingArguments:
     max_steps: int | None = None
     projection_dim: int | None = None
     contrastive_views: int = 1
+    head_learning_rate: float | None = None
+    layer_lr_decay: float | None = None
 
     def __post_init__(self) -> None:
         _require(
@@ -277,7 +291,24 @@ class TrainingArguments:
             f"contrastive_views={self.contrastive_views} needs an augmentation: without one "
             "every view of an image is identical.",
         )
-        for name in ("unfreeze_last_blocks", "checkpoint_dir", "max_steps"):
+        _require(
+            self.head_learning_rate is None
+            or (_is_number(self.head_learning_rate) and self.head_learning_rate > 0),
+            f"head_learning_rate must be > 0 or None, got {self.head_learning_rate!r}.",
+        )
+        _require(
+            self.head_learning_rate is None
+            or self.training_mode == "end_to_end"
+            or self.projection_dim is not None,
+            "head_learning_rate applies to the classifier of training_mode='end_to_end' and the "
+            "projection head of 'supcon' (projection_dim); this setup trains neither.",
+        )
+        _require(
+            self.layer_lr_decay is None
+            or (_is_number(self.layer_lr_decay) and 0 < self.layer_lr_decay <= 1),
+            f"layer_lr_decay must be in (0, 1] or None, got {self.layer_lr_decay!r}.",
+        )
+        for name in ("unfreeze_last_blocks", "checkpoint_dir", "max_steps", "layer_lr_decay"):
             _require(
                 self.training_mode != "frozen" or getattr(self, name) is None,
                 f"{name} only applies to modes that train the backbone, not 'frozen'.",

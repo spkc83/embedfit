@@ -123,7 +123,14 @@ def test_supcon_accepts_a_projection_head_and_several_views():
 
 def test_new_fields_come_last_and_are_recorded():
     names = [field.name for field in fields(TrainingArguments)]
-    assert names[-4:] == ["checkpoint_dir", "max_steps", "projection_dim", "contrastive_views"]
+    assert names[-6:] == [
+        "checkpoint_dir",
+        "max_steps",
+        "projection_dim",
+        "contrastive_views",
+        "head_learning_rate",
+        "layer_lr_decay",
+    ]
     recorded = _recorded_arguments(
         TrainingArguments(
             max_steps=9, projection_dim=4, contrastive_views=2, augmentation="natural"
