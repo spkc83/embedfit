@@ -1,7 +1,9 @@
 """Adapter for ``timm`` image models used as feature extractors."""
 
+import contextlib
 import difflib
 import functools
+import importlib
 import json
 import math
 import re
@@ -64,8 +66,17 @@ def _import_timm() -> Any:
 @functools.cache
 def _timm_normalization_types() -> tuple[type[nn.Module], ...]:
     layers = _import_timm().layers
+    # timm.layers does not re-export every class: GlobalResponseNorm lives only in its module.
+    modules = [layers]
+    with contextlib.suppress(ImportError):
+        modules.append(importlib.import_module("timm.layers.grn"))
     return tuple(
-        getattr(layers, name) for name in _TIMM_NORMALIZATION_NAMES if hasattr(layers, name)
+        {
+            getattr(m, name)
+            for name in _TIMM_NORMALIZATION_NAMES
+            for m in modules
+            if hasattr(m, name)
+        }
     )
 
 
