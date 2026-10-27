@@ -13,6 +13,7 @@ CE(classifier(e)) + w · SupCon(z; temperature)
 - `e` is the backbone embedding, as the model produces it (normalised or not), and `classifier` the jointly trained linear layer of `end_to_end`.
 - `z` is `e`, or the output of the SupCon projection head of ADR 0018 when `projection_dim` is set. `SupConLoss` L2-normalises `z`, and its temperature is `TrainingArguments.temperature`.
 - Everything else is `end_to_end` as before: the classifier starts from a converged linear probe (ADR 0012), backbone, classifier, and projection head share one AdamW optimiser and schedule, gradient accumulation and mixed precision work as in every mode, the best epoch restores backbone, classifier, and projection head together, and after training the classifier becomes a `LinearHead` that is refitted to convergence (ADR 0011). The projection head is discarded, as in `supcon`.
+- SupCon is computed per micro-batch: with `gradient_accumulation_steps` above 1, each accumulated batch contributes the contrastive loss of its own samples, so accumulation enlarges the optimizer step but not the set of positives and negatives an anchor is compared with.
 
 With a weight above 0:
 
@@ -22,7 +23,7 @@ With a weight above 0:
 
 With the weight at 0 (the default), `end_to_end` is unchanged: the same batches, the same computations, and bit-identical weights for the same seed. `temperature`, `projection_dim`, and `contrastive_views` then play no part, and the latter two are rejected, as is a weight above 0 in any other mode.
 
-`benchmarks/few_shot.py` and `benchmarks/embedding_quality.py` add the method `ce_supcon`: `end_to_end` with `--contrastive-weight` (default 1.0), its own `--learning-rate ce_supcon=...`, and the contrastive options `--projection-dim`, `--contrastive-views`, and `--temperature`, which it shares with `supcon`. Under `--interpolate` it is refitted with the head of `end_to_end`, a `LinearHead` seeded like the linear probe, so at weight 0 both are exactly that probe.
+`benchmarks/few_shot.py` and `benchmarks/embedding_quality.py` add the method `ce_supcon`: `end_to_end` with `--contrastive-weight` (default 1.0), its own `--learning-rate ce_supcon=...`, and the contrastive options `--projection-dim`, `--contrastive-views`, and `--temperature`, which it shares with `supcon`. `--sampler METHOD=balanced|random` sets the batch sampler of `end_to_end`, `supcon`, or `ce_supcon`, so that `--sampler end_to_end=balanced` gives the baseline the batches of `ce_supcon`. Under `--interpolate` it is refitted with the head of `end_to_end`, a `LinearHead` seeded like the linear probe, so at weight 0 both are exactly that probe.
 
 ## Context
 
@@ -38,7 +39,7 @@ EmbedFit could run the replacement (`supcon`) but not the joint objective.
 
 ## Rationale
 
-- **An option of `end_to_end`, not a new mode.** The joint objective needs exactly what `end_to_end` already has: the classifier, the LP-FT start, the refit at the end, the `LinearHead` result, and the head checks in `Trainer`. A separate mode would duplicate all of it, and every place that treats `end_to_end` specially (checkpoints, the benchmark's WiSE refit) would need a second name. A weight of 0 being the baseline exactly also makes the comparison between the two clean: the only difference is the added term.
+- **An option of `end_to_end`, not a new mode.** The joint objective needs exactly what `end_to_end` already has: the classifier, the LP-FT start, the refit at the end, the `LinearHead` result, and the head checks in `Trainer`. A separate mode would duplicate all of it, and every place that treats `end_to_end` specially (checkpoints, the benchmark's WiSE refit) would need a second name. A weight of 0 is the baseline exactly, so the added term can be isolated; at the defaults the batches differ as well (see Consequences).
 - **`CE + w · SupCon` rather than `(1 − λ) · CE + λ · SupCon`.** Core-tuning's form keeps the cross-entropy at full weight, so the weight is the only new parameter, 0 is the baseline, and the cross-entropy part of the loss keeps the scale the baseline's learning rate was tuned for. The two forms differ only in scale: λ corresponds to `w = λ / (1 − λ)` with the whole loss multiplied by `1 − λ`, a factor that Adam's updates are nearly invariant to.
 - **Class-balanced batches by default.** SupCon needs positives in every batch. In uniformly shuffled few-shot batches many anchors have none: at 4 shots of 10 classes, about 54% of the anchors in a batch of 8 have no other sample of their class in it. This is the sampler `supcon` uses, so the two contrastive methods see the same batches.
 - **`contrastive_views` and `projection_dim` reused, not duplicated.** They mean the same thing as in `supcon` (ADR 0018), and the projection head is built, trained, restored, and discarded by the same code. It is one of the modules trained besides the backbone, like the classifier, so `head_learning_rate` (ADR 0020) sets its rate together with the classifier's, and `trainable_parameters` (ADR 0021) never freezes it.
@@ -58,6 +59,12 @@ ADR 0012 rejected a temperature-scaled classifier partly because it would couple
 
 ## Consequences
 
+- At the defaults, `end_to_end` with a weight differs from `end_to_end` without one in its batches as well as in the added term, because the default sampler changes from `random` to `balanced`:
+  - **Composition.** Every batch holds `samples_per_class` samples of each of `classes_per_batch` classes, instead of a uniform shuffle.
+  - **Realised batch size.** `batch_shape` can leave a remainder of `batch_size`, and a class with fewer than `samples_per_class` samples contributes all it has, so a balanced batch can hold fewer than `batch_size` samples.
+  - **Step count.** An epoch has `ceil(N / (classes_per_batch × samples_per_class))` balanced batches against `ceil(N / batch_size)` shuffled ones, so the same `num_epochs` can take a different number of optimizer steps. With `max_steps` the steps are equal, but the number of epochs can differ.
+
+  `sampler="balanced"` on the baseline removes all three (in the benchmarks, `--sampler end_to_end=balanced`), leaving the contrastive term, with its temperature, projection head, and views, as the only difference. `sampler="random"` on the joint objective is the other direction, but uniform batches give many anchors no positive (see Rationale), and a sampler that yields a batch without one fails before training.
 - The benchmark default `--contrastive-weight 1.0` is equal weighting: the middle of Core-tuning's grid on a log scale, and between its best value on ImageNet20 (0.1) and the equivalent of Gunel et al.'s few-shot optimum (λ = 0.9, `w` = 9). The literature does not support one value across domains; tune it on the validation split with the learning rate.
 - `ce_supcon` is not in the benchmarks' default `--methods`, so a results file from before this change resumes unchanged; such a file resumes as one with the default `--contrastive-weight`.
 - A weight above 0 costs one similarity matrix per batch (`(V × B)²`), plus the projection head when it is used: small next to the backbone.

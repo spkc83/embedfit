@@ -43,7 +43,9 @@ def trained_state(args, train, validation=None):
     return model, result
 
 
-def test_weight_zero_is_exactly_the_cross_entropy_baseline():
+def test_an_explicit_zero_weight_trains_exactly_like_the_default():
+    """The default path itself: ``test_weight_zero_is_the_plain_cross_entropy_of_a_batch``
+    checks that its loss is the baseline's cross-entropy."""
     train, validation = dataset(6, 0), dataset(4, 2)
     baseline, base = trained_state(joint_args(contrastive_weight=0.0), train, validation)
     default, plain = trained_state(
@@ -130,11 +132,24 @@ def test_cross_entropy_applies_to_every_view():
     assert joint.item() == pytest.approx(expected.item(), rel=1e-6)
 
 
-def test_the_projection_head_is_trained_and_discarded():
+def test_the_projection_head_is_trained_and_discarded(monkeypatch):
+    heads = []
+
+    def recorded(model, args):
+        head = build(model, args)
+        heads.append((head, [p.detach().clone() for p in head.parameters()]))
+        return head
+
+    build = representation._projection_head
+    monkeypatch.setattr(representation, "_projection_head", recorded)
     train = dataset(6, 0)
     model = make_model()
     trainer = Trainer(model, joint_args(projection_dim=8), train)
     output = trainer.train()
+    [(head, initial)] = heads
+    assert all(
+        not torch.equal(p, start) for p, start in zip(head.parameters(), initial, strict=True)
+    )
     assert output.training_mode == "end_to_end" and np.isfinite(output.train_losses).all()
     assert isinstance(model.head, LinearHead) and model.head_name == "linear"
     assert all(parameter.shape != (8, 32) for parameter in model.parameters())  # No projection.

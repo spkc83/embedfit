@@ -48,6 +48,7 @@ CURRENT = {
     "contrastive_views": 1,
     "temperature": 0.07,
     "contrastive_weight": 1.0,
+    "sampler": {},
     "device": "cpu",
     "interpolate": [],
     "max_image_side": None,
@@ -73,6 +74,7 @@ def write_results(path, config):
         ("contrastive_views", 1, 2),
         ("temperature", 0.07, 0.2),
         ("contrastive_weight", 1.0, 0.5),
+        ("sampler", {}, {"end_to_end": "balanced"}),
         ("device", "cpu", "cuda"),
         ("interpolate", [], [0.5]),
         ("max_image_side", None, 224),
@@ -160,6 +162,43 @@ def test_the_contrastive_weight_needs_the_ce_supcon_method(few_shot, capsys):
     with pytest.raises(SystemExit):
         few_shot.main([*REQUIRED, "--methods", "end_to_end", "supcon", "--contrastive-weight", "2"])
     assert "applies to the ce_supcon method only" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("option", "message"),
+    [
+        (["end_to_end"], "expects METHOD=NAME"),
+        (["pair=balanced"], "expects METHOD=NAME"),
+        (["end_to_end=uniform"], "expects METHOD=NAME"),
+        (["supcon=random"], "names supcon, which is not selected"),
+        (["end_to_end=balanced", "end_to_end=random"], "names end_to_end twice"),
+    ],
+)
+def test_a_sampler_names_a_selected_batch_method_and_a_builtin_sampler(
+    few_shot, option, message, capsys
+):
+    with pytest.raises(SystemExit):
+        few_shot.parse_arguments(
+            [*REQUIRED, "--methods", "end_to_end", "ce_supcon", "pair", "--sampler", *option]
+        )
+    assert message in capsys.readouterr().err
+
+
+def test_a_sampler_is_configuration_and_a_default_one_is_left_out(few_shot):
+    methods = ["--methods", "end_to_end", "ce_supcon", "supcon"]
+    options = [*methods, "--sampler", "ce_supcon=balanced", "end_to_end=balanced"]
+    config = namespace(few_shot, *options)
+    assert config["sampler"] == {"end_to_end": "balanced"}
+    assert namespace(few_shot, *methods, "--sampler", "end_to_end=balanced") == config
+    assert namespace(few_shot, *methods)["sampler"] == {}
+    args = few_shot.parse_arguments([*REQUIRED, *options, "--sampler", "supcon=random"])
+    rates = few_shot.parse_learning_rates(args.learning_rate, args.default_learning_rate)
+    arguments = few_shot.training_arguments(args, rates)
+    assert {method: arguments[method].sampler for method in arguments} == {
+        "end_to_end": "balanced",
+        "ce_supcon": None,
+        "supcon": "random",
+    }
 
 
 def test_the_default_methods_leave_ce_supcon_out(few_shot):

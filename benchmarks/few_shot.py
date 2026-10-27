@@ -90,6 +90,7 @@ METHOD_MODES = {"ce_supcon": "end_to_end"}  # Methods that are not a training mo
 CONTRASTIVE_METHODS = ("supcon", "ce_supcon")
 DEFAULT_CONTRASTIVE_WEIGHT = 1.0
 HEADS = ("linear", "logistic_regression")
+SAMPLER_DEFAULTS = {"end_to_end": "random", "supcon": "balanced", "ce_supcon": "balanced"}
 DOCUMENT_SHORT_SIDE = 512
 RVL_CDIP_DATASET = "jinhybr/rvl_cdip_400_train_val_test"
 RVL_CDIP_REVISION = (
@@ -486,6 +487,7 @@ def read_previous(output: Path, config: dict, measured: Collection[str] = MEASUR
         saved.setdefault("contrastive_views", 1)
         saved.setdefault("temperature", 0.07)
         saved.setdefault("contrastive_weight", DEFAULT_CONTRASTIVE_WEIGHT)
+        saved.setdefault("sampler", {})
         saved.setdefault("device", "cpu")
         saved.setdefault("interpolate", [])
         saved.setdefault("max_image_side", None)
@@ -730,6 +732,17 @@ def training_parser(description: str) -> argparse.ArgumentParser:
         "supcon=0.8 (ADR 0020); default: none",
     )
     parser.add_argument(
+        "--sampler",
+        nargs="*",
+        action="extend",  # Repeated options add up rather than replace each other.
+        default=[],
+        metavar="METHOD=NAME",
+        help="per-method batch sampler, balanced or random, for "
+        f"{', '.join(SAMPLER_DEFAULTS)}; defaults: "
+        f"{', '.join(f'{m}={n}' for m, n in SAMPLER_DEFAULTS.items())}. "
+        "end_to_end=balanced gives the batches of ce_supcon (ADR 0022)",
+    )
+    parser.add_argument(
         "--pairs-per-example",
         type=int,
         default=1,
@@ -834,6 +847,26 @@ def check_arguments(parser: argparse.ArgumentParser, args: argparse.Namespace) -
         parse_learning_rates(args.learning_rate, args.default_learning_rate)
     except ValueError:
         parser.error("--learning-rate expects METHOD=RATE with a number as RATE")
+    samplers: dict[str, str] = {}
+    for value in args.sampler:
+        method, _, name = value.partition("=")
+        if method not in SAMPLER_DEFAULTS or name not in ("balanced", "random"):
+            parser.error(
+                f"--sampler expects METHOD=NAME with METHOD in {list(SAMPLER_DEFAULTS)} and NAME "
+                "balanced or random"
+            )
+        if method in samplers:
+            parser.error(f"--sampler names {method} twice")
+        if method not in args.methods:
+            parser.error(f"--sampler names {method}, which is not selected")
+        samplers[method] = name
+    # Only the choices that differ from the default are recorded, so that naming a default
+    # resumes like leaving it out.
+    args.sampler = {
+        method: samplers[method]
+        for method in sorted(samplers)
+        if samplers[method] != SAMPLER_DEFAULTS[method]
+    }
     if args.augmentation != "none" and not set(args.methods) & set(TRAINED_METHODS):
         parser.error("--augmentation applies to trained methods only, and none is selected")
     if args.unfreeze_last_blocks is not None and not set(args.methods) & set(TRAINED_METHODS):
@@ -990,6 +1023,8 @@ def training_arguments(
         arguments["ce_supcon"] = replace(
             arguments["ce_supcon"], contrastive_weight=args.contrastive_weight, **contrastive
         )
+    for method, name in args.sampler.items():
+        arguments[method] = replace(arguments[method], sampler=name)
     if "pair" in arguments:
         arguments["pair"] = TrainingArguments(
             training_mode="pair",
