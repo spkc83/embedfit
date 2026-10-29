@@ -207,10 +207,8 @@ def test_the_selection_combines_with_per_part_learning_rates(monkeypatch):
     rates = {names.get(id(p), "classifier"): g["initial_lr"] for g in groups for p in g["params"]}
     assert all(p.requires_grad for g in groups for p in g["params"])
     # The norm is the second of four blocks: decayed twice. The classifier keeps its own rate.
-    assert rates == {
-        "features.1.weight": 1e-2 * 0.5**2,
-        "features.1.bias": 1e-2 * 0.5**2,
-        "classifier": 1e-3,
-    }
+    assert rates == pytest.approx(
+        {"features.1.weight": 1e-2 * 0.5**2, "features.1.bias": 1e-2 * 0.5**2, "classifier": 1e-3}
+    )
     assert sum(len(g["params"]) for g in groups) == 4
     assert result.classifier is not None

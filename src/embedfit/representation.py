@@ -508,7 +508,7 @@ def _parameter_groups(
     unset there is one group, of every trainable parameter in the order of ``parameters()``.
     """
     decay = args.layer_lr_decay
-    positions, num_blocks = backbone._block_positions() if decay is not None else ({}, 0)
+    positions, num_blocks = backbone.block_positions() if decay is not None else ({}, 0)
     rated: list[tuple[float, nn.Parameter]] = []
     for name, parameter in backbone.named_parameters():
         if parameter.requires_grad:

@@ -713,12 +713,17 @@ def training_parser(description: str) -> argparse.ArgumentParser:
         "batch 32 at half the memory, but a supcon or pair batch then holds 16 samples, not 32",
     )
     parser.add_argument(
-        "--learning-rate", nargs="*", default=[], help="per-method rates, e.g. supcon=1e-5"
+        "--learning-rate",
+        nargs="*",
+        action="extend",
+        default=[],
+        help="per-method rates, e.g. supcon=1e-5",
     )
     parser.add_argument("--default-learning-rate", type=float, default=2e-5)
     parser.add_argument(
         "--head-learning-rate",
         nargs="*",
+        action="extend",
         default=[],
         help="per-method rates of the end_to_end and ce_supcon classifier and of the projection "
         "head (supcon, ce_supcon), e.g. end_to_end=1e-3 (ADR 0020); default: the method's "
@@ -727,6 +732,7 @@ def training_parser(description: str) -> argparse.ArgumentParser:
     parser.add_argument(
         "--layer-lr-decay",
         nargs="*",
+        action="extend",
         default=[],
         help="per-method layer-wise learning-rate decay of the backbone in (0, 1], e.g. "
         "supcon=0.8 (ADR 0020); default: none",
@@ -847,6 +853,9 @@ def check_arguments(parser: argparse.ArgumentParser, args: argparse.Namespace) -
         parse_learning_rates(args.learning_rate, args.default_learning_rate)
     except ValueError:
         parser.error("--learning-rate expects METHOD=RATE with a number as RATE")
+    methods = [value.partition("=")[0] for value in args.learning_rate]
+    if len(set(methods)) != len(methods):  # After the format check, so a typo reads as one.
+        parser.error("--learning-rate names a method twice")
     samplers: dict[str, str] = {}
     for value in args.sampler:
         method, _, name = value.partition("=")
@@ -920,9 +929,12 @@ def check_arguments(parser: argparse.ArgumentParser, args: argparse.Namespace) -
             if method not in set(args.methods) & set(TRAINED_METHODS):
                 parser.error(f"{option} expects METHOD=VALUE with METHOD a selected trained method")
             try:
-                values[method] = float(number)
+                number = float(number)
             except ValueError:
                 parser.error(f"{option} expects METHOD=VALUE with a number as VALUE")
+            if method in values:
+                parser.error(f"{option} names a method twice")
+            values[method] = number
         setattr(args, name, values)  # A map, so that resuming compares values, not spellings.
     try:  # Every combination TrainingArguments rejects, such as a head rate without a head.
         training_arguments(

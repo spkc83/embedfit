@@ -54,6 +54,25 @@ def _restore_global_rng_state():
 
 
 @pytest.fixture
+def spawned_workers(monkeypatch):
+    """Start the data-loader workers of representation training by spawning, not forking.
+
+    Workers forked from the multi-threaded test process can deadlock; spawned ones start
+    clean. This changes how workers start, not what they compute.
+    """
+    from embedfit import representation
+
+    loader = representation.DataLoader
+
+    def spawning(*arguments, **options):
+        if options.get("num_workers"):
+            options["multiprocessing_context"] = "spawn"
+        return loader(*arguments, **options)
+
+    monkeypatch.setattr(representation, "DataLoader", spawning)
+
+
+@pytest.fixture
 def bar_dataset() -> tuple[list[Image.Image], list[str]]:
     """Three classes of 32x32 RGB bar images, eight per class."""
     return make_bar_images(8, num_classes=3, seed=0)

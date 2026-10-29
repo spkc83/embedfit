@@ -264,6 +264,43 @@ def test_per_part_rates_are_configuration_by_value_and_reach_the_methods(few_sho
     assert namespace(few_shot)["head_learning_rate"] == {}
 
 
+def test_per_method_options_add_up_over_repeats(few_shot):
+    args = few_shot.parse_arguments(
+        [
+            *REQUIRED,
+            *("--learning-rate", "supcon=1e-5", "--learning-rate", "pair=2e-5"),
+            *("--head-learning-rate", "end_to_end=1e-3", "--head-learning-rate", "supcon=1e-2"),
+            *("--layer-lr-decay", "pair=0.5", "--layer-lr-decay", "supcon=0.8"),
+            *("--projection-dim", "8"),
+        ]
+    )
+    rates = few_shot.parse_learning_rates(args.learning_rate, args.default_learning_rate)
+    assert (rates["supcon"], rates["pair"]) == (1e-5, 2e-5)
+    assert args.head_learning_rate == {"end_to_end": 1e-3, "supcon": 1e-2}
+    assert args.layer_lr_decay == {"pair": 0.5, "supcon": 0.8}
+
+
+def test_a_malformed_value_is_reported_before_a_repeat(few_shot, capsys):
+    with pytest.raises(SystemExit, match="--learning-rate expects METHOD=RATE"):
+        few_shot.main([*REQUIRED, "--learning-rate", "=1e-5", "=2e-5"])
+    with pytest.raises(SystemExit):
+        few_shot.main([*REQUIRED, "--head-learning-rate", "=1e-5", "=2e-5"])
+    assert "--head-learning-rate expects METHOD=VALUE" in capsys.readouterr().err
+    with pytest.raises(SystemExit):
+        few_shot.main([*REQUIRED, "--sampler", "=random", "=random"])
+    assert "--sampler expects METHOD=NAME" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("option", ["--learning-rate", "--head-learning-rate", "--layer-lr-decay"])
+@pytest.mark.parametrize("separate", [False, True])
+def test_a_method_named_twice_is_rejected(few_shot, option, separate, capsys):
+    first, second = "end_to_end=0.5", "end_to_end=0.25"
+    repeated = [option, first, option, second] if separate else [option, first, second]
+    with pytest.raises(SystemExit):
+        few_shot.main([*REQUIRED, *repeated])
+    assert f"{option} names a method twice" in capsys.readouterr().err
+
+
 @pytest.mark.parametrize(
     ("options", "message"),
     [
@@ -273,8 +310,10 @@ def test_per_part_rates_are_configuration_by_value_and_reach_the_methods(few_sho
         (["--head-learning-rate", "end_to_end=x"], "with a number as VALUE"),
         (["--head-learning-rate", "pair=1e-3"], "trains neither"),
         (["--head-learning-rate", "supcon=1e-3"], "trains neither"),
-        (["--head-learning-rate", "end_to_end=0"], "head_learning_rate must be > 0"),
+        (["--head-learning-rate", "end_to_end=0"], "head_learning_rate must be finite and > 0"),
         (["--layer-lr-decay", "supcon=1.5"], "layer_lr_decay must be in"),
+        (["--head-learning-rate", "end_to_end=inf"], "head_learning_rate must be finite"),
+        (["--learning-rate", "supcon=inf"], "learning_rate must be finite"),
     ],
 )
 def test_invalid_per_part_rates_are_rejected(few_shot, options, message, capsys):

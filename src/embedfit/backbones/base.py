@@ -151,8 +151,15 @@ class ImageBackbone(nn.Module, ABC):
         wanted = {id(parameter) for module in modules for parameter in module.parameters()}
         return [name for name, parameter in self.named_parameters() if id(parameter) in wanted]
 
-    def _block_positions(self) -> tuple[dict[str, int], int]:
-        """Each parameter's block index (-1 for the stem, the block count for the tail)."""
+    def block_positions(self) -> tuple[dict[str, int], int]:
+        """The block of every parameter, and the number of blocks.
+
+        Returns:
+            A map from each name of ``named_parameters()`` to its block index in
+            ``[0, num_blocks)``, -1 for the stem, or ``num_blocks`` for the tail (placed as
+            ``parameter_blocks`` describes), and ``num_blocks``. Partial unfreezing and
+            layer-wise learning-rate decay both count blocks this way (ADRs 0015 and 0020).
+        """
         blocks = self.parameter_blocks()
         owner = {name: index for index, names in enumerate(blocks) for name in names}
         positions: dict[str, int] = {}
@@ -220,7 +227,7 @@ class ImageBackbone(nn.Module, ABC):
             )
         names = [name for name, _ in self.named_parameters()]
         if last_blocks is not None:
-            positions, num_blocks = self._block_positions()
+            positions, num_blocks = self.block_positions()
             check_last_blocks(last_blocks, num_blocks, self.identifier)
             names = [name for name in names if positions[name] >= num_blocks - last_blocks]
         if trainable_parameters == "all":

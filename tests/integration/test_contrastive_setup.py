@@ -367,9 +367,7 @@ def test_one_view_trains_exactly_like_before(monkeypatch):
     assert plain.train_losses == single.train_losses
 
 
-# Worker processes are forked from the threaded test process; the warning is about the test
-# runner, not about the code under test.
-@pytest.mark.filterwarnings("ignore:This process .* is multi-threaded:DeprecationWarning")
+@pytest.mark.usefixtures("spawned_workers")
 def test_views_are_reproducible_and_independent_of_workers():
     test_data = dataset(4, 2)
     runs = [

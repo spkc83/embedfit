@@ -97,6 +97,35 @@ def test_layer_decay_counts_every_block_but_leaves_frozen_ones_out():
     }
 
 
+def test_a_parameter_shared_with_the_backbone_is_grouped_once_at_the_backbone_rate():
+    backbone = make_backbone()
+    classifier = nn.Linear(16, 8)
+    classifier.weight = backbone.projection.weight  # Tied: one tensor in both modules.
+    options = args(head_learning_rate=0.1, layer_lr_decay=0.5)
+    groups = _parameter_groups(backbone, [classifier], options)
+    grouped = [id(p) for group in groups for p in group["params"]]
+    assert len(grouped) == len(set(grouped)) == len(list(backbone.parameters())) + 1
+    rates = {id(p): group["lr"] for group in groups for p in group["params"]}
+    assert rates[id(backbone.projection.weight)] == RATE  # The tail block, not the head.
+    assert rates[id(classifier.bias)] == 0.1
+
+
+def test_block_positions_place_stem_blocks_and_tail():
+    backbone = stem_and_tail_backbone()
+    positions, num_blocks = backbone.block_positions()
+    assert num_blocks == 2
+    assert {name: positions[name] for name, _ in backbone.named_parameters()} == {
+        "features.0.weight": -1,
+        "features.0.bias": -1,
+        "features.1.weight": 0,
+        "features.1.bias": 0,
+        "features.3.weight": 1,
+        "features.3.bias": 1,
+        "projection.weight": 2,
+        "projection.bias": 2,
+    }
+
+
 @pytest.mark.parametrize(
     "kwargs, match",
     [
@@ -104,6 +133,10 @@ def test_layer_decay_counts_every_block_but_leaves_frozen_ones_out():
         ({"training_mode": "end_to_end", "head_learning_rate": -1e-3}, "head_learning_rate"),
         ({"training_mode": "end_to_end", "head_learning_rate": True}, "head_learning_rate"),
         ({"training_mode": "end_to_end", "head_learning_rate": "1e-3"}, "head_learning_rate"),
+        ({"training_mode": "end_to_end", "head_learning_rate": float("inf")}, "must be finite"),
+        ({"training_mode": "end_to_end", "head_learning_rate": float("nan")}, "must be finite"),
+        ({"learning_rate": float("inf")}, "learning_rate must be finite"),
+        ({"learning_rate": float("nan")}, "learning_rate must be > 0"),
         ({"training_mode": "supcon", "head_learning_rate": 1e-3}, "trains neither"),
         ({"training_mode": "pair", "head_learning_rate": 1e-3}, "trains neither"),
         ({"training_mode": "frozen", "head_learning_rate": 1e-3}, "trains neither"),
