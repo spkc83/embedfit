@@ -70,14 +70,11 @@ def _timm_normalization_types() -> tuple[type[nn.Module], ...]:
     modules = [layers]
     with contextlib.suppress(ImportError):
         modules.append(importlib.import_module("timm.layers.grn"))
-    return tuple(
-        {
-            getattr(m, name)
-            for name in _TIMM_NORMALIZATION_NAMES
-            for m in modules
-            if hasattr(m, name)
-        }
-    )
+    found = {
+        getattr(m, name) for name in _TIMM_NORMALIZATION_NAMES for m in modules if hasattr(m, name)
+    }
+    # In name order, so that the tuple is the same from run to run.
+    return tuple(sorted(found, key=lambda kind: (kind.__name__, kind.__module__)))
 
 
 class TimmBackbone(ImageBackbone):

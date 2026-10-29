@@ -171,9 +171,7 @@ def test_every_trained_mode_runs_with_each_profile(mode, profile, tmp_path):
     assert metadata["training_arguments"]["augmentation"] == profile
 
 
-# Worker processes are forked from the threaded test process; the warning is about the test
-# runner, not about the code under test.
-@pytest.mark.filterwarnings("ignore:This process .* is multi-threaded:DeprecationWarning")
+@pytest.mark.usefixtures("spawned_workers")
 @pytest.mark.parametrize("mode", ["supcon", "pair"])
 def test_augmented_training_is_reproducible_and_independent_of_workers(mode):
     train_data, test_data = dataset(12, 0), dataset(4, 2)

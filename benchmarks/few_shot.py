@@ -849,14 +849,13 @@ def training_parser(description: str) -> argparse.ArgumentParser:
 
 def check_arguments(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
     """Every check of the ``training_parser`` options that needs no data; exits on an error."""
-    for option in ("--learning-rate", "--head-learning-rate", "--layer-lr-decay"):
-        methods = [value.partition("=")[0] for value in getattr(args, option[2:].replace("-", "_"))]
-        if len(set(methods)) != len(methods):
-            parser.error(f"{option} names a method twice")
     try:  # Before loading any data, so that a typo fails at once.
         parse_learning_rates(args.learning_rate, args.default_learning_rate)
     except ValueError:
         parser.error("--learning-rate expects METHOD=RATE with a number as RATE")
+    methods = [value.partition("=")[0] for value in args.learning_rate]
+    if len(set(methods)) != len(methods):  # After the format check, so a typo reads as one.
+        parser.error("--learning-rate names a method twice")
     samplers: dict[str, str] = {}
     for value in args.sampler:
         method, _, name = value.partition("=")
@@ -930,9 +929,12 @@ def check_arguments(parser: argparse.ArgumentParser, args: argparse.Namespace) -
             if method not in set(args.methods) & set(TRAINED_METHODS):
                 parser.error(f"{option} expects METHOD=VALUE with METHOD a selected trained method")
             try:
-                values[method] = float(number)
+                number = float(number)
             except ValueError:
                 parser.error(f"{option} expects METHOD=VALUE with a number as VALUE")
+            if method in values:
+                parser.error(f"{option} names a method twice")
+            values[method] = number
         setattr(args, name, values)  # A map, so that resuming compares values, not spellings.
     try:  # Every combination TrainingArguments rejects, such as a head rate without a head.
         training_arguments(
