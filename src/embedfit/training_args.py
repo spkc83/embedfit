@@ -1,5 +1,6 @@
 """Training configuration, validated when it is created."""
 
+import math
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -81,8 +82,9 @@ class TrainingArguments:
             batch-norm layers built without running statistics.
         sampler: Name of a registered batch sampler for ``supcon`` and ``end_to_end`` training,
             used for both training and validation batches. ``None`` selects the mode's default:
-            ``"balanced"`` (``BalancedClassBatchSampler``) for ``supcon``, ``"random"`` for
-            ``end_to_end``. Rejected in other modes.
+            ``"balanced"`` (``BalancedClassBatchSampler``) for ``supcon`` and for ``end_to_end``
+            with a ``contrastive_weight`` above 0, ``"random"`` for ``end_to_end`` without one.
+            Rejected in other modes.
         augmentation: Task augmentation applied to the images that representation training
             draws from the training set: ``"none"``, ``"natural"``, ``"document"``, or a name
             given to ``embedfit.augmentation.register_augmentation``. It runs before the
@@ -101,20 +103,23 @@ class TrainingArguments:
             stops after this many steps, part-way through an epoch if need be, and the
             learning-rate schedule is sized on it (ADR 0017). ``None`` trains for
             ``num_epochs`` epochs. Rejected in ``frozen`` mode.
-        projection_dim: ``supcon`` mode: compute the contrastive loss on a projection head
+        projection_dim: ``supcon`` mode, and ``end_to_end`` with a ``contrastive_weight``
+            above 0: compute the contrastive loss on a projection head
             ``Linear(D, D) → ReLU → Linear(D, projection_dim)`` over the backbone's
             embeddings, trained with the backbone and discarded afterwards; the classification
-            head and every encoding use the backbone's embeddings (ADR 0018). ``None`` applies
-            the loss to the embeddings directly. Rejected in other modes.
-        contrastive_views: ``supcon`` mode: augmented views of every drawn image (>= 1), each
-            with its own augmentation seed; the views of one image are positives of each other
-            (ADR 0018). Above 1 it needs an ``augmentation`` other than ``"none"``. Validation
-            batches use one view of the original images. Must be 1 in other modes.
+            head and every encoding use the backbone's embeddings (ADR 0018, ADR 0022). ``None``
+            applies the loss to the embeddings directly. Rejected in other modes.
+        contrastive_views: ``supcon`` mode, and ``end_to_end`` with a ``contrastive_weight``
+            above 0: augmented views of every drawn image (>= 1), each with its own augmentation
+            seed; the views of one image are positives of each other (ADR 0018), and in
+            ``end_to_end`` cross-entropy applies to every view (ADR 0022). Above 1 it needs an
+            ``augmentation`` other than ``"none"``. Validation batches use one view of the
+            original images. Must be 1 in other modes.
         head_learning_rate: Learning rate (> 0) of the parameters that representation training
-            creates besides the backbone: the ``end_to_end`` classifier and the ``supcon``
-            projection head (ADR 0020). ``None`` trains them at ``learning_rate``. Rejected when
-            training creates no such parameters (``frozen``, ``pair``, ``triplet``, and
-            ``supcon`` without ``projection_dim``).
+            creates besides the backbone: the ``end_to_end`` classifier and the projection head
+            of ``projection_dim`` (ADR 0020, ADR 0022). ``None`` trains them at
+            ``learning_rate``. Rejected when training creates no such parameters (``frozen``,
+            ``pair``, ``triplet``, and ``supcon`` without ``projection_dim``).
         layer_lr_decay: Layer-wise learning-rate decay of the backbone, in (0, 1] (ADR 0020):
             block ``i`` of ``n`` (``ImageBackbone.parameter_blocks``, input side first) trains
             at ``learning_rate * layer_lr_decay ** (n - 1 - i)``, the stem before the first
@@ -126,8 +131,13 @@ class TrainingArguments:
             normalisation layers (layer, group, RMS, instance, and batch norm, the latter's
             running statistics still governed by ``freeze_batch_norm``); or ``"bias"``, only
             bias terms (BitFit). With ``unfreeze_last_blocks`` it selects among the parameters
-            of those blocks. The ``end_to_end`` classifier and the ``supcon`` projection head
-            always train. Must be ``"all"`` in ``frozen`` mode.
+            of those blocks. The ``end_to_end`` classifier and the projection head always
+            train. Must be ``"all"`` in ``frozen`` mode.
+        contrastive_weight: ``end_to_end`` mode: weight ``w`` (finite, >= 0) of a supervised
+            contrastive term added to the cross-entropy of every batch,
+            ``CE + w * SupCon(temperature)``, on the embeddings or their projection with
+            ``projection_dim`` (ADR 0022). 0 trains with cross-entropy alone. Rejected in other
+            modes.
 
     Raises:
         ConfigurationError: If any value is invalid. Raised at construction, never mid-training.
@@ -167,6 +177,7 @@ class TrainingArguments:
     head_learning_rate: float | None = None
     layer_lr_decay: float | None = None
     trainable_parameters: str = "all"
+    contrastive_weight: float = 0.0
 
     def __post_init__(self) -> None:
         _require(
@@ -287,13 +298,26 @@ class TrainingArguments:
             f"contrastive_views must be an int >= 1, got {self.contrastive_views!r}.",
         )
         _require(
-            self.projection_dim is None or self.training_mode == "supcon",
-            f"projection_dim only applies to training_mode='supcon', not '{self.training_mode}'.",
+            _is_number(self.contrastive_weight) and 0 <= self.contrastive_weight < math.inf,
+            f"contrastive_weight must be a finite number >= 0, got {self.contrastive_weight!r}.",
         )
         _require(
-            self.contrastive_views == 1 or self.training_mode == "supcon",
-            "contrastive_views only applies to training_mode='supcon', not "
+            self.contrastive_weight == 0 or self.training_mode == "end_to_end",
+            "contrastive_weight only applies to training_mode='end_to_end', not "
             f"'{self.training_mode}'.",
+        )
+        contrastive = self.training_mode == "supcon" or self.contrastive_weight > 0
+        _require(
+            self.projection_dim is None or contrastive,
+            "projection_dim only applies to training_mode='supcon', or 'end_to_end' with "
+            f"contrastive_weight > 0, not '{self.training_mode}' with contrastive_weight="
+            f"{self.contrastive_weight}.",
+        )
+        _require(
+            self.contrastive_views == 1 or contrastive,
+            "contrastive_views only applies to training_mode='supcon', or 'end_to_end' with "
+            f"contrastive_weight > 0, not '{self.training_mode}' with contrastive_weight="
+            f"{self.contrastive_weight}.",
         )
         _require(
             self.contrastive_views == 1 or self.augmentation != NO_AUGMENTATION,
@@ -310,7 +334,7 @@ class TrainingArguments:
             or self.training_mode == "end_to_end"
             or self.projection_dim is not None,
             "head_learning_rate applies to the classifier of training_mode='end_to_end' and the "
-            "projection head of 'supcon' (projection_dim); this setup trains neither.",
+            "projection head (projection_dim); this setup trains neither.",
         )
         _require(
             self.layer_lr_decay is None

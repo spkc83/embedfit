@@ -8,7 +8,7 @@ Two `TrainingArguments` options give parts of the trained network their own lear
 
 ### `head_learning_rate`
 
-The learning rate of the parameters that representation training creates besides the backbone: the classifier of `end_to_end` (the linear probe it starts from, ADR 0012) and the `supcon` projection head (`projection_dim`, ADR 0018). It must be > 0. It is rejected when training creates no such parameters: in `frozen`, `pair`, and `triplet` mode, and in `supcon` mode without `projection_dim`.
+The learning rate of the parameters that representation training creates besides the backbone: the classifier of `end_to_end` (the linear probe it starts from, ADR 0012) and the projection head (`projection_dim`, ADR 0018) of `supcon`, and of `end_to_end` with a `contrastive_weight` (ADR 0022). It must be > 0. It is rejected when training creates no such parameters: in `frozen`, `pair`, and `triplet` mode, and in `supcon` mode without `projection_dim`. `end_to_end` always trains its classifier, so it always accepts one.
 
 ### `layer_lr_decay`
 

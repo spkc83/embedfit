@@ -33,7 +33,6 @@ from embedfit.training_args import TrainingArguments
 logger = logging.getLogger(__name__)
 
 _EVAL_SEED_OFFSET = 1_000_003  # Keeps validation batches independent of training batches.
-_DEFAULT_SAMPLERS = {"supcon": "balanced", "end_to_end": "random"}
 
 
 @dataclass(frozen=True)
@@ -144,10 +143,27 @@ class _DrawKeys:
             draw += len(batch)
 
 
+def _contrastive(args: TrainingArguments) -> bool:
+    """Whether the objective includes the supervised contrastive loss: ``supcon``, and
+    ``end_to_end`` with a ``contrastive_weight`` (ADR 0022)."""
+    return args.training_mode == "supcon" or args.contrastive_weight > 0
+
+
+def _sampler_name(args: TrainingArguments) -> str | None:
+    """``args.sampler``, or the mode's default: class-balanced batches whenever the objective
+    needs positives, uniformly shuffled ones for plain ``end_to_end``; ``None`` for ``pair``."""
+    if args.sampler is not None:
+        return args.sampler
+    if _contrastive(args):
+        return "balanced"
+    return "random" if args.training_mode == "end_to_end" else None
+
+
 def _batch_sampler(args: TrainingArguments, targets: np.ndarray, seed: int) -> BatchSampler:
     """The batch sampler of ``supcon`` and ``end_to_end`` training: ``args.sampler``, or the
     mode's default. ``targets`` are the class indices of the samples, in dataset order."""
-    name = args.sampler or _DEFAULT_SAMPLERS[args.training_mode]
+    name = _sampler_name(args)
+    assert name is not None
     return create_sampler(name, targets, batch_size=args.batch_size, seed=seed)
 
 
@@ -342,8 +358,8 @@ def _objective(
 
     ``classifier`` is the jointly trained linear layer of ``end_to_end`` mode; without one the
     objective can check the data but not compute a loss.
-    ``projection`` is the projection head of ``supcon`` mode (``args.projection_dim``); without
-    one the loss is applied to the backbone's embeddings.
+    ``projection`` is the projection head of the contrastive loss (``args.projection_dim``);
+    without one the loss is applied to the backbone's embeddings.
     ``mine`` enables hard-negative mining (``pair`` mode, training data only).
     ``augmentation`` is applied to every image drawn (training data only).
     """
@@ -372,12 +388,26 @@ def _objective(
     if args.training_mode == "end_to_end":
         loader, sampler = _loader(model, dataset, args, seed=seed, augmentation=augmentation)
 
+        weight = args.contrastive_weight
+        contrastive = create_loss("supcon", temperature=args.temperature) if weight > 0 else None
+
         def cross_entropy(batch: Any) -> torch.Tensor:
             if classifier is None:
                 raise ConfigurationError("end_to_end training needs a classifier layer.")
             pixels, labels = batch
-            logits = classifier(model(pixels.to(device=device, dtype=dtype)))
-            loss: torch.Tensor = nn.functional.cross_entropy(logits.float(), labels.to(device))
+            labels = labels.to(device)
+            # Views, [B, V, C, H, W], are embedded in one pass; cross-entropy applies to each.
+            embeddings = model(pixels.flatten(0, -4).to(device=device, dtype=dtype))
+            views = pixels.shape[1] if pixels.ndim == 5 else 1
+            logits = classifier(embeddings).float()
+            loss: torch.Tensor = nn.functional.cross_entropy(
+                logits, labels.repeat_interleave(views) if views > 1 else labels
+            )
+            if contrastive is not None:  # CE + w * SupCon (ADR 0022).
+                features = embeddings if projection is None else projection(embeddings)
+                if views > 1:
+                    features = features.unflatten(0, pixels.shape[:2])
+                loss = loss + weight * contrastive(features, labels)
             return loss
 
         return _Objective(loader, sampler.set_epoch, lambda epoch: len(sampler), cross_entropy)
@@ -517,7 +547,7 @@ def validate_representation_setup(
             or (``supcon``, with one view) holds no two samples of one class, or such a
             sampler that yields no batches, gives an epoch no optimizer step before
             ``max_steps`` is reached, or whose length differs from its batch count or between
-            epochs),
+            epochs; ``end_to_end`` with a ``contrastive_weight`` is checked like ``supcon``),
             relationship rules are given for a mode other than ``pair``, the backbone
             has no trainable parameters, ``unfreeze_last_blocks`` exceeds the backbone's
             blocks, ``layer_lr_decay`` is set for a backbone without blocks,
@@ -541,7 +571,7 @@ def validate_representation_setup(
             if len(dataset) == 0:
                 raise ConfigurationError(f"{name} is empty.")
             objective = _objective(model, dataset, args, rules, seed=seed)
-            sampler = args.sampler or _DEFAULT_SAMPLERS.get(args.training_mode)
+            sampler = _sampler_name(args)
             if sampler is not None and needs_batch_check(sampler):
                 assert model.label_mapping is not None
                 targets = model.label_mapping.encode(dataset.labels)
@@ -551,7 +581,7 @@ def validate_representation_setup(
                     _batch_sampler(args, targets, seed),
                     targets,
                     range(_planned_epochs(objective, args) if training else 1),
-                    need_positive=args.training_mode == "supcon" and one_view,
+                    need_positive=_contrastive(args) and one_view,
                 )
     augmentation = create_augmentation(args.augmentation)
     if augmentation is not None:
@@ -668,8 +698,11 @@ def train_representation(
     the embeddings of the untouched backbone; that linear classifier is then trained jointly
     with the backbone under cross-entropy on uniformly shuffled batches by default, and returned in
     ``classifier``. The classifier sees exactly the embeddings the model produces (normalised
-    or not) and ``temperature`` plays no part, so the baseline shares no hyperparameter with
-    the contrastive losses.
+    or not). Without ``args.contrastive_weight``, ``temperature`` plays no part, so the baseline
+    shares no hyperparameter with the contrastive losses. With ``args.contrastive_weight = w``
+    above 0, every batch's loss is ``CE + w * SupCon``, the supervised contrastive loss taken on
+    the embeddings or on a ``projection_dim`` projection head, the batches are class-balanced
+    by default, and ``contrastive_views`` views of each image all enter both terms (ADR 0022).
 
     Training lasts ``args.num_epochs`` epochs, or with ``args.max_steps`` exactly that many
     optimizer steps, as many epochs as they take, the last possibly partial (ADR 0017).
@@ -716,7 +749,8 @@ def train_representation(
             ``temperature``,
             ``gradient_accumulation_steps``, ``max_grad_norm``, ``mixed_precision``,
             ``num_workers``, ``seed``, ``augmentation``, for ``supcon`` ``projection_dim`` and
-            ``contrastive_views``, and for pairs ``positives_per_example`` and
+            ``contrastive_views``, for ``end_to_end`` ``contrastive_weight`` (and with it the
+            contrastive options), and for pairs ``positives_per_example`` and
             ``negatives_per_example``.
         rules: Relationship rules for ``"pair"`` mode.
         validate: Run ``validate_representation_setup`` first. ``Trainer`` has already done so

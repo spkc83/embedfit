@@ -557,3 +557,17 @@ def test_records_and_configuration_gain_no_head(run, quality, tmp_path):
     config = {k: v for k, v in results["config"].items() if k not in quality.MEASURED}
     previous = quality.read_previous(tmp_path / "results.json", config)
     assert all("head" not in record for record in previous["records"])
+
+
+def test_ce_supcon_trains_and_interpolates_like_end_to_end(run):
+    options = ("--tasks", "rare_positive", "--negatives", "6", "--batch-size", "8")
+    budget = ("--max-steps", "2", "--default-learning-rate", "1e-2", "--interpolate", "0")
+    records = run("--methods", "end_to_end", "ce_supcon", *options, *budget)["records"]
+    at_zero = {
+        method: {
+            r["metric"]: r["value"] for r in records if (r["method"], r["alpha"]) == (method, 0.0)
+        }
+        for method in ("end_to_end", "ce_supcon")
+    }
+    assert at_zero["ce_supcon"] == at_zero["end_to_end"] and at_zero["ce_supcon"]
+    assert {r["method"] for r in records if r["alpha"] is None} == {"end_to_end", "ce_supcon"}

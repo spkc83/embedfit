@@ -84,8 +84,13 @@ from embedfit.utils.seed import set_seed
 
 logger = logging.getLogger(__name__)
 
-TRAINED_METHODS = ("end_to_end", "supcon", "pair")
+TRAINED_METHODS = ("end_to_end", "supcon", "pair", "ce_supcon")
+DEFAULT_METHODS = ("frozen", "end_to_end", "supcon", "pair")  # Kept, so that old runs resume.
+METHOD_MODES = {"ce_supcon": "end_to_end"}  # Methods that are not a training mode of their own.
+CONTRASTIVE_METHODS = ("supcon", "ce_supcon")
+DEFAULT_CONTRASTIVE_WEIGHT = 1.0
 HEADS = ("linear", "logistic_regression")
+SAMPLER_DEFAULTS = {"end_to_end": "random", "supcon": "balanced", "ce_supcon": "balanced"}
 DOCUMENT_SHORT_SIDE = 512
 RVL_CDIP_DATASET = "jinhybr/rvl_cdip_400_train_val_test"
 RVL_CDIP_REVISION = (
@@ -481,6 +486,8 @@ def read_previous(output: Path, config: dict, measured: Collection[str] = MEASUR
         saved.setdefault("projection_dim", None)
         saved.setdefault("contrastive_views", 1)
         saved.setdefault("temperature", 0.07)
+        saved.setdefault("contrastive_weight", DEFAULT_CONTRASTIVE_WEIGHT)
+        saved.setdefault("sampler", {})
         saved.setdefault("device", "cpu")
         saved.setdefault("interpolate", [])
         saved.setdefault("max_image_side", None)
@@ -512,10 +519,10 @@ def positive_float(value: str) -> float:
 
 
 def own_head(method: str) -> str:
-    """The head ``method`` is scored with by default: ``linear`` for ``end_to_end``, whose jointly
-    trained classifier becomes a ``LinearHead`` (ADR 0011), and the default
-    ``TrainingArguments.head`` for every other method."""
-    if method == "end_to_end":
+    """The head ``method`` is scored with by default: ``linear`` for ``end_to_end`` and
+    ``ce_supcon``, whose jointly trained classifier becomes a ``LinearHead`` (ADR 0011), and the
+    default ``TrainingArguments.head`` for every other method."""
+    if METHOD_MODES.get(method, method) == "end_to_end":
         return "linear"
     return str(TrainingArguments.__dataclass_fields__["head"].default)
 
@@ -576,9 +583,9 @@ def trained_weights(trainer: Trainer, alphas: Sequence[float]) -> Iterator[float
     At every weight the backbone is ``(1 - alpha) * initial + alpha * trained`` and a new head
     is fitted on the training set, so a weight's result does not depend on the others:
     ``end_to_end`` gets a ``LinearHead`` seeded and configured as its linear probe (ADR 0012),
-    so that at ``alpha`` 0 it is that probe; every other mode gets a copy of its head as it was
-    before training, refitted. The initial state is kept on the CPU and the trained one on the
-    model's device.
+    so that at ``alpha`` 0 it is that probe (``ce_supcon`` too, which trains in that mode); every
+    other mode gets a copy of its head as it was before training, refitted. The initial state is
+    kept on the CPU and the trained one on the model's device.
     """
     model = trainer.model
     interpolate = bool(alphas) and trainer.args.training_mode != "frozen"
@@ -690,7 +697,9 @@ def training_parser(description: str) -> argparse.ArgumentParser:
         "--methods",
         nargs="+",
         choices=["frozen", *TRAINED_METHODS],
-        default=["frozen", *TRAINED_METHODS],
+        default=list(DEFAULT_METHODS),
+        help="ce_supcon is end_to_end with a supervised contrastive term (ADR 0022); default: "
+        f"{' '.join(DEFAULT_METHODS)}",
     )
     parser.add_argument("--shots", nargs="+", type=int, default=[4, 8, 16])
     parser.add_argument("--seeds", nargs="+", type=int, default=[0, 1, 2])
@@ -711,8 +720,9 @@ def training_parser(description: str) -> argparse.ArgumentParser:
         "--head-learning-rate",
         nargs="*",
         default=[],
-        help="per-method rates of the end_to_end classifier and the supcon projection head, "
-        "e.g. end_to_end=1e-3 (ADR 0020); default: the method's learning rate",
+        help="per-method rates of the end_to_end and ce_supcon classifier and of the projection "
+        "head (supcon, ce_supcon), e.g. end_to_end=1e-3 (ADR 0020); default: the method's "
+        "learning rate",
     )
     parser.add_argument(
         "--layer-lr-decay",
@@ -720,6 +730,17 @@ def training_parser(description: str) -> argparse.ArgumentParser:
         default=[],
         help="per-method layer-wise learning-rate decay of the backbone in (0, 1], e.g. "
         "supcon=0.8 (ADR 0020); default: none",
+    )
+    parser.add_argument(
+        "--sampler",
+        nargs="*",
+        action="extend",  # Repeated options add up rather than replace each other.
+        default=[],
+        metavar="METHOD=NAME",
+        help="per-method batch sampler, balanced or random, for "
+        f"{', '.join(SAMPLER_DEFAULTS)}; defaults: "
+        f"{', '.join(f'{m}={n}' for m, n in SAMPLER_DEFAULTS.items())}. "
+        "end_to_end=balanced gives the batches of ce_supcon (ADR 0022)",
     )
     parser.add_argument(
         "--pairs-per-example",
@@ -761,20 +782,27 @@ def training_parser(description: str) -> argparse.ArgumentParser:
         "--projection-dim",
         type=positive_int,
         default=None,
-        help="supcon: compute the loss on a projection head of this output size (ADR 0018)",
+        help="supcon and ce_supcon: compute the contrastive loss on a projection head of this "
+        "output size (ADR 0018)",
     )
     parser.add_argument(
         "--contrastive-views",
         type=positive_int,
         default=1,
-        help="supcon: augmented views of every drawn image; above 1 needs --augmentation "
-        "(ADR 0018)",
+        help="supcon and ce_supcon: augmented views of every drawn image; above 1 needs "
+        "--augmentation (ADR 0018)",
     )
     parser.add_argument(
         "--temperature",
         type=positive_float,
         default=0.07,
-        help="supcon: temperature of the supervised contrastive loss",
+        help="supcon and ce_supcon: temperature of the supervised contrastive loss",
+    )
+    parser.add_argument(
+        "--contrastive-weight",
+        type=positive_float,
+        default=DEFAULT_CONTRASTIVE_WEIGHT,
+        help="ce_supcon: weight w of the loss CE + w * SupCon (ADR 0022)",
     )
     parser.add_argument(
         "--interpolate",
@@ -819,6 +847,26 @@ def check_arguments(parser: argparse.ArgumentParser, args: argparse.Namespace) -
         parse_learning_rates(args.learning_rate, args.default_learning_rate)
     except ValueError:
         parser.error("--learning-rate expects METHOD=RATE with a number as RATE")
+    samplers: dict[str, str] = {}
+    for value in args.sampler:
+        method, _, name = value.partition("=")
+        if method not in SAMPLER_DEFAULTS or name not in ("balanced", "random"):
+            parser.error(
+                f"--sampler expects METHOD=NAME with METHOD in {list(SAMPLER_DEFAULTS)} and NAME "
+                "balanced or random"
+            )
+        if method in samplers:
+            parser.error(f"--sampler names {method} twice")
+        if method not in args.methods:
+            parser.error(f"--sampler names {method}, which is not selected")
+        samplers[method] = name
+    # Only the choices that differ from the default are recorded, so that naming a default
+    # resumes like leaving it out.
+    args.sampler = {
+        method: samplers[method]
+        for method in sorted(samplers)
+        if samplers[method] != SAMPLER_DEFAULTS[method]
+    }
     if args.augmentation != "none" and not set(args.methods) & set(TRAINED_METHODS):
         parser.error("--augmentation applies to trained methods only, and none is selected")
     if args.unfreeze_last_blocks is not None and not set(args.methods) & set(TRAINED_METHODS):
@@ -844,8 +892,15 @@ def check_arguments(parser: argparse.ArgumentParser, args: argparse.Namespace) -
         ("--contrastive-views", args.contrastive_views, 1),
         ("--temperature", args.temperature, 0.07),
     ):
-        if value != default and "supcon" not in args.methods:
-            parser.error(f"{option} applies to the supcon method only, and it is not selected")
+        if value != default and not set(args.methods) & set(CONTRASTIVE_METHODS):
+            parser.error(
+                f"{option} applies to the supcon and ce_supcon methods only, and neither is "
+                "selected"
+            )
+    if args.contrastive_weight != DEFAULT_CONTRASTIVE_WEIGHT and "ce_supcon" not in args.methods:
+        parser.error(
+            "--contrastive-weight applies to the ce_supcon method only, and it is not selected"
+        )
     if args.device == "auto":
         parser.error("--device must name a device: 'auto' could resolve differently on resume")
     try:
@@ -887,7 +942,7 @@ def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
         default=None,
         help="score every method with each of these heads, fitted on the training embeddings of "
         "its final backbone (ADR 0019); default: each method's own head, linear for end_to_end "
-        "and logistic_regression for the others",
+        "and ce_supcon and logistic_regression for the others",
     )
     args = parser.parse_args(argv)
     check_arguments(parser, args)
@@ -949,7 +1004,7 @@ def training_arguments(
     }
     arguments = {
         method: TrainingArguments(
-            training_mode=method,
+            training_mode=METHOD_MODES.get(method, method),
             learning_rate=rates[method],
             layer_lr_decay=args.layer_lr_decay.get(method),
             **budget,
@@ -957,13 +1012,19 @@ def training_arguments(
         for method in args.methods
         if method in TRAINED_METHODS
     }
+    contrastive = {
+        "projection_dim": args.projection_dim,
+        "contrastive_views": args.contrastive_views,
+        "temperature": args.temperature,
+    }
     if "supcon" in arguments:
-        arguments["supcon"] = replace(
-            arguments["supcon"],
-            projection_dim=args.projection_dim,
-            contrastive_views=args.contrastive_views,
-            temperature=args.temperature,
+        arguments["supcon"] = replace(arguments["supcon"], **contrastive)
+    if "ce_supcon" in arguments:
+        arguments["ce_supcon"] = replace(
+            arguments["ce_supcon"], contrastive_weight=args.contrastive_weight, **contrastive
         )
+    for method, name in args.sampler.items():
+        arguments[method] = replace(arguments[method], sampler=name)
     if "pair" in arguments:
         arguments["pair"] = TrainingArguments(
             training_mode="pair",
@@ -1161,7 +1222,7 @@ def main(argv: list[str] | None = None) -> None:
             for method in args.methods:
                 set_seed(seed)  # For any randomly initialised part of the backbone.
                 model = model_factory()
-                options = arguments.get(method, TrainingArguments(training_mode=method))
+                options = arguments.get(method, TrainingArguments(training_mode="frozen"))
                 trainer = Trainer(model, replace(options, seed=seed), sample)
                 for alpha in trained_weights(trainer, args.interpolate):
                     for head in fitted_heads(trainer, args.heads or [own_head(method)]):

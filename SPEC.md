@@ -75,6 +75,8 @@ A baseline using a differentiable linear classification head and cross-entropy. 
 
 This is for comparison, not the primary workflow.
 
+With `contrastive_weight = w` above 0, the loss of every batch is `CE + w · SupCon`, the supervised contrastive loss taken on the embeddings or on a discarded `projection_dim` projection head, with class-balanced batches by default and `contrastive_views` augmented views per image entering both terms. The mode is then a representation-learning method in its own right: joint cross-entropy and contrastive fine-tuning (ADR 0022). At the default of 0 it is the baseline above, unchanged.
+
 ## 4. Backbones
 
 Required providers:
@@ -173,9 +175,10 @@ checkpoint_dir: str | None = None         # best and last epoch written as bundl
 max_steps: int | None = None              # budget in optimizer steps; replaces num_epochs (ADR 0017)
 projection_dim: int | None = None         # supcon: loss on a discarded projection head (ADR 0018)
 contrastive_views: int = 1                # supcon: augmented views per drawn image (ADR 0018)
-head_learning_rate: float | None = None   # end_to_end classifier / supcon projection head (ADR 0020)
+head_learning_rate: float | None = None   # end_to_end classifier / projection head (ADR 0020)
 layer_lr_decay: float | None = None       # backbone block i of n at decay ** (n - 1 - i) (ADR 0020)
 trainable_parameters: str = "all"         # "all", "layernorm", or "bias" backbone parameters (ADR 0021)
+contrastive_weight: float = 0.0           # end_to_end: loss CE + w · SupCon (ADR 0022)
 ```
 
 ## 6. Input data

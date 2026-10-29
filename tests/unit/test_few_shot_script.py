@@ -47,6 +47,8 @@ CURRENT = {
     "projection_dim": None,
     "contrastive_views": 1,
     "temperature": 0.07,
+    "contrastive_weight": 1.0,
+    "sampler": {},
     "device": "cpu",
     "interpolate": [],
     "max_image_side": None,
@@ -71,6 +73,8 @@ def write_results(path, config):
         ("projection_dim", None, 128),
         ("contrastive_views", 1, 2),
         ("temperature", 0.07, 0.2),
+        ("contrastive_weight", 1.0, 0.5),
+        ("sampler", {}, {"end_to_end": "balanced"}),
         ("device", "cpu", "cuda"),
         ("interpolate", [], [0.5]),
         ("max_image_side", None, 224),
@@ -106,11 +110,12 @@ def test_count_options_must_be_positive_ints(few_shot, option, value, capsys):
     assert f"{option}: expected a positive int" in capsys.readouterr().err
 
 
+@pytest.mark.parametrize("option", ["--temperature", "--contrastive-weight"])
 @pytest.mark.parametrize("value", ["0", "-0.1", "inf", "nan", "x"])
-def test_temperature_must_be_a_positive_number(few_shot, value, capsys):
+def test_temperature_and_weight_must_be_positive_numbers(few_shot, option, value, capsys):
     with pytest.raises(SystemExit):
-        few_shot.main(["--temperature", value])
-    assert "--temperature: expected a positive number" in capsys.readouterr().err
+        few_shot.main([option, value])
+    assert f"{option}: expected a positive number" in capsys.readouterr().err
 
 
 REQUIRED = ["--dataset", "eurosat", "--evaluate-on", "validation", "--output", "results.json"]
@@ -145,10 +150,82 @@ def test_training_options_need_a_trained_method(few_shot, option, capsys):
         ["--temperature", "0.2"],
     ],
 )
-def test_supcon_options_need_the_supcon_method(few_shot, option, capsys):
+def test_contrastive_options_need_a_contrastive_method(few_shot, option, capsys):
     with pytest.raises(SystemExit):
-        few_shot.main([*REQUIRED, "--methods", "frozen", "pair", *option])
-    assert "applies to the supcon method only" in capsys.readouterr().err
+        few_shot.main([*REQUIRED, "--methods", "frozen", "end_to_end", "pair", *option])
+    assert "applies to the supcon and ce_supcon methods only" in capsys.readouterr().err
+    for method in ("supcon", "ce_supcon"):
+        few_shot.parse_arguments([*REQUIRED, "--methods", method, *option])
+
+
+def test_the_contrastive_weight_needs_the_ce_supcon_method(few_shot, capsys):
+    with pytest.raises(SystemExit):
+        few_shot.main([*REQUIRED, "--methods", "end_to_end", "supcon", "--contrastive-weight", "2"])
+    assert "applies to the ce_supcon method only" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("option", "message"),
+    [
+        (["end_to_end"], "expects METHOD=NAME"),
+        (["pair=balanced"], "expects METHOD=NAME"),
+        (["end_to_end=uniform"], "expects METHOD=NAME"),
+        (["supcon=random"], "names supcon, which is not selected"),
+        (["end_to_end=balanced", "end_to_end=random"], "names end_to_end twice"),
+    ],
+)
+def test_a_sampler_names_a_selected_batch_method_and_a_builtin_sampler(
+    few_shot, option, message, capsys
+):
+    with pytest.raises(SystemExit):
+        few_shot.parse_arguments(
+            [*REQUIRED, "--methods", "end_to_end", "ce_supcon", "pair", "--sampler", *option]
+        )
+    assert message in capsys.readouterr().err
+
+
+def test_a_sampler_is_configuration_and_a_default_one_is_left_out(few_shot):
+    methods = ["--methods", "end_to_end", "ce_supcon", "supcon"]
+    options = [*methods, "--sampler", "ce_supcon=balanced", "end_to_end=balanced"]
+    config = namespace(few_shot, *options)
+    assert config["sampler"] == {"end_to_end": "balanced"}
+    assert namespace(few_shot, *methods, "--sampler", "end_to_end=balanced") == config
+    assert namespace(few_shot, *methods)["sampler"] == {}
+    args = few_shot.parse_arguments([*REQUIRED, *options, "--sampler", "supcon=random"])
+    rates = few_shot.parse_learning_rates(args.learning_rate, args.default_learning_rate)
+    arguments = few_shot.training_arguments(args, rates)
+    assert {method: arguments[method].sampler for method in arguments} == {
+        "end_to_end": "balanced",
+        "ce_supcon": None,
+        "supcon": "random",
+    }
+    combined = few_shot.parse_arguments(
+        [*REQUIRED, *methods, "--sampler", "end_to_end=balanced", "--trainable-parameters", "bias"]
+    )
+    joint = few_shot.training_arguments(combined, rates)["end_to_end"]
+    assert (joint.sampler, joint.trainable_parameters) == ("balanced", "bias")
+
+
+def test_the_default_methods_leave_ce_supcon_out(few_shot):
+    assert few_shot.parse_arguments(REQUIRED).methods == ["frozen", "end_to_end", "supcon", "pair"]
+
+
+def test_ce_supcon_is_end_to_end_with_a_contrastive_weight(few_shot):
+    args = few_shot.parse_arguments(
+        [*REQUIRED, "--methods", "ce_supcon", "supcon", "--contrastive-weight", "0.5"]
+        + ["--projection-dim", "16", "--temperature", "0.2", "--learning-rate", "ce_supcon=3e-5"]
+    )
+    rates = few_shot.parse_learning_rates(args.learning_rate, args.default_learning_rate)
+    arguments = few_shot.training_arguments(args, rates)
+    joint, supcon = arguments["ce_supcon"], arguments["supcon"]
+    assert (joint.training_mode, joint.contrastive_weight, joint.learning_rate) == (
+        "end_to_end",
+        0.5,
+        3e-5,
+    )
+    assert (joint.projection_dim, joint.temperature) == (16, 0.2)
+    assert (supcon.projection_dim, supcon.temperature, supcon.contrastive_weight) == (16, 0.2, 0)
+    assert few_shot.resume_configuration(args)["contrastive_weight"] == 0.5
 
 
 def test_several_views_need_an_augmentation(few_shot, capsys):
@@ -567,6 +644,18 @@ def test_interpolating_a_bias_only_run_leaves_the_other_weights_pretrained(few_s
     for alpha in few_shot.trained_weights(trainer, [0.5]):  # As trained, then at 0.5.
         for name, tensor in model.backbone.state_dict().items():
             assert torch.equal(tensor, initial[name]) != name.endswith(".bias"), (alpha, name)
+
+
+def test_ce_supcon_is_interpolated_toward_the_same_linear_probe(few_shot, run, capsys):
+    results = run("--methods", "end_to_end", "ce_supcon", "--interpolate", "0", "0.5")
+    records = results["records"]
+    assert values(records, "ce_supcon", None).keys() == values(records, "end_to_end", None).keys()
+    assert values(records, "ce_supcon", 0.0) == values(records, "end_to_end", 0.0)
+    assert set(results["config"]["learning_rates"]) == {"end_to_end", "ce_supcon"}
+    assert "ce_supcon α=0.5" in capsys.readouterr().out
+    # Without --heads, ce_supcon is scored with the linear head of end_to_end (ADR 0011).
+    assert {r["head"] for r in records if r["method"] == "ce_supcon"} == {"linear"}
+    assert few_shot.own_head("ce_supcon") == few_shot.own_head("end_to_end") == "linear"
 
 
 def end_to_end_trainer():
