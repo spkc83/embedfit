@@ -162,7 +162,7 @@ Deliver:
 Deliver:
 
 - quickstart
-- financial-risk synthetic example
+- synthetic document-risk example
 - leakage guide
 - benchmark guide
 - API docs

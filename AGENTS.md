@@ -63,7 +63,7 @@ External-model tests must be explicitly marked.
 
 ### 4. Keep the core domain-neutral
 
-Do not place check-specific or fraud-specific behavior inside:
+Do not place use-case-specific behavior inside:
 
 - backbones
 - losses
@@ -71,7 +71,7 @@ Do not place check-specific or fraud-specific behavior inside:
 - generic samplers
 - model serialization
 
-Financial-services-specific material belongs in:
+Use-case-specific material belongs in:
 
 - examples
 - documentation
@@ -164,7 +164,7 @@ Do not:
 - hard-code ImageNet normalization globally;
 - make network access part of default tests;
 - add a heavy vector database to v0.1;
-- invent fraud labels in core code.
+- invent use-case labels in core code.
 
 ## Definition of done
 

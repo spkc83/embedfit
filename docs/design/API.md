@@ -7,8 +7,8 @@ from embedfit import EmbedFitModel
 
 model = EmbedFitModel.from_pretrained(
     "torchvision/resnet50",
-    labels=["legitimate", "fraud"],
-    positive_label="fraud",
+    labels=["legitimate", "risk"],
+    positive_label="risk",
 )
 ```
 

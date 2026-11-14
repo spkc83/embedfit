@@ -105,7 +105,7 @@ def test_relationship_rules_reach_the_sampler_and_change_training():
     images, labels = make_bar_images(6, num_classes=3, seed=0)
     train = ImageDataset(
         [
-            ImageSample(image, label, group_id=f"ring{i % 4}")
+            ImageSample(image, label, group_id=f"group{i % 4}")
             for i, (image, label) in enumerate(zip(images, labels, strict=True))
         ]
     )
@@ -168,7 +168,7 @@ def test_generator_rules_reach_training():
     images, labels = make_bar_images(6, num_classes=3, seed=0)
     train = ImageDataset(
         [
-            ImageSample(image, label, group_id=f"ring{i % 4}")
+            ImageSample(image, label, group_id=f"group{i % 4}")
             for i, (image, label) in enumerate(zip(images, labels, strict=True))
         ]
     )

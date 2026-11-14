@@ -2,7 +2,7 @@
 
 ## Problem
 
-Classical image fine-tuning is often data-hungry. In financial document-risk problems, high-quality fraud labels can be scarce, delayed, expensive, and highly imbalanced.
+Classical image fine-tuning is often data-hungry. In rare-positive document and image risk review, high-quality positive labels can be scarce, delayed, expensive, and highly imbalanced.
 
 The project should test and operationalize a vision analogue of the SetFit pattern:
 
@@ -13,19 +13,17 @@ The project should test and operationalize a vision analogue of the SetFit patte
 
 The learned representation should also be reusable for nearest-neighbor retrieval, clustering, duplicate-pattern detection, and novelty diagnostics.
 
-## Reference use case: check deposit risk
+## Reference use case: rare-positive document and image risk review
 
-Illustrative risk categories may include:
+A reviewer must find a small number of known positive items among many negatives. Illustrative categories may include:
 
-- legitimate
-- duplicate presentment
-- counterfeit check
-- altered amount
-- altered payee
-- washed check
-- forged signature
-- synthetic check
-- other fraud / suspicious item
+- negative
+- duplicate submission
+- template reuse
+- tampered region
+- edited field
+- synthetic or generated image
+- other positive
 
 These are **examples only**. The core framework must never require this taxonomy.
 
@@ -36,10 +34,10 @@ A binary classifier can miss operational context.
 An embedding model can support:
 
 - supervised classification
-- similarity to prior fraudulent items
+- similarity to prior positive items
 - retrieval of related items
 - recurring template detection
-- fraud-pattern clustering
+- positive-pattern clustering
 - prototype comparison
 - drift diagnostics
 
@@ -53,27 +51,27 @@ However, the architecture must not assume ImageNet supervision is optimal. It sh
 
 ### Rare events
 
-Accuracy can be misleading. PR-AUC, fixed-FPR recall, investigation-capacity metrics, and dollar-weighted capture are more useful.
+Accuracy can be misleading. PR-AUC, fixed-FPR recall, investigation-capacity metrics, and value-weighted capture (`dollar_recall`) are more useful.
 
 ### High resolution
 
-A complete check downscaled to 224×224 can destroy fine evidence. The framework must not hard-code one image resolution.
+A complete document downscaled to 224×224 can destroy fine evidence. The framework must not hard-code one image resolution.
 
 ### Leakage risk
 
 Potential leakage can arise from:
 
-- scans of the same physical check in multiple splits;
-- same fraud ring/template in train and test;
-- post-event labels or return codes;
+- scans of the same physical item in multiple splits;
+- same campaign/template in train and test;
+- post-event labels or outcome codes;
 - temporal information unavailable at decision time.
 
 ### Sensitive data
 
-Check images can contain account/routing numbers, names, addresses, signatures, and other sensitive information. The framework must default to not logging images or metadata.
+Document images can contain identifiers, names, addresses, signatures, and other sensitive information. The framework must default to not logging images or metadata.
 
 ## Product boundary
 
-EmbedFit is a machine-learning framework, not a fraud decision system.
+EmbedFit is a machine-learning framework, not a decision system.
 
-It produces model scores, embeddings, predictions, and evaluation artifacts. Business rules and final deposit decisions are out of scope.
+It produces model scores, embeddings, predictions, and evaluation artifacts. Business rules and final review decisions are out of scope.

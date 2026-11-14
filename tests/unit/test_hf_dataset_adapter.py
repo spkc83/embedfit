@@ -70,10 +70,10 @@ def test_every_field_can_be_mapped():
             "path": ["a.png", "b.png"],
             "y": ["risk", "legitimate"],
             "id": ["s1", None],
-            "account": ["g1", "g2"],
+            "entity": ["g1", "g2"],
             "seen": [datetime(2024, 1, 1), None],
             "value": [12.5, None],
-            "branch": ["north", None],
+            "region": ["north", None],
         }
     )
     dataset = ImageDataset.from_hf_dataset(
@@ -82,18 +82,18 @@ def test_every_field_can_be_mapped():
             "image": "path",
             "label": "y",
             "sample_id": "id",
-            "group_id": "account",
+            "group_id": "entity",
             "timestamp": "seen",
             "amount": "value",
         },
-        metadata_columns=["branch"],
+        metadata_columns=["region"],
     )
     first, second = dataset
     assert dataset.images == ["a.png", "b.png"]  # Path columns pass through.
     assert (first.sample_id, first.group_id, first.amount) == ("s1", "g1", 12.5)
-    assert first.timestamp == datetime(2024, 1, 1) and dict(first.metadata) == {"branch": "north"}
+    assert first.timestamp == datetime(2024, 1, 1) and dict(first.metadata) == {"region": "north"}
     assert (second.sample_id, second.timestamp, second.amount) == (None, None, None)
-    assert dict(second.metadata) == {"branch": None}
+    assert dict(second.metadata) == {"region": None}
 
 
 @pytest.mark.parametrize("output_format", [None, "numpy", "torch"])

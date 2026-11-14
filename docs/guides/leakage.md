@@ -17,7 +17,7 @@ Leakage is any path by which information about evaluation samples reaches traini
 In increasing order of realism:
 
 1. **`stratified_split`** shuffles within each class. It ignores groups and time, so it is a debugging baseline, not evidence of generalisation.
-2. **`grouped_split`** keeps every `group_id` on one side. Use the coarsest identifier that links related samples: the physical item, the account, the template, the device.
+2. **`grouped_split`** keeps every `group_id` on one side. Use the coarsest identifier that links related samples: the physical item, the source entity, the template, the device.
 3. **`temporal_split`** trains strictly before a cut-off and tests at or after it. This mirrors deployment, where a model only ever scores data newer than itself, and it exposes drift that random splits hide.
 
 Grouping and time interact: an entity active on both sides of a cut-off still links train and test. After a temporal split, check `group_id` overlap and decide deliberately whether it is acceptable for the question being asked.

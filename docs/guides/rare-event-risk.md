@@ -1,6 +1,6 @@
 # Rare-Event Risk Workflows
 
-This guide is for problems where the class of interest is rare and costly: a small fraction of items is risky, labels arrive late, and only a limited number of items can be reviewed. Deposit-risk screening of document images is the reference case ([domain notes](../domain/CHECK_FRAUD_REFERENCE.md)), but nothing below is specific to it, and EmbedFit's core contains no domain logic (ADR 0005).
+This guide is for problems where the class of interest is rare and costly: a small fraction of items is risky, labels arrive late, and only a limited number of items can be reviewed. Rare-positive review of document images is the reference case ([domain notes](../domain/RARE_POSITIVE_REVIEW_REFERENCE.md)), but nothing below is specific to it, and EmbedFit's core contains no domain logic (ADR 0005).
 
 EmbedFit produces scores, embeddings, and evaluation numbers. Decisions, business rules, and case handling sit outside it.
 
@@ -67,4 +67,4 @@ The same embeddings support retrieval: index past items with `RetrievalIndex` an
 
 ## 8. Handle sensitive data deliberately
 
-Images and metadata may contain personal and financial information. EmbedFit keeps image content, metadata, and sample identifiers out of its logs and exception messages, and saved models contain no training samples ([security and privacy requirements](../../SECURITY_PRIVACY.md)). Class label names and the ids of retrieval results do appear in messages, reprs, and saved models, so do not encode sensitive values in them. What is done with the scores and embeddings afterwards is the caller's responsibility: embeddings of sensitive images are themselves sensitive.
+Images and metadata may contain personal and other sensitive information. EmbedFit keeps image content, metadata, and sample identifiers out of its logs and exception messages, and saved models contain no training samples ([security and privacy requirements](../../SECURITY_PRIVACY.md)). Class label names and the ids of retrieval results do appear in messages, reprs, and saved models, so do not encode sensitive values in them. What is done with the scores and embeddings afterwards is the caller's responsibility: embeddings of sensitive images are themselves sensitive.
