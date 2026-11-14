@@ -203,7 +203,7 @@ class RetrievalIndex:
                 view and is returned unchanged with its item; nothing is inspected, logged, or
                 used for ranking.
             groups: One hashable group identifier, or ``None``, per row, naming items that come
-                from the same underlying thing (the same physical document, customer, or
+                from the same underlying thing (the same physical document, source, or
                 session). ``None`` means "belongs to no group" and never matches another item.
                 Required by ``search(..., exclude_same_group=True)``.
 

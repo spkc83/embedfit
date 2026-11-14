@@ -2,7 +2,7 @@
 
 This file provides domain context for examples and tests. It must not dictate generic library semantics.
 
-In this use case, a reviewer must find a small number of known positive items among many negatives. Positive labels are scarce, they can arrive late, and only a limited number of items can be reviewed.
+In this use case, a reviewer must find a small number of positive items among many negatives, learning from only a few labelled positive examples. Positive labels are scarce, they can arrive late, and only a limited number of items can be reviewed.
 
 ## Potential labels
 

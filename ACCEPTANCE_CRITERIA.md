@@ -9,7 +9,7 @@ The following must work:
 ```python
 model = EmbedFitModel.from_pretrained(
     "torchvision/resnet18",
-    labels=["legitimate", "risk"],
+    labels=["routine", "risk"],
 )
 
 embeddings = model.encode(images)

@@ -19,7 +19,7 @@ task-specific image embeddings
 lightweight classifier / retrieval / anomaly signals
 ```
 
-The reference use case is rare-positive document and image risk review, where a small number of known positive examples must be found among many negatives, but **the core library must remain domain-neutral**.
+The reference use case is rare-positive document and image risk review, where a small number of positive items must be found among many negatives, learning from only a few labelled positive examples, but **the core library must remain domain-neutral**.
 
 ## Install
 
@@ -45,7 +45,7 @@ from embedfit.testing import make_bar_images
 
 def stand_in_scans(per_class, seed):  # two classes of synthetic images
     images, kinds = make_bar_images(per_class, num_classes=2, seed=seed)
-    return images, ["legitimate" if kind == "vertical" else "risk" for kind in kinds]
+    return images, ["routine" if kind == "vertical" else "risk" for kind in kinds]
 
 
 train_images, train_labels = stand_in_scans(16, seed=0)
@@ -57,7 +57,7 @@ test = ImageDataset.from_lists(test_images, test_labels)
 ```
 
 ```python
-labels = ["legitimate", "risk"]
+labels = ["routine", "risk"]
 model = EmbedFitModel.from_pretrained(
     "dummy/tiny",                 # untrained offline CNN for this demo; for real images use e.g.
                                   # "torchvision/resnet18" (needs the torchvision extra)

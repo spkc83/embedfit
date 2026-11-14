@@ -15,7 +15,7 @@ The learned representation should also be reusable for nearest-neighbor retrieva
 
 ## Reference use case: rare-positive document and image risk review
 
-A reviewer must find a small number of known positive items among many negatives. Illustrative categories may include:
+A reviewer must find a small number of positive items among many negatives, learning from only a few labelled positive examples. Illustrative categories may include:
 
 - negative
 - duplicate submission
@@ -51,7 +51,7 @@ However, the architecture must not assume ImageNet supervision is optimal. It sh
 
 ### Rare events
 
-Accuracy can be misleading. PR-AUC, fixed-FPR recall, investigation-capacity metrics, and value-weighted capture (`dollar_recall`) are more useful.
+Accuracy can be misleading. PR-AUC, fixed-FPR recall, review-capacity metrics, and value-weighted capture (`dollar_recall`) are more useful.
 
 ### High resolution
 

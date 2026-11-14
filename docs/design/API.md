@@ -7,7 +7,7 @@ from embedfit import EmbedFitModel
 
 model = EmbedFitModel.from_pretrained(
     "torchvision/resnet50",
-    labels=["legitimate", "risk"],
+    labels=["routine", "risk"],
     positive_label="risk",
 )
 ```
@@ -89,7 +89,7 @@ Heads are interchangeable: `EmbedFitModel(..., head=...)` accepts a registered n
 train_ds = ImageDataset.from_lists(images, labels)
 train_ds = ImageDataset.from_pandas(
     frame,
-    columns={"image": "path", "label": "class", "group_id": "customer"},
+    columns={"image": "path", "label": "class", "group_id": "source"},
     metadata_columns=["source"],
     on_corrupt_image="skip",
 )

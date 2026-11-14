@@ -29,7 +29,7 @@ compute precision / recall
 
 The rounding is defined once, in `review_count`, which every review-rate metric and `select_threshold` use; see [Conventions](#conventions-implemented-in-embedfitevaluation).
 
-## Dollar recall
+## Value-weighted recall (`dollar_recall`)
 
 ```text
 captured positive amount / total positive amount
