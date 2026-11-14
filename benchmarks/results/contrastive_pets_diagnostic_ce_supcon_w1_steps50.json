@@ -1,0 +1,460 @@
+{
+ "description": "Oxford-IIIT Pets step-budget and contrastive-weight diagnostic, validation split, seeds 0 and 1, rare_positive task only: ce_supcon with contrastive weight 1 at 50 steps; see docs/benchmarks/contrastive-adaptation.md. git_commit is the code the run used.",
+ "runs": [
+  {
+   "methods": [
+    "ce_supcon"
+   ],
+   "config": {
+    "dataset": "pets",
+    "backbone": "hf/facebook/dinov2-small",
+    "image_size": 112,
+    "methods": [
+     "ce_supcon"
+    ],
+    "shots": [
+     4,
+     16
+    ],
+    "seeds": [
+     0,
+     1
+    ],
+    "epochs": null,
+    "batch_size": 32,
+    "gradient_accumulation_steps": 1,
+    "learning_rate": [
+     "ce_supcon=3e-7"
+    ],
+    "default_learning_rate": 2e-05,
+    "head_learning_rate": {},
+    "layer_lr_decay": {},
+    "sampler": {},
+    "pairs_per_example": 1,
+    "train_mode_batch_norm": false,
+    "augmentation": "natural",
+    "unfreeze_last_blocks": null,
+    "trainable_parameters": "all",
+    "max_steps": 50,
+    "projection_dim": null,
+    "contrastive_views": 1,
+    "temperature": 0.07,
+    "contrastive_weight": 1.0,
+    "interpolate": [],
+    "device": "cuda:0",
+    "max_image_side": 224,
+    "evaluate_on": "validation",
+    "pool_per_class": 100,
+    "eval_per_class": 100,
+    "split_seed": 0,
+    "tasks": [
+     "rare_positive"
+    ],
+    "unseen_classes": 3,
+    "negatives": 200,
+    "freeze_batch_norm": true,
+    "dataset_revision": null,
+    "learning_rates": {
+     "ce_supcon": 3e-07
+    },
+    "evaluation_duplicates_dropped": 0,
+    "evaluation_repeats_dropped": 0,
+    "evaluation_size": 740
+   },
+   "environment": {
+    "embedfit": "0.1.0",
+    "git_commit": "3a418ed102344b5f9925c7e7a3a11c05007da5c2",
+    "git_dirty": false,
+    "torch": "2.12.1+cu126",
+    "torchvision": "0.27.1+cu126",
+    "transformers": "5.17.0",
+    "timm": "1.0.29",
+    "scikit-learn": "1.6.1",
+    "device": "cuda:0",
+    "cudnn": false,
+    "threads": 1,
+    "processor": "x86_64",
+    "elapsed_seconds": 82.9,
+    "sessions": [
+     {
+      "embedfit": "0.1.0",
+      "git_commit": "3a418ed102344b5f9925c7e7a3a11c05007da5c2",
+      "git_dirty": false,
+      "torch": "2.12.1+cu126",
+      "torchvision": "0.27.1+cu126",
+      "transformers": "5.17.0",
+      "timm": "1.0.29",
+      "scikit-learn": "1.6.1",
+      "device": "cuda:0",
+      "cudnn": false,
+      "threads": 1,
+      "processor": "x86_64",
+      "elapsed_seconds": 82.9
+     }
+    ]
+   }
+  }
+ ],
+ "records": [
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "roc_auc",
+   "value": 0.9942361111111112
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "pr_auc",
+   "value": 0.9144187340007774
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "recall_at_fpr_0.01",
+   "value": 0.9
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "recall_at_fpr_0.05",
+   "value": 0.95
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "knn_roc_auc",
+   "value": 0.9869444444444444
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "knn_pr_auc",
+   "value": 0.871382193289802
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "knn_recall_at_fpr_0.01",
+   "value": 0.9
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "knn_recall_at_fpr_0.05",
+   "value": 0.9
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "prevalence",
+   "value": 0.02702702702702703
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "roc_auc",
+   "value": 0.9811111111111112
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "pr_auc",
+   "value": 0.8975339955783035
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "recall_at_fpr_0.01",
+   "value": 0.85
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "recall_at_fpr_0.05",
+   "value": 0.9
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "knn_roc_auc",
+   "value": 0.9844444444444445
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "knn_pr_auc",
+   "value": 0.8269945169687174
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "knn_recall_at_fpr_0.01",
+   "value": 0.85
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "knn_recall_at_fpr_0.05",
+   "value": 0.9
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "prevalence",
+   "value": 0.02702702702702703
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "roc_auc",
+   "value": 0.9954861111111112
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "pr_auc",
+   "value": 0.9422268907563027
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "recall_at_fpr_0.01",
+   "value": 0.9
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "recall_at_fpr_0.05",
+   "value": 0.95
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "knn_roc_auc",
+   "value": 0.9975
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "knn_pr_auc",
+   "value": 0.9519243156199679
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "knn_recall_at_fpr_0.01",
+   "value": 0.9
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "knn_recall_at_fpr_0.05",
+   "value": 1.0
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "prevalence",
+   "value": 0.02702702702702703
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "roc_auc",
+   "value": 0.9992361111111111
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "pr_auc",
+   "value": 0.9788961038961042
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "recall_at_fpr_0.01",
+   "value": 0.95
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "recall_at_fpr_0.05",
+   "value": 1.0
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "knn_roc_auc",
+   "value": 0.9940277777777777
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "knn_pr_auc",
+   "value": 0.9270388761565234
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "knn_recall_at_fpr_0.01",
+   "value": 0.9
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "knn_recall_at_fpr_0.05",
+   "value": 0.95
+  },
+  {
+   "task": "rare_positive",
+   "method": "ce_supcon",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "prevalence",
+   "value": 0.02702702702702703
+  }
+ ]
+}

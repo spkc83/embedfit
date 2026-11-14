@@ -324,3 +324,14 @@ python benchmarks/embedding_quality.py $COMMON --evaluate-on test --seeds 0 1 2 
 ```
 
 The scripts download the data and the weights into the git-ignored `.cache/` folder on first use. On Flowers-102, run `open_set` with `--shots 4 8` and `rare_positive` with all three shot counts, as separate commands.
+
+The records behind the tables are in `benchmarks/results/`, one file per test-split run, each with the run's configuration and code commit. The accuracy files hold `frozen`, `end_to_end`, `supcon`, and `ce_supcon`, and the control files hold `end_to_end` with balanced batches. On Flowers-102 the embedding metrics ran as two commands, one per task, so they are in two files.
+
+| Dataset | Accuracy | Control accuracy | Embedding metrics | Control embedding metrics |
+|---|---|---|---|---|
+| Pets | [test](../../benchmarks/results/contrastive_pets_test.json) | [test](../../benchmarks/results/contrastive_pets_balanced_test.json) | [both tasks](../../benchmarks/results/contrastive_pets_embedding.json) | [both tasks](../../benchmarks/results/contrastive_pets_balanced_embedding.json) |
+| Flowers-102 | [test](../../benchmarks/results/contrastive_flowers_test.json) | [test](../../benchmarks/results/contrastive_flowers_balanced_test.json) | [`open_set`](../../benchmarks/results/contrastive_flowers_embedding_open_set.json), [`rare_positive`](../../benchmarks/results/contrastive_flowers_embedding_rare_positive.json) | [`open_set`](../../benchmarks/results/contrastive_flowers_balanced_embedding_open_set.json), [`rare_positive`](../../benchmarks/results/contrastive_flowers_balanced_embedding_rare_positive.json) |
+| DTD | [test](../../benchmarks/results/contrastive_dtd_test.json) | [test](../../benchmarks/results/contrastive_dtd_balanced_test.json) | [both tasks](../../benchmarks/results/contrastive_dtd_embedding.json) | [both tasks](../../benchmarks/results/contrastive_dtd_balanced_embedding.json) |
+| RVL-CDIP | [test](../../benchmarks/results/contrastive_rvl_cdip_test.json) | [test](../../benchmarks/results/contrastive_rvl_cdip_balanced_test.json) | [both tasks](../../benchmarks/results/contrastive_rvl_cdip_embedding.json) | [both tasks](../../benchmarks/results/contrastive_rvl_cdip_balanced_embedding.json) |
+
+The [Pets diagnostic](#step-budget-and-contrastive-weight) is in `benchmarks/results/contrastive_pets_diagnostic_*.json`, one file per run: [`frozen`](../../benchmarks/results/contrastive_pets_diagnostic_frozen.json); `end_to_end` and `supcon` at [50](../../benchmarks/results/contrastive_pets_diagnostic_steps50.json), [150](../../benchmarks/results/contrastive_pets_diagnostic_steps150.json), and [500](../../benchmarks/results/contrastive_pets_diagnostic_steps500.json) steps; and `ce_supcon` in `contrastive_pets_diagnostic_ce_supcon_w<weight>_steps<steps>.json` for weights 0.1, 1, and 10 at the same three budgets. The validation runs of the tuning are not included.
