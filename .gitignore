@@ -31,3 +31,5 @@ embedfit-output/
 # Every other dot-directory (tool and editor state). Tracked dotfiles are files, not directories.
 .*/
 !.github/
+.env
+.env.*

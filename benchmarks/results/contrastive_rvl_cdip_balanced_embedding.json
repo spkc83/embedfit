@@ -1,0 +1,2957 @@
+{
+ "description": "RVL-CDIP, hf/facebook/dinov2-small at 112 px: embedding-quality test-split run of the control: end_to_end with class-balanced batches; see docs/benchmarks/contrastive-adaptation.md. git_commit is the code the run used.",
+ "runs": [
+  {
+   "methods": [
+    "end_to_end"
+   ],
+   "config": {
+    "dataset": "rvl-cdip",
+    "backbone": "hf/facebook/dinov2-small",
+    "image_size": 112,
+    "methods": [
+     "end_to_end"
+    ],
+    "shots": [
+     4,
+     8,
+     16
+    ],
+    "seeds": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ],
+    "epochs": null,
+    "batch_size": 32,
+    "gradient_accumulation_steps": 1,
+    "learning_rate": [
+     "end_to_end=1e-5"
+    ],
+    "default_learning_rate": 2e-05,
+    "head_learning_rate": {},
+    "layer_lr_decay": {},
+    "sampler": {
+     "end_to_end": "balanced"
+    },
+    "pairs_per_example": 20,
+    "train_mode_batch_norm": false,
+    "augmentation": "natural",
+    "unfreeze_last_blocks": null,
+    "trainable_parameters": "all",
+    "max_steps": 500,
+    "projection_dim": null,
+    "contrastive_views": 1,
+    "temperature": 0.07,
+    "contrastive_weight": 1.0,
+    "interpolate": [],
+    "device": "cuda:0",
+    "max_image_side": 224,
+    "evaluate_on": "test",
+    "pool_per_class": 100,
+    "eval_per_class": 100,
+    "split_seed": 0,
+    "tasks": [
+     "open_set",
+     "rare_positive"
+    ],
+    "unseen_classes": 3,
+    "negatives": 200,
+    "freeze_batch_norm": true,
+    "dataset_revision": "13462a42e3375e80a9bd46a64c58e1bcaba77874",
+    "learning_rates": {
+     "end_to_end": 1e-05
+    },
+    "evaluation_duplicates_dropped": 1,
+    "evaluation_repeats_dropped": 0,
+    "evaluation_size": 1599
+   },
+   "environment": {
+    "embedfit": "0.1.0",
+    "git_commit": "3a418ed102344b5f9925c7e7a3a11c05007da5c2",
+    "git_dirty": false,
+    "torch": "2.12.1+cu126",
+    "torchvision": "0.27.1+cu126",
+    "transformers": "5.17.0",
+    "timm": "1.0.29",
+    "scikit-learn": "1.6.1",
+    "device": "cuda:0",
+    "cudnn": false,
+    "threads": 1,
+    "processor": "x86_64",
+    "elapsed_seconds": 5636.8,
+    "sessions": [
+     {
+      "embedfit": "0.1.0",
+      "git_commit": "3a418ed102344b5f9925c7e7a3a11c05007da5c2",
+      "git_dirty": false,
+      "torch": "2.12.1+cu126",
+      "torchvision": "0.27.1+cu126",
+      "transformers": "5.17.0",
+      "timm": "1.0.29",
+      "scikit-learn": "1.6.1",
+      "device": "cuda:0",
+      "cudnn": false,
+      "threads": 1,
+      "processor": "x86_64",
+      "elapsed_seconds": 5636.8
+     }
+    ]
+   }
+  }
+ ],
+ "records": [
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "seen_accuracy",
+   "value": 0.4611239414934565
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "seen_map",
+   "value": 0.30457834434332465
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "seen_precision_at_1",
+   "value": 0.5280985373364127
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "unseen_map",
+   "value": 0.7758518711791882
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "unseen_precision_at_1",
+   "value": 0.9466666666666667
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "unseen_centroid_accuracy",
+   "value": 0.89
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "novelty_roc_auc",
+   "value": 0.6684423915832691
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "novelty_pr_auc",
+   "value": 0.32968863834092876
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "novelty_heldout_roc_auc",
+   "value": 0.6633410315627405
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "novelty_heldout_pr_auc",
+   "value": 0.36952422012501573
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "seen_accuracy",
+   "value": 0.45265588914549654
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "seen_map",
+   "value": 0.33277814046622645
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "seen_precision_at_1",
+   "value": 0.5319476520400308
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "unseen_map",
+   "value": 0.6603948989500611
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "unseen_precision_at_1",
+   "value": 0.8266666666666667
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "unseen_centroid_accuracy",
+   "value": 0.73
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "novelty_roc_auc",
+   "value": 0.5077136258660508
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "novelty_pr_auc",
+   "value": 0.19351222725805467
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "novelty_heldout_roc_auc",
+   "value": 0.5197228637413395
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "novelty_heldout_pr_auc",
+   "value": 0.23116031697598954
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "seen_accuracy",
+   "value": 0.41416474210931487
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "seen_map",
+   "value": 0.2861416691697191
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "seen_precision_at_1",
+   "value": 0.5458044649730562
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "unseen_map",
+   "value": 0.4885196057075554
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "unseen_precision_at_1",
+   "value": 0.6666666666666666
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "unseen_centroid_accuracy",
+   "value": 0.5966666666666667
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "novelty_roc_auc",
+   "value": 0.6453964588144727
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "novelty_pr_auc",
+   "value": 0.2396418545280445
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "novelty_heldout_roc_auc",
+   "value": 0.6225019245573519
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "novelty_heldout_pr_auc",
+   "value": 0.21953140947220487
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "seen_accuracy",
+   "value": 0.472671285604311
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "seen_map",
+   "value": 0.3274205545722295
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "seen_precision_at_1",
+   "value": 0.544264819091609
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "unseen_map",
+   "value": 0.5084360941578172
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "unseen_precision_at_1",
+   "value": 0.7466666666666667
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "unseen_centroid_accuracy",
+   "value": 0.56
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "novelty_roc_auc",
+   "value": 0.6118681036694894
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "novelty_pr_auc",
+   "value": 0.2176259344223303
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "novelty_heldout_roc_auc",
+   "value": 0.637331280472158
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "novelty_heldout_pr_auc",
+   "value": 0.24164144453457115
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "seen_accuracy",
+   "value": 0.48344880677444185
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "seen_map",
+   "value": 0.34334290405650253
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "seen_precision_at_1",
+   "value": 0.5804464973056197
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "unseen_map",
+   "value": 0.5240965066442814
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "unseen_precision_at_1",
+   "value": 0.7
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "unseen_centroid_accuracy",
+   "value": 0.6366666666666667
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "novelty_roc_auc",
+   "value": 0.591657685399025
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "novelty_pr_auc",
+   "value": 0.21836721485762756
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "novelty_heldout_roc_auc",
+   "value": 0.5418783679753657
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "novelty_heldout_pr_auc",
+   "value": 0.18789930154588855
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "seen_accuracy",
+   "value": 0.4973056197074673
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "seen_map",
+   "value": 0.31632436625706484
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "seen_precision_at_1",
+   "value": 0.5373364126250962
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "unseen_map",
+   "value": 0.7524873356391538
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "unseen_precision_at_1",
+   "value": 0.9233333333333333
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "unseen_centroid_accuracy",
+   "value": 0.8733333333333333
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "novelty_roc_auc",
+   "value": 0.6071952784192969
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "novelty_pr_auc",
+   "value": 0.2991611773123092
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "novelty_heldout_roc_auc",
+   "value": 0.6327149089042854
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "novelty_heldout_pr_auc",
+   "value": 0.31607851608821796
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "seen_accuracy",
+   "value": 0.5188606620477291
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "seen_map",
+   "value": 0.33646633013198707
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "seen_precision_at_1",
+   "value": 0.5635103926096998
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "unseen_map",
+   "value": 0.7031857737934175
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "unseen_precision_at_1",
+   "value": 0.8533333333333334
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "unseen_centroid_accuracy",
+   "value": 0.8566666666666667
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "novelty_roc_auc",
+   "value": 0.4890300230946883
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "novelty_pr_auc",
+   "value": 0.18096837782891123
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "novelty_heldout_roc_auc",
+   "value": 0.47903002309468823
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "novelty_heldout_pr_auc",
+   "value": 0.18043138772558812
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "seen_accuracy",
+   "value": 0.5150115473441108
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "seen_map",
+   "value": 0.34298250171604266
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "seen_precision_at_1",
+   "value": 0.5827559661277906
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "unseen_map",
+   "value": 0.5091434728360954
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "unseen_precision_at_1",
+   "value": 0.68
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "unseen_centroid_accuracy",
+   "value": 0.6566666666666666
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "novelty_roc_auc",
+   "value": 0.7380497818835001
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "novelty_pr_auc",
+   "value": 0.3589833623319349
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "novelty_heldout_roc_auc",
+   "value": 0.6977598152424943
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "novelty_heldout_pr_auc",
+   "value": 0.3055248099229423
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "seen_accuracy",
+   "value": 0.5142417244033872
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "seen_map",
+   "value": 0.3510588865342726
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "seen_precision_at_1",
+   "value": 0.5950731331793687
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "unseen_map",
+   "value": 0.5072923982122849
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "unseen_precision_at_1",
+   "value": 0.7233333333333334
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "unseen_centroid_accuracy",
+   "value": 0.5933333333333334
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "novelty_roc_auc",
+   "value": 0.6365306646138054
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "novelty_pr_auc",
+   "value": 0.23770694474267062
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "novelty_heldout_roc_auc",
+   "value": 0.6154862714908904
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "novelty_heldout_pr_auc",
+   "value": 0.22783835374147268
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "seen_accuracy",
+   "value": 0.5219399538106235
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "seen_map",
+   "value": 0.3498038834975573
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "seen_precision_at_1",
+   "value": 0.5812163202463433
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "unseen_map",
+   "value": 0.5078065783838734
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "unseen_precision_at_1",
+   "value": 0.6966666666666667
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "unseen_centroid_accuracy",
+   "value": 0.6433333333333333
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "novelty_roc_auc",
+   "value": 0.6064074929432898
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "novelty_pr_auc",
+   "value": 0.21711608811515404
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "novelty_heldout_roc_auc",
+   "value": 0.585799332820118
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "novelty_heldout_pr_auc",
+   "value": 0.21286523020426493
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "seen_accuracy",
+   "value": 0.5411855273287144
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "seen_map",
+   "value": 0.31784826152468404
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "seen_precision_at_1",
+   "value": 0.5596612779060816
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "unseen_map",
+   "value": 0.7880765267276465
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "unseen_precision_at_1",
+   "value": 0.94
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "unseen_centroid_accuracy",
+   "value": 0.91
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "novelty_roc_auc",
+   "value": 0.6798306389530409
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "novelty_pr_auc",
+   "value": 0.33339557596988756
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "novelty_heldout_roc_auc",
+   "value": 0.6702001539645882
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "novelty_heldout_pr_auc",
+   "value": 0.31989187973503963
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "seen_accuracy",
+   "value": 0.5619707467282525
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "seen_map",
+   "value": 0.35445616011317466
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "seen_precision_at_1",
+   "value": 0.5712086220169361
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "unseen_map",
+   "value": 0.6783432386232375
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "unseen_precision_at_1",
+   "value": 0.8533333333333334
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "unseen_centroid_accuracy",
+   "value": 0.84
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "novelty_roc_auc",
+   "value": 0.4457120862201694
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "novelty_pr_auc",
+   "value": 0.16787805137139072
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "novelty_heldout_roc_auc",
+   "value": 0.4645804464973056
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "novelty_heldout_pr_auc",
+   "value": 0.18295493307697774
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "seen_accuracy",
+   "value": 0.5665896843725943
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "seen_map",
+   "value": 0.3474850074973183
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "seen_precision_at_1",
+   "value": 0.590454195535027
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "unseen_map",
+   "value": 0.5003532660067326
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "unseen_precision_at_1",
+   "value": 0.7166666666666667
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "unseen_centroid_accuracy",
+   "value": 0.7066666666666667
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "novelty_roc_auc",
+   "value": 0.7001539645881447
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "novelty_pr_auc",
+   "value": 0.30016470512190097
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "novelty_heldout_roc_auc",
+   "value": 0.7427995894277649
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "novelty_heldout_pr_auc",
+   "value": 0.3294404812311023
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "seen_accuracy",
+   "value": 0.5889145496535797
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "seen_map",
+   "value": 0.34749341090495434
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "seen_precision_at_1",
+   "value": 0.5958429561200924
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "unseen_map",
+   "value": 0.5150863600074069
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "unseen_precision_at_1",
+   "value": 0.72
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "unseen_centroid_accuracy",
+   "value": 0.6566666666666666
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "novelty_roc_auc",
+   "value": 0.677426225301514
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "novelty_pr_auc",
+   "value": 0.28326576029047645
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "novelty_heldout_roc_auc",
+   "value": 0.6922530151398512
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "novelty_heldout_pr_auc",
+   "value": 0.30277340528785074
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "seen_accuracy",
+   "value": 0.581986143187067
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "seen_map",
+   "value": 0.3647260804523036
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "seen_precision_at_1",
+   "value": 0.6035411855273287
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "unseen_map",
+   "value": 0.519603960847724
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "unseen_precision_at_1",
+   "value": 0.7033333333333334
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "unseen_centroid_accuracy",
+   "value": 0.77
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "novelty_roc_auc",
+   "value": 0.6034205799332819
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "novelty_pr_auc",
+   "value": 0.21669208278756188
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "novelty_heldout_roc_auc",
+   "value": 0.5930767256864256
+  },
+  {
+   "task": "open_set",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "novelty_heldout_pr_auc",
+   "value": 0.21069635115680097
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "roc_auc",
+   "value": 0.9801200800533688
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "pr_auc",
+   "value": 0.8246124247441273
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "recall_at_fpr_0.01",
+   "value": 0.73
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "recall_at_fpr_0.05",
+   "value": 0.9
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "knn_roc_auc",
+   "value": 0.9551034022681787
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "knn_pr_auc",
+   "value": 0.8080737666393093
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "knn_recall_at_fpr_0.01",
+   "value": 0.74
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "knn_recall_at_fpr_0.05",
+   "value": 0.83
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "prevalence",
+   "value": 0.06253908692933083
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "roc_auc",
+   "value": 0.9639626417611741
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "pr_auc",
+   "value": 0.75458406218502
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "recall_at_fpr_0.01",
+   "value": 0.69
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "recall_at_fpr_0.05",
+   "value": 0.83
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "knn_roc_auc",
+   "value": 0.9114809873248833
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "knn_pr_auc",
+   "value": 0.7657693030526117
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "knn_recall_at_fpr_0.01",
+   "value": 0.68
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "knn_recall_at_fpr_0.05",
+   "value": 0.79
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "prevalence",
+   "value": 0.06253908692933083
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "roc_auc",
+   "value": 0.8601750841750843
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "pr_auc",
+   "value": 0.3686443505422569
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "recall_at_fpr_0.01",
+   "value": 0.16161616161616163
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "recall_at_fpr_0.05",
+   "value": 0.48484848484848486
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "knn_roc_auc",
+   "value": 0.8283838383838384
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "knn_pr_auc",
+   "value": 0.35816864976628965
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "knn_recall_at_fpr_0.01",
+   "value": 0.1717171717171717
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "knn_recall_at_fpr_0.05",
+   "value": 0.47474747474747475
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "prevalence",
+   "value": 0.06191369606003752
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "roc_auc",
+   "value": 0.47392261507671785
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "pr_auc",
+   "value": 0.07503389147137342
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "recall_at_fpr_0.01",
+   "value": 0.03
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "recall_at_fpr_0.05",
+   "value": 0.09
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "knn_roc_auc",
+   "value": 0.5705136757838558
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "knn_pr_auc",
+   "value": 0.09432253036457537
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "knn_recall_at_fpr_0.01",
+   "value": 0.03
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "knn_recall_at_fpr_0.05",
+   "value": 0.11
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "prevalence",
+   "value": 0.06253908692933083
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "roc_auc",
+   "value": 0.6189593062041361
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "pr_auc",
+   "value": 0.27264876739120814
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "recall_at_fpr_0.01",
+   "value": 0.2
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "recall_at_fpr_0.05",
+   "value": 0.26
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "knn_roc_auc",
+   "value": 0.648672448298866
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "knn_pr_auc",
+   "value": 0.2845227845860013
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "knn_recall_at_fpr_0.01",
+   "value": 0.2
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "knn_recall_at_fpr_0.05",
+   "value": 0.29
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "prevalence",
+   "value": 0.06253908692933083
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "roc_auc",
+   "value": 0.9832888592394929
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "pr_auc",
+   "value": 0.8420667508364106
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "recall_at_fpr_0.01",
+   "value": 0.85
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "recall_at_fpr_0.05",
+   "value": 0.93
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "knn_roc_auc",
+   "value": 0.9686524349566378
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "knn_pr_auc",
+   "value": 0.8290296643406728
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "knn_recall_at_fpr_0.01",
+   "value": 0.78
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "knn_recall_at_fpr_0.05",
+   "value": 0.94
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "prevalence",
+   "value": 0.06253908692933083
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "roc_auc",
+   "value": 0.9788525683789192
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "pr_auc",
+   "value": 0.8620501804745042
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "recall_at_fpr_0.01",
+   "value": 0.75
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "recall_at_fpr_0.05",
+   "value": 0.92
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "knn_roc_auc",
+   "value": 0.9738492328218812
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "knn_pr_auc",
+   "value": 0.8343912677301314
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "knn_recall_at_fpr_0.01",
+   "value": 0.73
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "knn_recall_at_fpr_0.05",
+   "value": 0.91
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "prevalence",
+   "value": 0.06253908692933083
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "roc_auc",
+   "value": 0.8932861952861954
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "pr_auc",
+   "value": 0.5241691247197966
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "recall_at_fpr_0.01",
+   "value": 0.3434343434343434
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "recall_at_fpr_0.05",
+   "value": 0.6565656565656566
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "knn_roc_auc",
+   "value": 0.8823164983164984
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "knn_pr_auc",
+   "value": 0.4470487269730066
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "knn_recall_at_fpr_0.01",
+   "value": 0.1919191919191919
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "knn_recall_at_fpr_0.05",
+   "value": 0.6363636363636364
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "prevalence",
+   "value": 0.06191369606003752
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "roc_auc",
+   "value": 0.6407471647765177
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "pr_auc",
+   "value": 0.136004757670059
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "recall_at_fpr_0.01",
+   "value": 0.04
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "recall_at_fpr_0.05",
+   "value": 0.16
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "knn_roc_auc",
+   "value": 0.6988125416944629
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "knn_pr_auc",
+   "value": 0.14771315581472744
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "knn_recall_at_fpr_0.01",
+   "value": 0.04
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "knn_recall_at_fpr_0.05",
+   "value": 0.13
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "prevalence",
+   "value": 0.06253908692933083
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "roc_auc",
+   "value": 0.7481120747164776
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "pr_auc",
+   "value": 0.4696651354556096
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "recall_at_fpr_0.01",
+   "value": 0.32
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "recall_at_fpr_0.05",
+   "value": 0.5
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "knn_roc_auc",
+   "value": 0.7787658438959306
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "knn_pr_auc",
+   "value": 0.48975178434171773
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "knn_recall_at_fpr_0.01",
+   "value": 0.33
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "knn_recall_at_fpr_0.05",
+   "value": 0.5
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "prevalence",
+   "value": 0.06253908692933083
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "roc_auc",
+   "value": 0.9844229486324216
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "pr_auc",
+   "value": 0.8789830893230074
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "recall_at_fpr_0.01",
+   "value": 0.67
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "recall_at_fpr_0.05",
+   "value": 0.96
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "knn_roc_auc",
+   "value": 0.977625083388926
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "knn_pr_auc",
+   "value": 0.8487962026373058
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "knn_recall_at_fpr_0.01",
+   "value": 0.6
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "knn_recall_at_fpr_0.05",
+   "value": 0.94
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "prevalence",
+   "value": 0.06253908692933083
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "roc_auc",
+   "value": 0.9723615743829219
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "pr_auc",
+   "value": 0.8738464404198966
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "recall_at_fpr_0.01",
+   "value": 0.79
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "recall_at_fpr_0.05",
+   "value": 0.93
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "knn_roc_auc",
+   "value": 0.9636490993995998
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "knn_pr_auc",
+   "value": 0.8540150587814237
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "knn_recall_at_fpr_0.01",
+   "value": 0.76
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "knn_recall_at_fpr_0.05",
+   "value": 0.91
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "prevalence",
+   "value": 0.06253908692933083
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "roc_auc",
+   "value": 0.9298047138047137
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "pr_auc",
+   "value": 0.6764047854937633
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "recall_at_fpr_0.01",
+   "value": 0.5050505050505051
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "recall_at_fpr_0.05",
+   "value": 0.7575757575757576
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "knn_roc_auc",
+   "value": 0.9176094276094275
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "knn_pr_auc",
+   "value": 0.6107558206919775
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "knn_recall_at_fpr_0.01",
+   "value": 0.43434343434343436
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "knn_recall_at_fpr_0.05",
+   "value": 0.7070707070707071
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "prevalence",
+   "value": 0.06191369606003752
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "roc_auc",
+   "value": 0.7856170780520345
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "pr_auc",
+   "value": 0.23204668672803988
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "recall_at_fpr_0.01",
+   "value": 0.12
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "recall_at_fpr_0.05",
+   "value": 0.27
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "knn_roc_auc",
+   "value": 0.8008072048032022
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "knn_pr_auc",
+   "value": 0.23196133770533506
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "knn_recall_at_fpr_0.01",
+   "value": 0.11
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "knn_recall_at_fpr_0.05",
+   "value": 0.28
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "prevalence",
+   "value": 0.06253908692933083
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "roc_auc",
+   "value": 0.8112808539026017
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "pr_auc",
+   "value": 0.4256852975244356
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "recall_at_fpr_0.01",
+   "value": 0.26
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "recall_at_fpr_0.05",
+   "value": 0.47
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "knn_roc_auc",
+   "value": 0.827484989993329
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "knn_pr_auc",
+   "value": 0.4406455576047448
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "knn_recall_at_fpr_0.01",
+   "value": 0.29
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "knn_recall_at_fpr_0.05",
+   "value": 0.48
+  },
+  {
+   "task": "rare_positive",
+   "method": "end_to_end",
+   "alpha": null,
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "prevalence",
+   "value": 0.06253908692933083
+  }
+ ]
+}

@@ -1,0 +1,7308 @@
+{
+ "description": "Oxford-IIIT Pets, hf/facebook/dinov2-small at 112 px: few-shot test-split run of the control: end_to_end with class-balanced batches; see docs/benchmarks/contrastive-adaptation.md. git_commit is the code the run used.",
+ "runs": [
+  {
+   "methods": [
+    "end_to_end"
+   ],
+   "config": {
+    "dataset": "pets",
+    "backbone": "hf/facebook/dinov2-small",
+    "image_size": 112,
+    "methods": [
+     "end_to_end"
+    ],
+    "shots": [
+     4,
+     8,
+     16
+    ],
+    "seeds": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ],
+    "epochs": null,
+    "batch_size": 32,
+    "gradient_accumulation_steps": 1,
+    "learning_rate": [
+     "end_to_end=1e-6"
+    ],
+    "default_learning_rate": 2e-05,
+    "head_learning_rate": {},
+    "layer_lr_decay": {},
+    "sampler": {
+     "end_to_end": "balanced"
+    },
+    "pairs_per_example": 20,
+    "train_mode_batch_norm": false,
+    "augmentation": "natural",
+    "unfreeze_last_blocks": null,
+    "trainable_parameters": "all",
+    "max_steps": 500,
+    "projection_dim": null,
+    "contrastive_views": 1,
+    "temperature": 0.07,
+    "contrastive_weight": 1.0,
+    "interpolate": [
+     0.25,
+     0.5,
+     0.75
+    ],
+    "device": "cuda:0",
+    "max_image_side": 224,
+    "evaluate_on": "test",
+    "pool_per_class": 100,
+    "eval_per_class": 100,
+    "split_seed": 0,
+    "heads": [
+     "linear",
+     "logistic_regression"
+    ],
+    "freeze_batch_norm": true,
+    "dataset_revision": null,
+    "learning_rates": {
+     "end_to_end": 1e-06
+    },
+    "evaluation_duplicates_dropped": 0,
+    "evaluation_size": 3669
+   },
+   "environment": {
+    "embedfit": "0.1.0",
+    "git_commit": "f6e41abd555eb53352afca921e9f893f438a0898",
+    "git_dirty": false,
+    "torch": "2.12.1+cu126",
+    "torchvision": "0.27.1+cu126",
+    "transformers": "5.17.0",
+    "timm": "1.0.29",
+    "scikit-learn": "1.6.1",
+    "device": "cuda:0",
+    "cudnn": false,
+    "threads": 1,
+    "processor": "x86_64",
+    "elapsed_seconds": 2904.9,
+    "sessions": [
+     {
+      "embedfit": "0.1.0",
+      "git_commit": "f6e41abd555eb53352afca921e9f893f438a0898",
+      "git_dirty": false,
+      "torch": "2.12.1+cu126",
+      "torchvision": "0.27.1+cu126",
+      "transformers": "5.17.0",
+      "timm": "1.0.29",
+      "scikit-learn": "1.6.1",
+      "device": "cuda:0",
+      "cudnn": false,
+      "threads": 1,
+      "processor": "x86_64",
+      "elapsed_seconds": 2904.9
+     }
+    ]
+   }
+  }
+ ],
+ "records": [
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.8097574270918506
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.809543595439907
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.8142215023574775
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.809543595439907
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8042787908293274
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.8044455698117153
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.8182065958026711
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.8180246969884738
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.820231398646342
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.8180246969884738
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8097908964950359
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.8099347486078003
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.8056691196511311
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.805227905118607
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.8118935535244358
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.805227905118607
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8021568311686046
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.8023750598495464
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.8103025347506132
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.8099432674439707
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.8164614967957357
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.8099432674439707
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.801319817020719
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.8015558608131192
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.8130280730444263
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.8126549315367969
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.818700923407857
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.8126549315367969
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8088588800977022
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.8090393341066457
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.8187517034614337
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.8184758700054657
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.8227286647292003
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.8184758700054657
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8093109547227042
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.8094891409365423
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.8135731807031888
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.813285121618841
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.8187769269233615
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.813285121618841
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8089259128272277
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.8090988146785703
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.8214772417552466
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.8212570202207969
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.8241111082314705
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.8212570202207969
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8128843854737587
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.8130342116356608
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.7966748432815481
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.7958665035389729
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.7967119818624343
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.7958665035389729
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.7895847501580651
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.7901913209098201
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.8043063505042246
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.8036983517785589
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.8032319345337035
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.8036983517785589
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.7951120568383505
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.7955844916951768
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.7833197056418643
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.782607313628892
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.7850004440940122
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.782607313628892
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.7775554519518735
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.7780177106889928
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.7876805669119651
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.787110108216825
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.788441199287069
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.787110108216825
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.77610984324226
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.7765081684337453
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.7917688743526846
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.7910542694723001
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.7930942571751917
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.7910542694723001
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.7858898128065622
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.7863838464898193
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.8004905968928864
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.8000310020526467
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.8010726776372504
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.8000310020526467
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.7913101416720514
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.7916722252510482
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.7969473971109294
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.7961167740805675
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.7964738321672354
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.7961167740805675
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.7904040195475164
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.7910104625516494
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.8053965658217498
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.8048734645828852
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.8052374975714425
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.8048734645828852
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.7967896654749678
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.7971775401182017
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.7721449986372309
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.7709745359896774
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.7719034732963437
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.7709745359896774
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.7640485595528129
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.7650891392572455
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.7784137367130008
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.7773145302277702
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.7795058262743123
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.7773145302277702
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.7697788947865364
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.7707788877412213
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.7705096756609431
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.7691242592678112
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.7717876823311349
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.7691242592678112
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.7626692372293593
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.763819359657794
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.7721449986372309
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.7710691527199611
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.7738715068212096
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.7710691527199611
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.762089380580173
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.7630392446312746
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.7759607522485691
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.7746566655145034
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.7769566380882622
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.7746566655145034
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.7680327904058142
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.7691437607737033
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.7827745979831017
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.7816240641175691
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.7827366731082059
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.7816240641175691
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.7735738210376658
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.774627208203432
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.7770509675660943
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.775769085912638
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.7770244871400397
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.775769085912638
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.7691528104158741
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.7702962498287307
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.7849550286181521
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.7838258670336578
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.7857169317387485
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.7838258670336578
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.7760193752506898
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.7770458536380725
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "accuracy",
+   "value": 0.7983101662578359
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "balanced_accuracy",
+   "value": 0.7973218229691729
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "macro_precision",
+   "value": 0.7985088365056306
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "macro_recall",
+   "value": 0.7973218229691729
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "macro_f1",
+   "value": 0.7914526268931862
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "weighted_f1",
+   "value": 0.792008225417587
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "accuracy",
+   "value": 0.8051240119923685
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "balanced_accuracy",
+   "value": 0.8042759581224111
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "macro_precision",
+   "value": 0.805496957296856
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "macro_recall",
+   "value": 0.8042759581224111
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "macro_f1",
+   "value": 0.7985652048910331
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "weighted_f1",
+   "value": 0.799055648815835
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "accuracy",
+   "value": 0.7991278277459798
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "balanced_accuracy",
+   "value": 0.7976973307443596
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "macro_precision",
+   "value": 0.8028329357859878
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "macro_recall",
+   "value": 0.7976973307443596
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "macro_f1",
+   "value": 0.7932810248747327
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "weighted_f1",
+   "value": 0.7941838783185543
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "accuracy",
+   "value": 0.797492504769692
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "balanced_accuracy",
+   "value": 0.7965091264960538
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "macro_precision",
+   "value": 0.8035173835335748
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "macro_recall",
+   "value": 0.7965091264960538
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "macro_f1",
+   "value": 0.7868863313637791
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "weighted_f1",
+   "value": 0.7874414460514835
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "accuracy",
+   "value": 0.803761242845462
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "balanced_accuracy",
+   "value": 0.8025323344453426
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "macro_precision",
+   "value": 0.806233185563389
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "macro_recall",
+   "value": 0.8025323344453426
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "macro_f1",
+   "value": 0.796874557066418
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "weighted_f1",
+   "value": 0.7976125050782665
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "accuracy",
+   "value": 0.8122104115562824
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "balanced_accuracy",
+   "value": 0.8113134106205543
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "macro_precision",
+   "value": 0.8152921174696528
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "macro_recall",
+   "value": 0.8113134106205543
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "macro_f1",
+   "value": 0.8050671460297486
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "weighted_f1",
+   "value": 0.8055601524174801
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "accuracy",
+   "value": 0.8013082583810303
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "balanced_accuracy",
+   "value": 0.8002327267227732
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "macro_precision",
+   "value": 0.8024044134290819
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "macro_recall",
+   "value": 0.8002327267227732
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "macro_f1",
+   "value": 0.7944803757130441
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "weighted_f1",
+   "value": 0.7950961577910718
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "accuracy",
+   "value": 0.8124829653856637
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "balanced_accuracy",
+   "value": 0.8116739381239388
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "macro_precision",
+   "value": 0.8134559456169153
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "macro_recall",
+   "value": 0.8116739381239388
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "macro_f1",
+   "value": 0.8061086074021268
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 3,
+   "metric": "weighted_f1",
+   "value": 0.8065753690990964
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "accuracy",
+   "value": 0.7841373671300081
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "balanced_accuracy",
+   "value": 0.7844739154175535
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "macro_precision",
+   "value": 0.7889433987454397
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "macro_recall",
+   "value": 0.7844739154175535
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "macro_f1",
+   "value": 0.7776853414568409
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "weighted_f1",
+   "value": 0.7777529771486131
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "accuracy",
+   "value": 0.785772690106296
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "balanced_accuracy",
+   "value": 0.7857890527696587
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "macro_precision",
+   "value": 0.7888260059792297
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "macro_recall",
+   "value": 0.7857890527696587
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "macro_f1",
+   "value": 0.7784252085323071
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "weighted_f1",
+   "value": 0.7785893880686608
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "accuracy",
+   "value": 0.7737803216135186
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "balanced_accuracy",
+   "value": 0.7739609606750644
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "macro_precision",
+   "value": 0.7782975410278652
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "macro_recall",
+   "value": 0.7739609606750644
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "macro_f1",
+   "value": 0.7677271250371908
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "weighted_f1",
+   "value": 0.7678942181019064
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "accuracy",
+   "value": 0.7721449986372309
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "balanced_accuracy",
+   "value": 0.7720384592478384
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "macro_precision",
+   "value": 0.7781397381970362
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "macro_recall",
+   "value": 0.7720384592478384
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "macro_f1",
+   "value": 0.7628098021397427
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "weighted_f1",
+   "value": 0.7630321696360064
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "accuracy",
+   "value": 0.7816843826655765
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "balanced_accuracy",
+   "value": 0.7820601524556449
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "macro_precision",
+   "value": 0.787036253650633
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "macro_recall",
+   "value": 0.7820601524556449
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "macro_f1",
+   "value": 0.7759914752270901
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "weighted_f1",
+   "value": 0.7760276869510084
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "accuracy",
+   "value": 0.7849550286181521
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "balanced_accuracy",
+   "value": 0.7849782732654933
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "macro_precision",
+   "value": 0.7894201983958042
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "macro_recall",
+   "value": 0.7849782732654933
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "macro_f1",
+   "value": 0.7771773963872466
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "weighted_f1",
+   "value": 0.7773056958063689
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "accuracy",
+   "value": 0.7860452439356773
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "balanced_accuracy",
+   "value": 0.7863935826285448
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "macro_precision",
+   "value": 0.7909477920619368
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "macro_recall",
+   "value": 0.7863935826285448
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "macro_f1",
+   "value": 0.7802927393317841
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "weighted_f1",
+   "value": 0.780364942621344
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "accuracy",
+   "value": 0.7871354592532025
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "balanced_accuracy",
+   "value": 0.7871542787151496
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "macro_precision",
+   "value": 0.790098639246265
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "macro_recall",
+   "value": 0.7871542787151496
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "macro_f1",
+   "value": 0.7797194942157766
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 4,
+   "seed": 4,
+   "metric": "weighted_f1",
+   "value": 0.7798365920426267
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.8634505314799673
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.8629770367962688
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.864600129635232
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.8629770367962688
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8616216376260087
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.8621967973520596
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.8675388389206868
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.8670225682856619
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.8669932365599003
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.8670225682856619
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8647597198118403
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.8652776274555387
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.8533660397928591
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.8526029796204044
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.8548509443802816
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.8526029796204044
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8513185117296548
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.8519992567245689
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.8577269010629599
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.856900287674642
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.8563074484488233
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.856900287674642
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8540835845033751
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.8547946490008034
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.8618152085036794
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.8612572936069981
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.8627068115315265
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.8612572936069981
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.85995570534312
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.8605703347538809
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.8634505314799673
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.8628231190549371
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.8621575641023489
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.8628231190549371
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8600622792291053
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.8606514958249347
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.8618152085036794
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.8612879677949759
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.8630518669887705
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.8612879677949759
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8599750641141564
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.8605714175785973
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.8653584082856364
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.864743393957539
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.8642457094092245
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.864743393957539
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8621133272120783
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.862741234941886
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.8509130553284273
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.8503088804540875
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.8550525164402334
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.8503088804540875
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.849888122021315
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.85037320225297
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.8522758244753339
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.8518796834005089
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.8566688963752932
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.8518796834005089
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.8504663906186857
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.8509425210487995
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.8411011174707005
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.8403924364677952
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.8452868583580484
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.8403924364677952
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.8401792370587647
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.840766852742354
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.8356500408830744
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.8352905050504792
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.8402788687692048
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.8352905050504792
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.8323095012913297
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.8327770547536404
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.848732624693377
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.8480439132765755
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.8532259166281964
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.8480439132765755
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.8480089896853473
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.8485688401031233
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.8430089942763695
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.8425877466334352
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.8475460859652125
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.8425877466334352
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.8402400375625423
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.840741206881602
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.8509130553284273
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.8502616573835817
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.8547538724209782
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.8502616573835817
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.8499863048672409
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.8505107485160434
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.8500953938402834
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.8496981309244056
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.8542154034972723
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.8496981309244056
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.848186402023041
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.8486509134785469
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.8544562551103843
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.8539211493512266
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.8561314792283252
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.8539211493512266
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.85252894974311
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.8529052205762644
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.8479149632052331
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.8475430688977544
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.8519440911956636
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.8475430688977544
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.8438618071141207
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.8441383438981624
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.8383755791768874
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.8377255876572453
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.8401096221418349
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.8377255876572453
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.8354884996273418
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.8358750820936965
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.8293813028073045
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.8289343832401205
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.8374534431602116
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.8289343832401205
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.8228048434068906
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.8231292620484413
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.8470973017170891
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.8465286293551587
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.848419499601486
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.8465286293551587
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.844438162679064
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.8448407184191012
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.8375579176887435
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.8372142916829418
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.8436261802896994
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.8372142916829418
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.832164914152249
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.8324015244580133
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.8511856091578087
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.8506416587627388
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.8520545062844864
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.8506416587627388
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.8488613408200228
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.849256247675609
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.8440992095938948
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.8437620151167007
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.8496065675839928
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.8437620151167007
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.8394477211098176
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.8396919167517676
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "accuracy",
+   "value": 0.8552739165985282
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "balanced_accuracy",
+   "value": 0.8545583910405773
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "macro_precision",
+   "value": 0.8590385468095727
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "macro_recall",
+   "value": 0.8545583910405773
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "macro_f1",
+   "value": 0.8537119659081309
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "weighted_f1",
+   "value": 0.8543212642107716
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "accuracy",
+   "value": 0.8582720087217225
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "balanced_accuracy",
+   "value": 0.8578826340205434
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "macro_precision",
+   "value": 0.85984501715881
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "macro_recall",
+   "value": 0.8578826340205434
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "macro_f1",
+   "value": 0.8557491816818126
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "weighted_f1",
+   "value": 0.8562076354800249
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "accuracy",
+   "value": 0.8479149632052331
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "balanced_accuracy",
+   "value": 0.8471535110698785
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "macro_precision",
+   "value": 0.8501221452239784
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "macro_recall",
+   "value": 0.8471535110698785
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "macro_f1",
+   "value": 0.8458041792955432
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "weighted_f1",
+   "value": 0.8463575576047894
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "accuracy",
+   "value": 0.8342872717361679
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "balanced_accuracy",
+   "value": 0.8338090173498326
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "macro_precision",
+   "value": 0.8361465747236976
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "macro_recall",
+   "value": 0.8338090173498326
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "macro_f1",
+   "value": 0.8299164646144708
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "weighted_f1",
+   "value": 0.8304310180964348
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "accuracy",
+   "value": 0.8511856091578087
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "balanced_accuracy",
+   "value": 0.8505183508632896
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "macro_precision",
+   "value": 0.8541962195567884
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "macro_recall",
+   "value": 0.8505183508632896
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "macro_f1",
+   "value": 0.8492302182601467
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "weighted_f1",
+   "value": 0.849751698196034
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "accuracy",
+   "value": 0.8495502861815208
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "balanced_accuracy",
+   "value": 0.8491512268870745
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "macro_precision",
+   "value": 0.850651778358387
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "macro_recall",
+   "value": 0.8491512268870745
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "macro_f1",
+   "value": 0.8464361244444754
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "weighted_f1",
+   "value": 0.846899568848808
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "accuracy",
+   "value": 0.8536385936222404
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "balanced_accuracy",
+   "value": 0.8529931540523786
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "macro_precision",
+   "value": 0.8572291384298886
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "macro_recall",
+   "value": 0.8529931540523786
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "macro_f1",
+   "value": 0.8518658789228917
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "weighted_f1",
+   "value": 0.8524105327313237
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "accuracy",
+   "value": 0.8555464704279095
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "balanced_accuracy",
+   "value": 0.8551291198416846
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "macro_precision",
+   "value": 0.856949461038807
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "macro_recall",
+   "value": 0.8551291198416846
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "macro_f1",
+   "value": 0.8529172686938434
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 3,
+   "metric": "weighted_f1",
+   "value": 0.8533954584425532
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "accuracy",
+   "value": 0.8618152085036794
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "balanced_accuracy",
+   "value": 0.8610592518303793
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "macro_precision",
+   "value": 0.8639297266442747
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "macro_recall",
+   "value": 0.8610592518303793
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "macro_f1",
+   "value": 0.859962624366222
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "weighted_f1",
+   "value": 0.860631416208588
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "accuracy",
+   "value": 0.8656309621150177
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "balanced_accuracy",
+   "value": 0.8650650136026019
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "macro_precision",
+   "value": 0.8668761557912609
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "macro_recall",
+   "value": 0.8650650136026019
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "macro_f1",
+   "value": 0.8626303939120319
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "weighted_f1",
+   "value": 0.8632175138700747
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "accuracy",
+   "value": 0.8503679476696647
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "balanced_accuracy",
+   "value": 0.849441824592575
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "macro_precision",
+   "value": 0.852897489326077
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "macro_recall",
+   "value": 0.849441824592575
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "macro_f1",
+   "value": 0.8483689087799342
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "weighted_f1",
+   "value": 0.8491622611255611
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "accuracy",
+   "value": 0.8462796402289452
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "balanced_accuracy",
+   "value": 0.8456747166152108
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "macro_precision",
+   "value": 0.847856004304258
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "macro_recall",
+   "value": 0.8456747166152108
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "macro_f1",
+   "value": 0.8417491339455228
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "weighted_f1",
+   "value": 0.8424279895494329
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "accuracy",
+   "value": 0.8585445625511039
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "balanced_accuracy",
+   "value": 0.8577348310717775
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "macro_precision",
+   "value": 0.8612773443505137
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "macro_recall",
+   "value": 0.8577348310717775
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "macro_f1",
+   "value": 0.8565915960786463
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "weighted_f1",
+   "value": 0.8573089272213539
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "accuracy",
+   "value": 0.8590896702098665
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "balanced_accuracy",
+   "value": 0.8585195830692347
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "macro_precision",
+   "value": 0.8599776533907961
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "macro_recall",
+   "value": 0.8585195830692347
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "macro_f1",
+   "value": 0.8553518342628568
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "weighted_f1",
+   "value": 0.8559724495282263
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "accuracy",
+   "value": 0.8618152085036794
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "balanced_accuracy",
+   "value": 0.861059364982186
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "macro_precision",
+   "value": 0.864756144457442
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "macro_recall",
+   "value": 0.861059364982186
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "macro_f1",
+   "value": 0.8600911993716865
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "weighted_f1",
+   "value": 0.8607448043517449
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "accuracy",
+   "value": 0.8637230853093486
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "balanced_accuracy",
+   "value": 0.8631620641402872
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "macro_precision",
+   "value": 0.8644561464767088
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "macro_recall",
+   "value": 0.8631620641402872
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "macro_f1",
+   "value": 0.8602194685030669
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 8,
+   "seed": 4,
+   "metric": "weighted_f1",
+   "value": 0.860804955871009
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.8942491142000545
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.8935913238929903
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.8936470597982347
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.8935913238929903
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8920472735521666
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.8926733803050498
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.892886345053148
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.8921312322290297
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.8919273049099441
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.8921312322290297
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8899111978322803
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.890615575016526
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.8773507767784138
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.8765556057352487
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.8765889803293451
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.8765556057352487
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8747193994591644
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.8754683985822603
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.8754428999727446
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.8746949974460689
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.8740937253437961
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.8746949974460689
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8719890941065853
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.8726718912188802
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.886617606977378
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.8857948037120151
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.8857594512255775
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.8857948037120151
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8841270785647286
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.8848969020566182
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.8852548378304715
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.8844858248404442
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.8837194070902573
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.8844858248404442
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8819046623063198
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.8826163556495492
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.8917961297356228
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.8911226441153135
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.8910331583843708
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.8911226441153135
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8895903047069806
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.8902166554160267
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "accuracy",
+   "value": 0.8887980376124285
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "balanced_accuracy",
+   "value": 0.8880021240710292
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_precision",
+   "value": 0.8872318319286778
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_recall",
+   "value": 0.8880021240710292
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "macro_f1",
+   "value": 0.8854583953990948
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 0,
+   "metric": "weighted_f1",
+   "value": 0.886200036324506
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.8926137912237667
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.8916467248336654
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.892677156237769
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.8916467248336654
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.8902063298823056
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.8909874797961704
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.8923412373943854
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.891426407636631
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.8920503294278465
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.891426407636631
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.8892277876544579
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.8899860606350027
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.881166530389752
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.8801961496832508
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.8820606476746331
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.8801961496832508
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.8787443156414233
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.8794707584782795
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.8729899155083128
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.872104759323819
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.8737407545397293
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.872104759323819
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.8693200319648111
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.8700713951522394
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.886617606977378
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.885585558183397
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.8868986328883245
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.885585558183397
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.8841132494844847
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.8849072024619437
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.883892068683565
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.8829528639969474
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.8838439758013266
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.8829528639969474
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.8803665917036135
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.8811531746581702
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.8904333605887162
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.8894200715981755
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.8903542238575884
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.8894200715981755
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.8879540121751672
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.8887494458134247
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "accuracy",
+   "value": 0.8920686835650041
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "balanced_accuracy",
+   "value": 0.8911368602042262
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_precision",
+   "value": 0.8921949330932153
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_recall",
+   "value": 0.8911368602042262
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "macro_f1",
+   "value": 0.8889325074265202
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 1,
+   "metric": "weighted_f1",
+   "value": 0.8896881940227316
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.8833469610248024
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.8826663162103582
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.884745847932158
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.8826663162103582
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.8817346436062473
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.882348473216243
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.8828018533660398
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.8822369065297364
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.8832672870560564
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.8822369065297364
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.8806209629850551
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.881192934822142
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.8702643772144999
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.8695953644050649
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.8733371792398114
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.8695953644050649
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.8688925818899789
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.8694953244794595
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.8689016080675933
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.8683030145380595
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.8692790680328428
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.8683030145380595
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.866214756309068
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.866753551737378
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.8787135459253202
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.8780466188619289
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.8806183535900153
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.8780466188619289
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.8771210614790864
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.8777400141033093
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.8781684382665577
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.8775672578311953
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.8788569670365118
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.8775672578311953
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.8758160184453019
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.8763807108782599
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.8833469610248024
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.8826439434592536
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.885221718115899
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.8826439434592536
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.8817917267265418
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.8824082986129244
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "accuracy",
+   "value": 0.8830744071954211
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "balanced_accuracy",
+   "value": 0.882473772609299
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_precision",
+   "value": 0.8839212627630678
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_recall",
+   "value": 0.882473772609299
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "macro_f1",
+   "value": 0.8808257733951869
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 2,
+   "metric": "weighted_f1",
+   "value": 0.881418853046087
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "accuracy",
+   "value": 0.9007904061052058
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "balanced_accuracy",
+   "value": 0.8999328244447472
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "macro_precision",
+   "value": 0.9017636239917113
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "macro_recall",
+   "value": 0.8999328244447472
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "macro_f1",
+   "value": 0.8996565426566882
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "weighted_f1",
+   "value": 0.9003690339349872
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "accuracy",
+   "value": 0.8977923139820114
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "balanced_accuracy",
+   "value": 0.8970629890435949
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "macro_precision",
+   "value": 0.8984733989552073
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "macro_recall",
+   "value": 0.8970629890435949
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "macro_f1",
+   "value": 0.8964631267856041
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "weighted_f1",
+   "value": 0.8971090311431285
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "accuracy",
+   "value": 0.8849822840010902
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "balanced_accuracy",
+   "value": 0.8841622080882561
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "macro_precision",
+   "value": 0.8854662033051224
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "macro_recall",
+   "value": 0.8841622080882561
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "macro_f1",
+   "value": 0.8836361469358002
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "weighted_f1",
+   "value": 0.8843142192448642
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "accuracy",
+   "value": 0.8822567457072772
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "balanced_accuracy",
+   "value": 0.8814927407101125
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "macro_precision",
+   "value": 0.8820656874223076
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "macro_recall",
+   "value": 0.8814927407101125
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "macro_f1",
+   "value": 0.8801224553511615
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "weighted_f1",
+   "value": 0.8808176841161485
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "accuracy",
+   "value": 0.8926137912237667
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "balanced_accuracy",
+   "value": 0.8917379656640136
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "macro_precision",
+   "value": 0.8932087861669513
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "macro_recall",
+   "value": 0.8917379656640136
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "macro_f1",
+   "value": 0.8912798815466768
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "weighted_f1",
+   "value": 0.8919996934832508
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "accuracy",
+   "value": 0.8904333605887162
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "balanced_accuracy",
+   "value": 0.8897016133676124
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "macro_precision",
+   "value": 0.8906609644143701
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "macro_recall",
+   "value": 0.8897016133676124
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "macro_f1",
+   "value": 0.8885875055501592
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "weighted_f1",
+   "value": 0.8892629723368396
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "accuracy",
+   "value": 0.8977923139820114
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "balanced_accuracy",
+   "value": 0.8969237172783369
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "macro_precision",
+   "value": 0.8982300375135032
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "macro_recall",
+   "value": 0.8969237172783369
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "macro_f1",
+   "value": 0.8963948284337078
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "weighted_f1",
+   "value": 0.8971214974964073
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "accuracy",
+   "value": 0.8961569910057237
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "balanced_accuracy",
+   "value": 0.8954413674219734
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "macro_precision",
+   "value": 0.8968464836661675
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "macro_recall",
+   "value": 0.8954413674219734
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "macro_f1",
+   "value": 0.8947050239790223
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 3,
+   "metric": "weighted_f1",
+   "value": 0.895367345232993
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "accuracy",
+   "value": 0.8931588988825293
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "balanced_accuracy",
+   "value": 0.8925932135120299
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "macro_precision",
+   "value": 0.8940209425305504
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "macro_recall",
+   "value": 0.8925932135120299
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "macro_f1",
+   "value": 0.8915880300789677
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "weighted_f1",
+   "value": 0.8921652006067852
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "accuracy",
+   "value": 0.890160806759335
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "balanced_accuracy",
+   "value": 0.8894759493169249
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "macro_precision",
+   "value": 0.8905483076645324
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "macro_recall",
+   "value": 0.8894759493169249
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "macro_f1",
+   "value": 0.8876971369772388
+  },
+  {
+   "method": "end_to_end",
+   "alpha": null,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "weighted_f1",
+   "value": 0.8882839829561219
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "accuracy",
+   "value": 0.8705369310438812
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "balanced_accuracy",
+   "value": 0.8698307643739622
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "macro_precision",
+   "value": 0.871004025765701
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "macro_recall",
+   "value": 0.8698307643739622
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "macro_f1",
+   "value": 0.8689167072653827
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "weighted_f1",
+   "value": 0.8695000977855042
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "accuracy",
+   "value": 0.8740801308258381
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "balanced_accuracy",
+   "value": 0.8732811380498827
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "macro_precision",
+   "value": 0.8734924306761419
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "macro_recall",
+   "value": 0.8732811380498827
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "macro_f1",
+   "value": 0.8709580299347076
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.25,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "weighted_f1",
+   "value": 0.87158020248999
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "accuracy",
+   "value": 0.8819841918778959
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "balanced_accuracy",
+   "value": 0.8813336673431659
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "macro_precision",
+   "value": 0.8831067399628569
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "macro_recall",
+   "value": 0.8813336673431659
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "macro_f1",
+   "value": 0.8804479494147515
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "weighted_f1",
+   "value": 0.8810531766419969
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "accuracy",
+   "value": 0.8836195148541837
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "balanced_accuracy",
+   "value": 0.8829137435974157
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "macro_precision",
+   "value": 0.883538078165888
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "macro_recall",
+   "value": 0.8829137435974157
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "macro_f1",
+   "value": 0.8809498819721829
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.5,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "weighted_f1",
+   "value": 0.8814756922186364
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "accuracy",
+   "value": 0.8896156991005724
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "balanced_accuracy",
+   "value": 0.8890604228363823
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "macro_precision",
+   "value": 0.8905290239584458
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "macro_recall",
+   "value": 0.8890604228363823
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "macro_f1",
+   "value": 0.88812916797732
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "linear",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "weighted_f1",
+   "value": 0.8886710892134309
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "accuracy",
+   "value": 0.8874352684655219
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "balanced_accuracy",
+   "value": 0.8867085031064611
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "macro_precision",
+   "value": 0.887508034425269
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "macro_recall",
+   "value": 0.8867085031064611
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "macro_f1",
+   "value": 0.8848208155663267
+  },
+  {
+   "method": "end_to_end",
+   "alpha": 0.75,
+   "head": "logistic_regression",
+   "backbone": "hf/facebook/dinov2-small",
+   "shots": 16,
+   "seed": 4,
+   "metric": "weighted_f1",
+   "value": 0.8854185055533987
+  }
+ ]
+}
