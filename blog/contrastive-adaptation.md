@@ -1,22 +1,19 @@
----
-title: "Contrastive Fine-Tuning for Few-Shot Vision: A Pre-Registered Test on Four Domains"
-thumbnail: /blog/assets/FILL-ME-thumbnail-folder/thumbnail.png  # FILL ME: path to the thumbnail image
-authors:
-- user: FILL-ME-hf-username  # FILL ME: Hugging Face username of each author
----
+<!--
+Hugging Face community article (hf.co/blog/<user>).
+Intended title: "Contrastive Fine-Tuning for Few-Shot Vision: A Test on Four Domains with a Decision Rule Fixed in Advance"
+Set the title and the thumbnail in the web editor. FILL ME: thumbnail image.
+-->
 
-# Contrastive Fine-Tuning for Few-Shot Vision: A Pre-Registered Test on Four Domains
-
-You have a pretrained vision backbone and a few labelled images per class. Should you fine-tune it with a supervised contrastive loss? We tested this on four image domains with [EmbedFit](https://github.com/spkc83/embedfit), under a decision rule fixed before the test runs.
+You have a pretrained vision backbone and a few labelled images per class. Should you fine-tune it with a supervised contrastive loss? We tested this on four image domains with [EmbedFit](https://github.com/spkc83/embedfit), with a decision rule fixed in advance. The protocol deviated from that rule in two ways: the step budget was not tuned, and the learning-rate grids differ between methods (see [limitations](#limitations)).
 
 The short answer:
 
 - Joint cross-entropy and SupCon (`ce_supcon`) improved few-shot accuracy on three of four datasets. Apart from Pets at 4 shots (+3.4 points), the gains were 1.2 points or less.
-- Neither contrastive method helped on scanned documents (RVL-CDIP). SupCon alone lost 3 to 4 points of accuracy there.
-- On three of four datasets, the contrastive methods made nearest-neighbour search for rare positives worse. On two of them, worse than the frozen pretrained backbone.
+- Neither contrastive method improved accuracy on scanned documents (RVL-CDIP). SupCon alone lost 3 to 4 points of accuracy there.
+- On three of four datasets, the contrastive methods made nearest-neighbour search for rare positives worse than plain fine-tuning (`end_to_end`). On two of them, worse than the frozen pretrained backbone.
 - Where contrastive training did help rare positives (RVL-CDIP), class-balanced batches with plain cross-entropy gave most of the same gain.
 
-Read the [limitations](#limitations) before you act on any of this. The study has one backbone, one input size, and settings at the edge of the tuning grid.
+Read the [limitations](#limitations) before you act on any of this. The study has one backbone, one input size, settings at the edge of the tuning grid, a fixed 500-step budget, and a lift rule with no minimum effect size.
 
 ## The question
 
@@ -29,9 +26,9 @@ There are four common ways to adapt a pretrained backbone with few labels:
 | `supcon` | Fine-tune the backbone with a supervised contrastive loss ([SupCon](https://arxiv.org/abs/2004.11362)) instead of cross-entropy, then fit a logistic regression. |
 | `ce_supcon` | Fine-tune with cross-entropy plus a weighted SupCon term: `CE + w · SupCon`. |
 
-The joint form follows earlier work that reports few-shot gains from training a contrastive term together with cross-entropy, for example [Gunel et al.](https://arxiv.org/abs/2011.01403) and [Core-tuning](https://arxiv.org/abs/2102.06605). The design is in [ADR 0022](https://github.com/spkc83/embedfit/blob/main/docs/adrs/0022-joint-cross-entropy-and-supervised-contrastive-training.md).
+The joint form follows [Gunel et al.](https://arxiv.org/abs/2011.01403), who report few-shot gains from training a supervised contrastive term together with cross-entropy. The form `CE + w · SupCon`, with the cross-entropy at full weight, is the one of [Core-tuning](https://arxiv.org/abs/2102.06605). The design is in [ADR 0022](https://github.com/spkc83/embedfit/blob/main/docs/adrs/0022-joint-cross-entropy-and-supervised-contrastive-training.md).
 
-We asked two things. Does contrastive adaptation beat the two baselines anyone would try first, `frozen` and `end_to_end`? And does it give better embeddings, not only a better classifier?
+We asked two things. Does contrastive adaptation beat the two standard baselines, `frozen` and `end_to_end`? And does it give better embeddings, not only a better classifier?
 
 ## The setup
 
@@ -130,9 +127,9 @@ This is the result we did not expect. Mean `knn_pr_auc` over 5 seeds (higher is 
 | RVL-CDIP | 4 | 0.291 | 0.425 | 0.462 | **0.469** | 0.443 |
 | RVL-CDIP | 16 | 0.273 | 0.554 | 0.597 | **0.609** | 0.595 |
 
-The 8-shot rows follow the same pattern and are in the [full benchmark page](https://github.com/spkc83/embedfit/blob/main/docs/benchmarks/contrastive-adaptation.md#rare-positives). Each seed draws a different positive class, so the standard deviations are large: up to 0.29 on the first three datasets and about 0.3 on RVL-CDIP.
+The 8-shot rows follow the same pattern and are in the [full benchmark page](https://github.com/spkc83/embedfit/blob/main/docs/benchmarks/contrastive-adaptation.md#rare-positives). Each seed draws a different positive class, so the sample standard deviations over seeds are large: 0.02 to 0.29 on the first three datasets and 0.23 to 0.34 on RVL-CDIP.
 
-- On Pets, Flowers-102, and DTD, neither contrastive method has lift at any shot count. Both are below `end_to_end` by 0.024 to 0.468.
+- On Pets, Flowers-102, and DTD, neither contrastive method has lift at any shot count. Both are below `end_to_end` by 0.024 to 0.468. In paired seeds against `end_to_end`, they win 0 of 5 on Pets and Flowers-102, and 1 or 2 of 5 on DTD.
 - On Pets and Flowers-102, both are also below `frozen` at every shot count. After contrastive training, the nearest-positive ranking is worse than with the pretrained embeddings.
 - On RVL-CDIP, `supcon` has lift at all three shot counts. The next section shows where most of that gain comes from.
 
@@ -140,7 +137,7 @@ So a model tuned for accuracy can give worse embeddings for this kind of search.
 
 ### The Pets diagnostic
 
-To see what drives the loss, we varied the step budget and the contrastive weight on Pets. This ran on the validation split with seeds 0 and 1 only, at fixed rates (1e-6 for `end_to_end` and `supcon`, 3e-7 for `ce_supcon`). The test split was not used.
+To see what drives the loss, we varied the step budget and the contrastive weight on Pets. This ran on the validation split with seeds 0 and 1 only, at fixed rates (1e-6 for `end_to_end` and `supcon`, 3e-7 for `ce_supcon`). The test split was not used. So the `ce_supcon` rows differ from `end_to_end` in the learning rate (3e-7 against 1e-6) as well as in the loss.
 
 Mean `knn_pr_auc` at 4 / 16 shots. `frozen` scores 0.864 / 0.933.
 
@@ -155,9 +152,9 @@ Mean `knn_pr_auc` at 4 / 16 shots. `frozen` scores 0.864 / 0.933.
 What the table shows:
 
 - `ce_supcon` gets worse as the step budget grows, at every weight. It gets worse as the weight grows, at every step budget.
-- The step budget matters more than the weight. Weight 0.1 at 500 steps (0.653) is below weight 10 at 50 steps (0.831).
+- In this grid, the step budget mattered more than the weight. Weight 0.1 at 500 steps (0.653) is below weight 10 at 50 steps (0.831).
 - Weight 10 at 500 steps is the setting tuning chose for accuracy on Pets. It is the worst `ce_supcon` setting tested here.
-- Only weight 0.1 at 50 steps is above `frozen` at both shot counts, by about 0.02. It stays below `end_to_end`.
+- Only weight 0.1 at 50 steps is above `frozen` at both shot counts, by about 0.02. It stays below `end_to_end`, which ran at a higher rate, so that gap is not due to the loss alone.
 - `supcon` is far below `frozen` already at 50 steps.
 
 What the table does not show:
@@ -188,7 +185,7 @@ The control is above `end_to_end` by 0.037 to 0.072, in 4 of 5 seeds at each sho
 
 A likely mechanism is simple arithmetic. In the rare-positive task, 4 of 204 training images are positive at 4 shots. A shuffled batch of 32 holds about 0.6 positives on average. A balanced batch over two labels holds every positive, up to 16. So on RVL-CDIP the gain over `end_to_end` comes mainly from the batches, not from the contrastive term.
 
-**The rate confound.** Each method and the control ran at the rate its own tuning chose. On RVL-CDIP the control ran at 1e-5 and `supcon` at 3e-6. On most other datasets, at least one contrastive method also ran at a different rate from the control (see [limitations](#limitations)). So a gap between a contrastive method and the control mixes the loss and the rate. The control removes the difference in batches, not the difference in rate. The lift verdicts compare each method with `end_to_end` and `frozen` only and do not depend on the control.
+**The rate confound.** Each method and the control ran at the rate its own tuning chose. On RVL-CDIP the control ran at 1e-5 and `supcon` at 3e-6. On every other dataset, at least one contrastive method also ran at a different rate from the control (see [limitations](#limitations)). So a gap between a contrastive method and the control mixes the loss and the rate. The control removes the difference in batches, not the difference in rate. The lift verdicts compare each method with `end_to_end` and `frozen` only and do not depend on the control.
 
 ## Practical guidance
 
@@ -196,7 +193,7 @@ These points follow from the results above. Each one is limited to one backbone 
 
 - **For few-shot accuracy on natural images, `ce_supcon` is worth a try.** It had lift on Pets, Flowers-102, and DTD. Expect a small gain: the largest was at 4 shots, and at 16 shots it was 0.003 or less.
 - **For documents, do not replace cross-entropy with SupCon.** On RVL-CDIP `supcon` lost about 0.03 accuracy at every shot count, and `ce_supcon` tied `end_to_end`.
-- **Do not assume a better classifier gives better embeddings.** On three of four datasets the contrastive methods lowered `knn_pr_auc`, on Pets and Flowers-102 below the frozen backbone. If you will use the embeddings for nearest-neighbour search, measure that use on your validation split.
+- **Do not assume a better classifier gives better embeddings.** On three of four datasets the contrastive methods had lower `knn_pr_auc` than plain fine-tuning (`end_to_end`), and on Pets and Flowers-102 also lower than the frozen backbone. If you will use the embeddings for nearest-neighbour search, measure that use on your validation split.
 - **Tune for the metric you will deploy.** Here every setting was chosen on accuracy. On Pets, the setting best for accuracy was the worst `ce_supcon` setting tested for rare positives.
 - **Treat the step budget as a hyperparameter.** On Pets, rare-positive ranking fell with longer contrastive training. Whether a shorter run keeps the accuracy gain is not known from these runs.
 - **Try balanced batches before a new loss.** If you see a gain from contrastive training, run `end_to_end` with the same batches. On RVL-CDIP that control gave most of the rare-positive gain.
@@ -236,7 +233,7 @@ The commands for Pets follow. For another dataset, change `--dataset` and use it
 ```bash
 git clone https://github.com/spkc83/embedfit.git
 cd embedfit
-pip install -e ".[hf,datasets]"
+pip install -e ".[torchvision,hf,datasets]"
 COMMON="--dataset pets --data-root .cache --backbone hf/facebook/dinov2-small --image-size 112 \
   --max-image-side 224 --shots 4 8 16 --augmentation natural --max-steps 500 --temperature 0.07 \
   --device cuda --disable-cudnn"

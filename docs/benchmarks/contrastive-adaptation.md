@@ -295,7 +295,7 @@ The test-split runs took 474 minutes for Pets, 640 for Flowers-102, 407 for DTD,
 The commands are for Pets. For another dataset, change `--dataset` and use its rates and weight from the [Tuning](#tuning) table.
 
 ```bash
-pip install -e ".[hf,datasets]"
+pip install -e ".[torchvision,hf,datasets]"
 # From the repository root. Shared settings:
 COMMON="--dataset pets --data-root .cache --backbone hf/facebook/dinov2-small --image-size 112 \
   --max-image-side 224 --shots 4 8 16 --augmentation natural --max-steps 500 --temperature 0.07 \
