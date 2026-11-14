@@ -313,14 +313,14 @@ Provide a generic optional concept:
 
 ```python
 RelationshipRule(
-    field="fraud_ring_id",
+    field="campaign_id",
     relation="same",
     pair_type="positive",
     weight=2.0,
 )
 ```
 
-The library must not know what a fraud ring is. It should simply support arbitrary relationship fields.
+The library must not know what a campaign is. It should simply support arbitrary relationship fields.
 
 ## 13. Augmentations
 
@@ -387,7 +387,7 @@ Validation-only utility:
 select_threshold(
     y_true,
     scores,
-    positive_label="fraud",
+    positive_label="risk",
     objective="target_fpr",
     target=0.01,
 )
@@ -412,7 +412,7 @@ Provide helpers for:
 - temporal splitting
 - cross-split ID overlap checks
 
-Document temporal out-of-time testing as important for fraud-like domains.
+Document temporal out-of-time testing as important for rare-positive risk domains.
 
 ## 18. Retrieval
 
@@ -538,7 +538,7 @@ No sensitive image/metadata logging.
 
 ## 25. Security/privacy
 
-Raw input images can contain sensitive financial information.
+Raw input images can contain sensitive personal or organisational information.
 
 Defaults:
 

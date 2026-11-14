@@ -2,7 +2,7 @@
 
 > **Status:** pre-alpha — see [What the package provides](#what-the-package-provides)  
 > **Primary modality for v0.1:** images  
-> **Reference use case:** few-shot check-fraud / deposit-risk classification and similarity retrieval  
+> **Reference use case:** few-shot classification and similarity retrieval for rare-positive document and image risk review  
 > **Package name:** `embedfit` ([naming notes](PROJECT_NAMING.md))
 
 EmbedFit is a SetFit-inspired framework for adapting pretrained embedding models to supervised tasks with very small labeled datasets.
@@ -19,7 +19,7 @@ task-specific image embeddings
 lightweight classifier / retrieval / anomaly signals
 ```
 
-The initial financial-services use case is check deposit risk, including fraud and RDI/returned-item patterns, but **the core library must remain domain-neutral**.
+The reference use case is rare-positive document and image risk review, where a small number of positive items must be found among many negatives, learning from only a few labelled positive examples, but **the core library must remain domain-neutral**.
 
 ## Install
 
@@ -45,7 +45,7 @@ from embedfit.testing import make_bar_images
 
 def stand_in_scans(per_class, seed):  # two classes of synthetic images
     images, kinds = make_bar_images(per_class, num_classes=2, seed=seed)
-    return images, ["legitimate" if kind == "vertical" else "risk" for kind in kinds]
+    return images, ["routine" if kind == "vertical" else "risk" for kind in kinds]
 
 
 train_images, train_labels = stand_in_scans(16, seed=0)
@@ -57,7 +57,7 @@ test = ImageDataset.from_lists(test_images, test_labels)
 ```
 
 ```python
-labels = ["legitimate", "risk"]
+labels = ["routine", "risk"]
 model = EmbedFitModel.from_pretrained(
     "dummy/tiny",                 # untrained offline CNN for this demo; for real images use e.g.
                                   # "torchvision/resnet18" (needs the torchvision extra)
@@ -130,7 +130,7 @@ trainer.evaluate(test)
 from embedfit.data import ImageSample
 from embedfit.sampling import RelationshipRule
 
-train_groups = [f"group-{i // 4}" for i in range(len(train_images))]   # e.g. a shared account
+train_groups = [f"group-{i // 4}" for i in range(len(train_images))]   # e.g. a shared source
 train = ImageDataset([                     # from_lists cannot set group_id
     ImageSample(image, label, group_id=group)
     for image, label, group in zip(train_images, train_labels, train_groups)
@@ -219,9 +219,9 @@ Branching, commit, and documentation conventions are in [`CONTRIBUTING.md`](CONT
 - document-layout transformers
 - VLM/LLM reasoning
 - object detection / segmentation
-- automatic check-field detection
+- automatic document-field detection
 - production vector databases
-- fraud decision-engine orchestration
+- decision-engine orchestration
 - large-scale distributed training
 
 ## License

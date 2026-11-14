@@ -54,7 +54,7 @@ A near-duplicate of the same original item should not count as evidence that the
 index.fit(embeddings, ids=None, metadata=None, groups=None)
 ```
 
-`embeddings` is a finite `[N, D]` float matrix with `N >= 1`. `ids` holds one unique hashable identifier per row and defaults to `0..N-1`; identifiers (and group ids) match on type and value, like labels elsewhere in the library, so `0`, `False`, and `"0"` are different identifiers. Values are stored as float32; a float64 value too large for float32 is rejected with the other non-finite values. `metadata` holds one mapping, or `None`, per row, kept as a read-only shallow copy and returned unchanged with its item; it is never inspected, logged, or used for ranking. `groups` names the underlying thing a row came from — the same physical document, customer, or session — and `None` means the row belongs to no group. Fitting again replaces everything.
+`embeddings` is a finite `[N, D]` float matrix with `N >= 1`. `ids` holds one unique hashable identifier per row and defaults to `0..N-1`; identifiers (and group ids) match on type and value, like labels elsewhere in the library, so `0`, `False`, and `"0"` are different identifiers. Values are stored as float32; a float64 value too large for float32 is rejected with the other non-finite values. `metadata` holds one mapping, or `None`, per row, kept as a read-only shallow copy and returned unchanged with its item; it is never inspected, logged, or used for ranking. `groups` names the underlying thing a row came from — the same physical document, source, or session — and `None` means the row belongs to no group. Fitting again replaces everything.
 
 ### Ordering
 

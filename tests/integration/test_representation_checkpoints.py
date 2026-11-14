@@ -97,7 +97,7 @@ def test_end_to_end_checkpoints_hold_an_unfitted_linear_head(tmp_path):
 
 def test_checkpoints_contain_no_pickles_and_no_training_data(tmp_path):
     images, labels = make_bar_images(6, num_classes=3, seed=0)
-    secret = {"account_number": "000123456789"}
+    secret = {"secret_id": "000123456789"}
     train = ImageDataset(
         [
             {"image": image, "label": label, "sample_id": f"sid-{i}-77", "metadata": secret}
@@ -110,7 +110,7 @@ def test_checkpoints_contain_no_pickles_and_no_training_data(tmp_path):
     trainer.save_model()
     for path in (p for p in tmp_path.rglob("*") if p.is_file()):
         content = path.read_bytes()
-        for forbidden in (b"000123456789", b"account_number", b"sid-", str(tmp_path).encode()):
+        for forbidden in (b"000123456789", b"secret_id", b"sid-", str(tmp_path).encode()):
             assert forbidden not in content, path
         if path.suffix == ".json":
             json.loads(content)

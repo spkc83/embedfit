@@ -2,14 +2,14 @@
 
 ## Why rare-event evaluation differs
 
-In deposit-risk scenarios, a model can have excellent accuracy while capturing little fraud.
+In rare-positive review scenarios, a model can have excellent accuracy while capturing few positives.
 
 Prioritize:
 
 - PR-AUC
 - recall at operational FPR
 - precision / recall at review capacity
-- dollar-weighted capture
+- value-weighted capture
 
 ## Recall at fixed FPR
 
@@ -19,7 +19,7 @@ Tied scores are handled deterministically; see [Conventions](#conventions-implem
 
 ## Review-rate metrics
 
-If the operation can review 1% of deposits:
+If the operation can review 1% of items:
 
 ```text
 sort by risk descending
@@ -29,13 +29,13 @@ compute precision / recall
 
 The rounding is defined once, in `review_count`, which every review-rate metric and `select_threshold` use; see [Conventions](#conventions-implemented-in-embedfitevaluation).
 
-## Dollar recall
+## Value-weighted recall (`dollar_recall`)
 
 ```text
-captured fraud amount / total fraud amount
+captured positive amount / total positive amount
 ```
 
-Only fraudulent examples contribute to numerator/denominator.
+Only positive examples contribute to numerator/denominator.
 
 Negative amounts are rejected with `ConfigurationError`.
 

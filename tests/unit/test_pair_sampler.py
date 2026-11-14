@@ -19,7 +19,7 @@ def make_dataset(per_class=(10, 6, 4)) -> ImageDataset:
                     f"{position}.png",
                     f"c{class_index}",
                     sample_id=f"s{position}",
-                    group_id=f"ring{position % 5}",
+                    group_id=f"group{position % 5}",
                     metadata={"template": position % 2},
                 )
             )

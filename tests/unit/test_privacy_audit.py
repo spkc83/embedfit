@@ -217,7 +217,7 @@ class TestTheAuditItself:
     @pytest.mark.parametrize(
         "expression, acceptable",
         [
-            ("sample.metadata['acct']", False),
+            ("sample.metadata['secret_id']", False),
             ("record", False),
             ("image", False),
             ("self.metadata", False),
@@ -236,7 +236,7 @@ class TestTheAuditItself:
 def test_unknown_label_error_names_the_type_not_the_value():
     mapping = LabelMapping(["legitimate", "risk"])
     with pytest.raises(ConfigurationError) as excinfo:
-        mapping.encode(["legitimate", "acct-99887766"])
+        mapping.encode(["legitimate", "secret-99887766"])
     message = str(excinfo.value)
     assert "99887766" not in message
     assert "type str" in message and "['legitimate', 'risk']" in message
@@ -245,7 +245,7 @@ def test_unknown_label_error_names_the_type_not_the_value():
 @pytest.mark.parametrize("content", [None, b"this is not an image"])
 def test_image_file_paths_never_reach_a_traceback_or_a_log(tmp_path, caplog, content):
     """The cause of a file error names the path, so it must not be chained."""
-    path = tmp_path / "acct-99887766-routing-0210.png"
+    path = tmp_path / "secret-99887766-ref-0210.png"
     if content is not None:
         path.write_bytes(content)
     try:
@@ -259,12 +259,12 @@ def test_image_file_paths_never_reach_a_traceback_or_a_log(tmp_path, caplog, con
 
 
 def test_skipping_unreadable_images_names_no_file_or_label(tmp_path, caplog):
-    secret = tmp_path / "acct-99887766-routing-0210.png"
+    secret = tmp_path / "secret-99887766-ref-0210.png"
     secret.write_bytes(b"this is not an image")
     records = [
-        {"image": secret, "label": "acct-99887766"},
-        {"image": tmp_path / "acct-99887766-missing.png", "label": "acct-99887766"},
-        {"image": b"acct-99887766", "label": "acct-99887766"},
+        {"image": secret, "label": "secret-99887766"},
+        {"image": tmp_path / "secret-99887766-missing.png", "label": "secret-99887766"},
+        {"image": b"secret-99887766", "label": "secret-99887766"},
     ]
     with caplog.at_level(logging.DEBUG):
         dataset = ImageDataset(records, on_corrupt_image="skip")

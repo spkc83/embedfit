@@ -2,15 +2,15 @@
 
 ## Threat model
 
-Reference deployments may process financial document images containing:
+Reference deployments may process document images containing:
 
-- account numbers
-- routing numbers
+- personal identifiers
+- reference numbers
 - signatures
 - names
 - addresses
-- transaction amounts
-- institution identifiers
+- monetary or other values
+- organisation identifiers
 
 Treat image and metadata content as potentially sensitive.
 
@@ -39,7 +39,7 @@ Validation PR-AUC: 0.42
 Unsafe:
 
 ```text
-Failed row: {"account_number": "...", ...}
+Failed row: {"secret_id": "...", ...}
 ```
 
 ## Metadata
@@ -65,7 +65,7 @@ It must not include examples or identifiers unless a user explicitly implements 
 
 Repository examples must use generated/synthetic images only.
 
-Do not commit real checks or realistic account/routing numbers.
+Do not commit real documents or realistic identifiers.
 
 Benchmark scripts in `benchmarks/` may use public research datasets. They download the data at run time into the repository's git-ignored `.cache/` folder, and keep intermediate run output in the git-ignored `.runs/` folder; only aggregate metrics are committed.
 

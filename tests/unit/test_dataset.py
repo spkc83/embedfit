@@ -59,7 +59,10 @@ def test_map_style_torch_dataset_is_accepted(bar_dataset):
     "records, match",
     [
         ([{"image": "a.png"}], r"Record 0 is missing required keys: \['label'\]"),
-        ([{"image": "a.png", "label": 1, "acct": "12345678"}], r"unknown keys \['acct'\]"),
+        (
+            [{"image": "a.png", "label": 1, "secret_id": "12345678"}],
+            r"unknown keys \['secret_id'\]",
+        ),
         ([("a.png", 1)], "Record 0 must be an ImageSample or a mapping, got tuple"),
         (iter([]), "must be a sequence"),
     ],
@@ -71,10 +74,10 @@ def test_invalid_records(records, match):
 
 def test_errors_and_reprs_never_show_record_values():
     with pytest.raises(ConfigurationError) as excinfo:
-        ImageDataset([{"image": "a.png", "label": 1, "acct": "12345678"}])
+        ImageDataset([{"image": "a.png", "label": 1, "secret_id": "12345678"}])
     assert "12345678" not in str(excinfo.value)
 
-    sample = ImageSample("check-0099.png", "risk", amount=9876.5, metadata={"acct": "12345678"})
+    sample = ImageSample("item-0099.png", "risk", amount=9876.5, metadata={"secret_id": "12345678"})
     for text in (repr(sample), repr(ImageDataset([sample]))):
         assert not any(secret in text for secret in ("0099", "risk", "9876", "12345678"))
     assert "metadata" in repr(sample)
@@ -115,13 +118,13 @@ class TestSkipCorruptImages:
     def records(self, tmp_path):
         image = Image.new("RGB", (8, 8))
         image.save(tmp_path / "ok.png")
-        (tmp_path / "acct-99887766.png").write_bytes(b"not an image")
+        (tmp_path / "secret-99887766.png").write_bytes(b"not an image")
         encoded = io.BytesIO()
         image.save(encoded, "PNG")
         return [
             {"image": tmp_path / "ok.png", "label": "a"},
             {"image": tmp_path / "missing.png", "label": "b"},
-            {"image": tmp_path / "acct-99887766.png", "label": "secret-label"},
+            {"image": tmp_path / "secret-99887766.png", "label": "secret-label"},
             {"image": encoded.getvalue(), "label": "c"},
             {"image": b"not an image", "label": "d"},
             {"image": np.zeros((8, 8, 3), np.float32) + 2.0, "label": "e"},  # Invalid, not a file.

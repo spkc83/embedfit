@@ -204,10 +204,10 @@ Potential later extension:
 
 ```text
 full image ──────────────┐
-payee crop ──────────────┤
-amount crop ─────────────┼→ region encoders → fusion → embedding
+field crop A ────────────┤
+field crop B ────────────┼→ region encoders → fusion → embedding
 signature crop ──────────┤
-MICR crop ───────────────┘
+code-line crop ──────────┘
 ```
 
 v0.1 should only define enough abstraction that future multi-region inputs do not require rewriting every head/evaluator.

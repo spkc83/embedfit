@@ -15,7 +15,7 @@ Status: Accepted
 
 ## Rationale
 
-An implementation that dropped "the top hit" or everything scoring about 1.0 would silently discard genuine near-duplicates, which is exactly the signal a fraud-oriented retrieval evaluation is looking for. Matching on the identifier is unambiguous, and requiring `query_ids` makes the leakage-relevant choice visible at the call site instead of inferring it (`AGENTS.md` rule 6).
+An implementation that dropped "the top hit" or everything scoring about 1.0 would silently discard genuine near-duplicates, which is exactly the signal a risk-oriented retrieval evaluation is looking for. Matching on the identifier is unambiguous, and requiring `query_ids` makes the leakage-relevant choice visible at the call site instead of inferring it (`AGENTS.md` rule 6).
 
 Groups express "the same underlying item photographed twice", which `AGENTS.md` rule 5 forbids counting as evidence of generalisation. They belong to the query rather than to the index, because the same index serves queries from different groups.
 

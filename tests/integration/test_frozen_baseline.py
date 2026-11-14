@@ -226,7 +226,7 @@ def test_head_name_in_arguments_replaces_a_named_head_only(datasets, monkeypatch
 def test_logs_name_phases_and_counts_but_no_sample_content(caplog, logged_messages):
     caplog.set_level(logging.DEBUG, logger="embedfit")
     images, labels = make_bar_images(4, num_classes=2, seed=0)
-    secret = {"account_number": "000123456789"}
+    secret = {"secret_id": "000123456789"}
     train = ImageDataset(
         [
             {
@@ -245,7 +245,7 @@ def test_logs_name_phases_and_counts_but_no_sample_content(caplog, logged_messag
     messages = logged_messages()
     assert "Phase 1/2" in messages and "Phase 2/2" in messages
     assert f"{len(train)} samples" in messages
-    for forbidden in ("000123456789", "account_number", "4321", "sid-", "173", "vertical"):
+    for forbidden in ("000123456789", "secret_id", "4321", "sid-", "173", "vertical"):
         assert forbidden not in messages
 
 
@@ -313,7 +313,7 @@ def test_training_on_image_files_logs_neither_paths_nor_bytes(tmp_path, caplog, 
     images, labels = make_bar_images(4, num_classes=2, seed=0)
     paths = []
     for position, image in enumerate(images):
-        path = tmp_path / f"acct-5550{position}-scan.png"
+        path = tmp_path / f"secret-5550{position}-scan.png"
         image.save(path)
         paths.append(path)
     model = EmbedFitModel.from_pretrained("dummy/tiny", labels=list(BAR_CLASSES[:2]))
@@ -324,7 +324,7 @@ def test_training_on_image_files_logs_neither_paths_nor_bytes(tmp_path, caplog, 
     trainer.evaluate(ImageDataset.from_lists(paths, labels))
     messages = logged_messages()
     assert "8 samples" in messages
-    for forbidden in ("acct-", "5550", ".png", str(tmp_path), "PNG"):
+    for forbidden in ("secret-", "5550", ".png", str(tmp_path), "PNG"):
         assert forbidden not in messages
 
 

@@ -120,7 +120,7 @@ def test_file_path_matches_in_memory_image(tmp_path):
 
 
 def test_missing_and_corrupt_files_raise_without_leaking_the_path(tmp_path):
-    secret_name = "acct-99887766.png"
+    secret_name = "secret-99887766.png"
     with pytest.raises(ImageInputError, match="does not exist") as missing:
         to_rgb_tensor(tmp_path / secret_name)
     (tmp_path / secret_name).write_bytes(b"this is not an image")
@@ -179,7 +179,7 @@ def test_encoded_bytes_match_the_same_file(tmp_path):
 
 def test_corrupt_bytes_raise_without_content_or_cause():
     with pytest.raises(ImageInputError, match="bytes could not be decoded") as excinfo:
-        to_rgb_tensor(b"acct-99887766 is not an image")
+        to_rgb_tensor(b"secret-99887766 is not an image")
     assert "99887766" not in str(excinfo.value)
     assert excinfo.value.__cause__ is None and excinfo.value.__suppress_context__
 
@@ -233,11 +233,11 @@ class TestIsReadable:
             is_readable(tmp_path)
 
         def denied(*args, **kwargs):
-            raise PermissionError(13, "Permission denied", str(tmp_path / "acct-99887766.png"))
+            raise PermissionError(13, "Permission denied", str(tmp_path / "secret-99887766.png"))
 
         monkeypatch.setattr(Image, "open", denied)
         with pytest.raises(ImageInputError, match="could not be opened") as excinfo:
-            is_readable(tmp_path / "acct-99887766.png")
+            is_readable(tmp_path / "secret-99887766.png")
         assert "99887766" not in str(excinfo.value) and excinfo.value.__cause__ is None
 
 

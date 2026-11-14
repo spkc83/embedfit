@@ -314,7 +314,7 @@ def test_results_are_frozen_records(index):
 
 def test_reprs_and_errors_never_reveal_metadata_or_embedding_values():
     built = RetrievalIndex()
-    secret = {"account_number": "000123456789", "payee": "Jane Roe"}
+    secret = {"secret_id": "000123456789", "owner_name": "Jane Roe"}
     embeddings = np.array([[3.5, 0.0], [0.0, 2.25]], dtype=np.float32)
     built.fit(embeddings, ids=["s-1", "s-2"], metadata=[secret, None])
     results = built.search(embeddings[0], k=2)
@@ -327,7 +327,7 @@ def test_reprs_and_errors_never_reveal_metadata_or_embedding_values():
     text = " ".join(
         [repr(results), repr(results[0]), repr(built), str(mismatch.value), str(degenerate.value)]
     )
-    for forbidden in ("000123456789", "account_number", "Jane Roe", "3.5", "9.75", "7.125"):
+    for forbidden in ("000123456789", "secret_id", "Jane Roe", "3.5", "9.75", "7.125"):
         assert forbidden not in text
     assert "<present>" in text and "s-1" in text
 
@@ -364,7 +364,9 @@ class TestBruteForceCosineBackend:
 
 
 def test_retrieval_result_repr_hides_metadata_but_shows_presence():
-    with_metadata = RetrievalResult(id="s-1", score=0.5, rank=1, metadata={"payee": "Jane Roe"})
+    with_metadata = RetrievalResult(
+        id="s-1", score=0.5, rank=1, metadata={"owner_name": "Jane Roe"}
+    )
     without = RetrievalResult(id="s-2", score=0.25, rank=2)
     assert repr(with_metadata) == "RetrievalResult(id='s-1', score=0.5, rank=1, metadata=<present>)"
     assert repr(without) == "RetrievalResult(id='s-2', score=0.25, rank=2, metadata=None)"

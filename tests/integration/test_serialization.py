@@ -113,7 +113,7 @@ def test_unfitted_head_and_label_free_model_round_trip(tmp_path):
 
 def test_bundle_contains_no_pickles_and_no_training_data(data, tmp_path):
     (train_images, train_labels), _ = data
-    secret = {"account_number": "000123456789"}
+    secret = {"secret_id": "000123456789"}
     train = ImageDataset(
         [
             {"image": image, "label": label, "sample_id": f"sid-{i}-77", "metadata": secret}
@@ -127,7 +127,7 @@ def test_bundle_contains_no_pickles_and_no_training_data(data, tmp_path):
 
     for path in (p for p in tmp_path.rglob("*") if p.is_file()):
         content = path.read_bytes()
-        for forbidden in (b"000123456789", b"account_number", b"sid-"):
+        for forbidden in (b"000123456789", b"secret_id", b"sid-"):
             assert forbidden not in content, path
         if path.suffix == ".npz":
             np.load(path, allow_pickle=False).close()  # Raises if any array is pickled.
