@@ -127,7 +127,7 @@ This is the result we did not expect. Mean `knn_pr_auc` over 5 seeds (higher is 
 | RVL-CDIP | 4 | 0.291 | 0.425 | 0.462 | **0.469** | 0.443 |
 | RVL-CDIP | 16 | 0.273 | 0.554 | 0.597 | **0.609** | 0.595 |
 
-The 8-shot rows follow the same pattern and are in the [full benchmark page](https://github.com/spkc83/embedfit/blob/main/docs/benchmarks/contrastive-adaptation.md#rare-positives). Each seed draws a different positive class, so the sample standard deviations over seeds are large: 0.02 to 0.29 on the first three datasets and 0.23 to 0.34 on RVL-CDIP.
+The 8-shot rows follow the same pattern and are in the [full benchmark page](https://github.com/spkc83/embedfit/blob/main/docs/benchmarks/contrastive-adaptation.md#rare-positives). Each seed draws a different positive class, so the sample standard deviations over seeds are large: 0.02 to 0.29 on the first three datasets and 0.23 to 0.33 on RVL-CDIP.
 
 - On Pets, Flowers-102, and DTD, neither contrastive method has lift at any shot count. Both are below `end_to_end` by 0.024 to 0.468. In paired seeds against `end_to_end`, they win 0 of 5 on Pets and Flowers-102, and 1 or 2 of 5 on DTD.
 - On Pets and Flowers-102, both are also below `frozen` at every shot count. After contrastive training, the nearest-positive ranking is worse than with the pretrained embeddings.
