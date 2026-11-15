@@ -13,13 +13,13 @@ Lift on each dataset, with each method's own head for accuracy:
 | `novelty_heldout_pr_auc` | Pets, Flowers-102 | Pets, Flowers-102, RVL-CDIP |
 | `knn_pr_auc` | RVL-CDIP | none |
 
-- **Accuracy.** `ce_supcon` has lift on the three natural-image and texture datasets, and not on RVL-CDIP, where it ties `end_to_end`. With each method's own head, `supcon` has lift on Pets alone. With the same linear head for every method, it also has lift on Flowers-102 and DTD, so its result there depends on the head. On RVL-CDIP it is 0.03 to 0.04 below `end_to_end` with every head. The gain of `ce_supcon` is largest at 4 shots: 0.034 on Pets, 0.012 on DTD, and 0.007 on Flowers-102. It is 0.003 or less at 16 shots.
+- **Accuracy.** `ce_supcon` has lift on the three natural-image and texture datasets, and not on RVL-CDIP, where it ties `end_to_end`. With each method's own head, `supcon` has lift on Pets alone. With the same linear head for every method, it also has lift on Flowers-102 and DTD, so its result there depends on the head. On RVL-CDIP it is 0.03 to 0.04 below `end_to_end` with every head. The gain of `ce_supcon` is largest at 4 shots: 0.034 on Pets, 0.012 on DTD, and 0.007 on Flowers-102. It is 0.003 or less at 16 shots. On DTD, where both ran at 3e-7, `ce_supcon` and `supcon` give almost the same backbone: at the same head their accuracy differs by 0.002 or less in every seed and shot count, and their `unseen_map` and `novelty_heldout_pr_auc` by 0.001 or less. Their different verdicts there come from the head, not the loss: with one head for all methods both have lift at the linear head (2 of 3) and neither at logistic regression (1 of 3).
 - **Unseen classes and novelty.** `novelty_heldout_pr_auc` improves on Pets and Flowers-102, by up to 0.041 and 0.105, and for `ce_supcon` on RVL-CDIP, by up to 0.030. It does not improve on DTD. `unseen_map` has lift for `ce_supcon` on all three of Pets, Flowers-102, and DTD, and for `supcon` on Flowers-102 and DTD, by 0.007 or less. On RVL-CDIP both methods are below `end_to_end` at every shot count.
 - **Rare positives.** On Pets, Flowers-102, and DTD, neither method has lift on `knn_pr_auc` at any shot count. Both are below `end_to_end` by 0.024 to 0.468, and on Pets and Flowers-102 they are also below `frozen`. On RVL-CDIP, `supcon` has lift, but class-balanced batches without the contrastive term give most of the same gain ([Rare positives](#rare-positives)).
 - **Batches.** Class-balanced batches alone do not reproduce the accuracy gain on the first three datasets, or their `knn_pr_auc` loss. Both come with the contrastive methods, which also ran at different learning rates from the control, so the comparison mixes the loss and the rate. On RVL-CDIP, the balanced control has most of the `knn_pr_auc` gain of `supcon`, which ran at 3e-6 against the control's 1e-5.
 - **On Pets, the setting chosen for accuracy is the worst of the `ce_supcon` settings tested for rare positives.** Every tuning and test run in the suite used 500 steps; the step budget was not tuned. On a Pets diagnostic at 500 steps, the contrastive weight that maximises validation accuracy (10) gives the lowest `knn_pr_auc` of the three weights tested, and a short run at a low weight recovers most of the rare-positive loss. Accuracy was not measured at 50 or 150 steps, so the diagnostic does not show what such a run costs in accuracy, and Flowers-102, DTD, and RVL-CDIP were not diagnosed.
 
-The lift rule has no effect-size floor. A difference of 0.002 passes it if the seeds agree, as several cells below do, so "lift" here means a consistent sign, not a large gain.
+The lift rule has no effect-size floor. A difference of 0.002 passes it if the seeds agree, as several cells below do, so "lift" here means a consistent sign, not a large gain. The runs are also not bit-identical on the GPU: a rerun of RVL-CDIP with the same settings and seeds changed individual accuracy and `knn_pr_auc` values by up to 0.002 ([Earlier test runs](#earlier-test-runs)). A verdict that rests on gains of about 0.001, such as `ce_supcon` accuracy on Flowers-102 at 16 shots (+0.001, 5/5), may flip on a rerun.
 
 ## Accuracy
 
@@ -93,7 +93,7 @@ The verdict for `supcon` changes with the head, so the same rule is also given w
 | RVL-CDIP | `supcon` | no, 0 of 3 | no, 0 of 3 | no, 0 of 3 |
 | RVL-CDIP | `ce_supcon` | no, 0 of 3 | no, 0 of 3 | no, 0 of 3 |
 
-On DTD, both contrastive methods have lift with the linear head and not with logistic regression. At 8 and 16 shots, their linear-head accuracy is 0.012 to 0.017 above their logistic-regression accuracy. The gain there depends on the head, not only on the backbone.
+On DTD, both contrastive methods have lift with the linear head and not with logistic regression. At 8 and 16 shots, their linear-head accuracy is 0.012 to 0.016 above their logistic-regression accuracy. The gain there depends on the head, not only on the backbone.
 
 ### Weight interpolation
 
@@ -114,7 +114,7 @@ Test accuracy at each interpolation weight, at each method's own head, for 4 / 8
 | RVL-CDIP | `supcon` | 0.384 / 0.417 / 0.447 | 0.407 / 0.448 / 0.479 | 0.409 / 0.454 / 0.495 |
 | RVL-CDIP | `ce_supcon` | 0.405 / 0.444 / 0.487 | 0.430 / 0.473 / 0.516 | 0.430 / 0.481 / 0.532 |
 
-On the first three datasets, validation chose a weight below 1 in three cases only: `end_to_end` (0.5) and `supcon` (0.75) on Pets at 4 shots, and `supcon` (0.75) on Flowers-102 at 8 shots. On RVL-CDIP it chose a weight below 1 in eight of nine cases: 0.75 for `ce_supcon` at every shot count, 0.75 for `end_to_end` at 4 and 16 shots, and 0.5, 0.75, and 0.75 for `supcon`. With those weights, every verdict in the own-heads column above stays the same, among the methods in the lift rule. On RVL-CDIP, `ce_supcon` then has lift at 8 shots only (+0.003, 4/5), one of three.
+On the first three datasets, validation chose a weight below 1 in three cases only: `end_to_end` (0.5) and `supcon` (0.75) on Pets at 4 shots, and `supcon` (0.75) on Flowers-102 at 8 shots. For `end_to_end` on Flowers-102 at 8 shots, weights 0.5 and 1 tie on validation; the tie went to 1, and weight 0.5 would change no verdict. On RVL-CDIP it chose a weight below 1 in eight of nine cases: 0.75 for `ce_supcon` at every shot count, 0.75 for `end_to_end` at 4 and 16 shots, and 0.5, 0.75, and 0.75 for `supcon`. With those weights, every verdict in the own-heads column above stays the same, among the methods in the lift rule. On RVL-CDIP, `ce_supcon` then has lift at 8 shots only (+0.003, 4/5), one of three.
 
 ## Unseen classes and novelty
 
@@ -218,9 +218,9 @@ A diagnostic on Pets varies the step budget and the contrastive weight, on the v
 
 ## Sampler control
 
-`end_to_end balanced` is `end_to_end` with the class-balanced batches of `supcon` and `ce_supcon`, tuned over the same rates. On Pets, Flowers-102, and DTD, its accuracy is within 0.002 of `end_to_end` in all nine cells at the linear head, and within 0.003 at logistic regression. So the accuracy gain does not come from the batches. On Pets and DTD its `unseen_map`, `novelty_heldout_pr_auc`, and `knn_pr_auc` are close to `end_to_end` as well.
+`end_to_end balanced` is `end_to_end` with the class-balanced batches of `supcon` and `ce_supcon`, tuned over the same four rates as `ce_supcon` (3e-7 to 1e-5; `supcon` was also tried at 3e-5). On Pets, Flowers-102, and DTD, its accuracy is within 0.002 of `end_to_end` in all nine cells at the linear head, and within 0.003 at logistic regression. So the accuracy gain does not come from the batches. On Pets and DTD its `unseen_map`, `novelty_heldout_pr_auc`, and `knn_pr_auc` are close to `end_to_end` as well.
 
-On Flowers-102, `novelty_heldout_pr_auc` rises by about 0.02 at 8 shots, in 5 of 5 seeds. `knn_pr_auc` rises by 0.017 at 8 shots and 0.011 at 16 shots, but in 1 of 5 seeds only: a single seed gains 0.105 and 0.056, and the others are unchanged or lower. That rise is inconsistent. Tuning chose different rates for the two runs there, 1e-6 with balanced batches and 3e-7 without, so these differences mix the batches and the rate. They are in the direction opposite to the `knn_pr_auc` loss of the contrastive methods, so balanced batches do not explain that loss.
+On Flowers-102, `novelty_heldout_pr_auc` rises by about 0.016 at 8 shots, in 5 of 5 seeds. `knn_pr_auc` rises by 0.017 at 8 shots and 0.011 at 16 shots, but in 1 of 5 seeds only: a single seed gains 0.105 and 0.056, and the others are unchanged or lower. That rise is inconsistent. Tuning chose different rates for the two runs there, 1e-6 with balanced batches and 3e-7 without, so these differences mix the batches and the rate. They are in the direction opposite to the `knn_pr_auc` loss of the contrastive methods, so balanced batches do not explain that loss.
 
 On RVL-CDIP, `end_to_end` and the control both use 1e-5. Accuracy stays within 0.006 of `end_to_end` at both heads, but `knn_pr_auc` rises by 0.037 to 0.072 (see [Rare positives](#rare-positives)). There the batches carry most of the rare-positive gain of `supcon`, which ran at 3e-6, so the remaining gap mixes the loss and the rate.
 
@@ -242,7 +242,7 @@ The contrastive methods ran at the rates their own tuning chose, which differ fr
 
 ### Tuning
 
-Rates and the contrastive weight were chosen on the validation split, before the test runs, over seeds 0 and 1 and all three shot counts, by mean accuracy of the fully trained model at each method's own head. `end_to_end` and `supcon` reuse an earlier sweep with the same settings.
+Rates and the contrastive weight were chosen on the validation split, over seeds 0 and 1 and all three shot counts, by mean accuracy of the fully trained model at each method's own head. `end_to_end` and `supcon` reuse an earlier sweep with the same settings. Some test results already existed when rates were chosen ([Earlier test runs](#earlier-test-runs)).
 
 | Dataset | `end_to_end` | balanced | `supcon` | `ce_supcon` rate | `ce_supcon` weight |
 |---|---|---|---|---|---|
@@ -270,9 +270,13 @@ Mean validation accuracy for `ce_supcon`:
 
 On Pets, Flowers-102, and DTD, the chosen `ce_supcon` setting is the same corner of the grid: the lowest rate and the highest weight. At that rate, weight 1 is within 0.002 of weight 10 on all three. RVL-CDIP is the only dataset away from that corner, at the opposite one: the highest `ce_supcon` rate, 1e-5, and the lowest weight, 0.1, with accuracy rising with the rate at every weight. `end_to_end` also chose 1e-5 there, and its accuracy fell at 3e-5 (0.4680 against 0.4961, earlier sweep), but `ce_supcon` was not tried above 1e-5. On every dataset, better `ce_supcon` settings may lie outside the grid.
 
-## RVL-CDIP and the earlier runs
+## Earlier test runs
 
-An earlier RVL-CDIP run, made before the balanced control existed, showed `supcon` improving rare-positive retrieval over `end_to_end`. That run used the same settings, rates, and seeds as the `end_to_end` and `supcon` arms here, and gives the same `knn_pr_auc` means to three decimals (individual values differ by up to 0.002), so this suite reproduces it rather than confirming it independently. The new information is the control: `end_to_end` with balanced batches gets most of the gain, and `supcon`, at a different rate (3e-6 against 1e-5), is above that control by 0.012 or less, in 2 or 3 of 5 seeds. The data do not show that the contrastive loss causes the gain. [RVL-CDIP with DINOv2-small](rvl-cdip-dinov2-small.md) is a separate benchmark at 224 px with another budget, and its numbers are not comparable with the tables here.
+The test split was not kept for one final run. Before `ce_supcon` and the balanced control were added to the study, earlier runs on all four datasets evaluated `frozen`, `end_to_end`, `supcon`, and a pair-based method (`pair`) on the test split, with seeds 0 to 4 and the same training settings. Their `end_to_end` and `supcon` rates are the ones used here. On Pets and DTD, a first test run used 3e-6 for both methods; the rate grid was then extended down to 3e-7 on validation and the rates were chosen again. The lift rule was fixed before any test run. But the Pets and DTD rates of `end_to_end` and `supcon` were chosen after a test run of those methods, and on every dataset `ce_supcon` and the control were tuned after the test results of the other methods were known.
+
+The `end_to_end` and `supcon` arms here reproduce those earlier runs rather than confirming them independently. On Pets, Flowers-102, and DTD, accuracy and `knn_pr_auc` agree to within 0.001 per value. On RVL-CDIP, they give the same `knn_pr_auc` means to three decimals, and individual accuracy and `knn_pr_auc` values differ by up to 0.002. The new information is `ce_supcon` and the control. On RVL-CDIP, the earlier run showed `supcon` improving rare-positive retrieval over `end_to_end`; here `end_to_end` with balanced batches gets most of that gain, and `supcon`, at a different rate (3e-6 against 1e-5), is above the control by 0.012 or less, in 2 or 3 of 5 seeds. The data do not show that the contrastive loss causes the gain. [RVL-CDIP with DINOv2-small](rvl-cdip-dinov2-small.md) is a separate benchmark at 224 px with another budget, and its numbers are not comparable with the tables here.
+
+PatchCamelyon was also run earlier under the same rule, with `supcon` and `pair` but without `ce_supcon` or the control. Neither method had lift on accuracy or on `knn_pr_auc`, and PatchCamelyon is not part of this suite.
 
 ## Limits
 
@@ -285,6 +289,9 @@ An earlier RVL-CDIP run, made before the balanced control existed, showed `supco
 - `benchmarks/embedding_quality.py` scores only each method's own head, so head-based `pr_auc` is not available with one head for all methods. The primary embedding metrics use no head.
 - The diagnostic covers one dataset, two seeds, and the validation split, at fixed rates tuned for classification. It measures the `rare_positive` metrics only, not accuracy, so the accuracy cost of 50 or 150 steps is unknown.
 - Validation for `end_to_end` and `supcon` comes from an earlier sweep, whose results record no code commit.
+- The test split was used before the final runs ([Earlier test runs](#earlier-test-runs)). On Pets and DTD the rates of `end_to_end` and `supcon` were chosen again after a first test run, and `ce_supcon` and the control were tuned after test results for the other methods existed. The `end_to_end` and `supcon` arms repeat the earlier runs, so they are not an independent confirmation.
+- DINOv2's pretraining data, LVD-142M, was built partly by retrieving web images close to the training splits of Oxford-IIIT Pets (trainval), Flowers-102, and DTD ([Oquab et al., 2023](https://arxiv.org/abs/2304.07193), Table 15). The "unseen" classes of the `open_set` task are therefore new to the fine-tuning, not to the backbone. This may explain why `frozen` already reaches an `unseen_map` of 0.967 on Pets and 0.978 on Flowers-102. It affects how to read the unseen-class results, not the paired comparisons between methods.
+- Three smaller issues apply equally to every method. Rates were tuned on validation accuracy over all classes, including the classes that the `open_set` task later holds out. RVL-CDIP used the `natural` augmentation, whose horizontal flips mirror document pages. The DTD pool has 3 pairs of identical images, and only exact copies between the pool and the evaluated split are dropped; near-duplicates across splits are not detected.
 
 ## Cost
 
