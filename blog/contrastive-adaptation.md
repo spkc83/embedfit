@@ -4,7 +4,7 @@ Intended title: "Contrastive Fine-Tuning for Few-Shot Vision: A Test on Four Dom
 Set the title and the thumbnail in the web editor. FILL ME: thumbnail image.
 -->
 
-You have a pretrained vision backbone and a few labelled images per class. Should you fine-tune it with a supervised contrastive loss? We tested this on four image domains with [EmbedFit](https://github.com/spkc83/embedfit), with a decision rule fixed in advance. The protocol deviated from that rule in two ways: the step budget was not tuned, and the learning-rate grids differ between methods (see [limitations](#limitations)).
+You have a pretrained vision backbone and a few labelled images per class. Should you fine-tune it with a supervised contrastive loss? We tested this on four image domains with [EmbedFit](https://github.com/spkc83/embedfit), with a decision rule fixed in advance. The protocol deviated from that plan in three ways: the step budget was not tuned, the learning-rate grids differ between methods, and the test split was used by earlier runs before the final ones (see [limitations](#limitations)).
 
 The short answer:
 
@@ -13,7 +13,7 @@ The short answer:
 - On three of four datasets, the contrastive methods made nearest-neighbour search for rare positives worse than plain fine-tuning (`end_to_end`). On two of them, worse than the frozen pretrained backbone.
 - Where contrastive training did help rare positives (RVL-CDIP), class-balanced batches with plain cross-entropy gave most of the same gain.
 
-Read the [limitations](#limitations) before you act on any of this. The study has one backbone, one input size, settings at the edge of the tuning grid, a fixed 500-step budget, and a lift rule with no minimum effect size.
+Read the [limitations](#limitations) before you act on any of this. The study has one backbone, one input size, settings at the edge of the tuning grid, a fixed 500-step budget, a test split that earlier runs had already used, and a lift rule with no minimum effect size.
 
 ## The question
 
@@ -26,7 +26,7 @@ There are four common ways to adapt a pretrained backbone with few labels:
 | `supcon` | Fine-tune the backbone with a supervised contrastive loss ([SupCon](https://arxiv.org/abs/2004.11362)) instead of cross-entropy, then fit a logistic regression. |
 | `ce_supcon` | Fine-tune with cross-entropy plus a weighted SupCon term: `CE + w · SupCon`. |
 
-The joint form follows [Gunel et al.](https://arxiv.org/abs/2011.01403), who report few-shot gains from training a supervised contrastive term together with cross-entropy. The form `CE + w · SupCon`, with the cross-entropy at full weight, is the one of [Core-tuning](https://arxiv.org/abs/2102.06605). The design is in [ADR 0022](https://github.com/spkc83/embedfit/blob/main/docs/adrs/0022-joint-cross-entropy-and-supervised-contrastive-training.md).
+The joint form follows [Gunel et al.](https://arxiv.org/abs/2011.01403), who report few-shot gains for language models from training a supervised contrastive term together with cross-entropy. The form `CE + w · SupCon`, with the cross-entropy at full weight, is the one of [Core-tuning](https://arxiv.org/abs/2102.06605). The design is in [ADR 0022](https://github.com/spkc83/embedfit/blob/main/docs/adrs/0022-joint-cross-entropy-and-supervised-contrastive-training.md).
 
 We asked two things. Does contrastive adaptation beat the two standard baselines, `frozen` and `end_to_end`? And does it give better embeddings, not only a better classifier?
 
@@ -43,7 +43,7 @@ We asked two things. Does contrastive adaptation beat the two standard baselines
 | Control | `end_to_end` with the class-balanced batches of the contrastive methods, tuned on its own |
 | Hardware | One NVIDIA TITAN V |
 
-**Tuning.** The learning rate, and for `ce_supcon` the contrastive weight, were chosen on the validation split before any test run. Tuning used seeds 0 and 1, all three shot counts, and mean accuracy. The grid was rates 3e-7, 1e-6, 3e-6, and 1e-5 (and 3e-5 for `end_to_end` and `supcon`), and weights 0.1, 1, and 10. The test split was used once.
+**Tuning.** The learning rate, and for `ce_supcon` the contrastive weight, were chosen on the validation split. Tuning used seeds 0 and 1, all three shot counts, and mean accuracy. The grid was rates 3e-7, 1e-6, 3e-6, and 1e-5 (and 3e-5 for `end_to_end` and `supcon`), and weights 0.1, 1, and 10. The test split was not kept for one final run: earlier test runs exist (see [limitations](#limitations)).
 
 **Metrics.** Four primary metrics, fixed in advance:
 
@@ -54,7 +54,7 @@ We asked two things. Does contrastive adaptation beat the two standard baselines
 
 The embedding metrics use no classifier head. On Flowers-102 the held-out-class metrics run at 4 and 8 shots only.
 
-**The lift rule.** We fixed it before the runs. A method has *lift* on a metric at a shot count when both hold:
+**The lift rule.** We fixed it before the runs of this study. A method has *lift* on a metric at a shot count when both hold:
 
 1. its mean over the 5 seeds is strictly above the means of `end_to_end` and `frozen`;
 2. it beats `end_to_end` in at least 4 of the 5 paired seeds.
@@ -103,6 +103,8 @@ Difference from `end_to_end` at each shot count, with the number of seeds out of
 The gains shrink as the shot count grows. At 16 shots they are 0.003 or less.
 
 The verdict for `supcon` depends on the head. With the same linear head for every method, `supcon` also has lift on Flowers-102 and DTD. On DTD, both contrastive methods have lift with the linear head and not with logistic regression. If you compare methods, compare them at the same head as well as at their own.
+
+On DTD, where both ran at 3e-7, `ce_supcon` and `supcon` give backbones that classify almost identically. At the same head their accuracy differs by about 0.002 at most (4 test images) in every seed and shot count. Their `knn_pr_auc` differs more, by up to 0.024. So the lift of `ce_supcon` and not `supcon` on DTD in the table above comes from the head, not the loss. With one head for both, they get the same verdict.
 
 Weight interpolation (WiSE-FT), with the weight chosen on validation, does not change these verdicts. On RVL-CDIP it gives `ce_supcon` lift at 8 shots only, which is not enough for lift on the dataset.
 
@@ -206,29 +208,32 @@ Please read these before you act on the results.
 
 - **Tuning at the edge of the grid.** The chosen `ce_supcon` setting is at a corner of the grid on every dataset: the lowest rate and highest weight on Pets, Flowers-102, and DTD, and the highest rate and lowest weight on RVL-CDIP. Better settings may lie outside the grid. On RVL-CDIP, `ce_supcon` ran at weight 0.1, not the weight 10 used elsewhere, and the Pets diagnostic does not cover that rate.
 - **The step budget was not tuned.** Every tuning and test run used 500 steps. The lift rule said the step budget would be tuned per dataset with the rate. The diagnostic shows the budget matters for rare positives on Pets.
-- **Gains are small, and the rule has no effect-size floor.** Apart from Pets at 4 shots, the accuracy gains of `ce_supcon` are about 1 point or less. On Flowers-102 they are 0.007 or less, on scores already near 0.98. "Lift" means a consistent sign over seeds, not a large effect.
+- **Gains are small, and the rule has no effect-size floor.** Apart from Pets at 4 shots, the accuracy gains of `ce_supcon` are 1.2 points or less. On Flowers-102 they are 0.007 or less, on scores already near 0.98. "Lift" means a consistent sign over seeds, not a large effect. Reruns are also not exact. A rerun of RVL-CDIP at a later commit, with the same settings and seeds, changed individual accuracy and `knn_pr_auc` values by up to 0.002, `end_to_end` `unseen_map` values by up to 0.010, and `novelty_heldout_pr_auc` values by up to 0.006. On the other three datasets the embedding metrics repeated exactly and accuracy agreed within 0.0005. A per-shot verdict that rests on gains of about 0.001, such as `ce_supcon` on Flowers-102 at 16 shots (+0.001, 5/5), may flip on a rerun.
 - **One backbone, one resolution.** All results are for DINOv2-small at 112 px. At that size the fine detail of Flowers-102 and DTD, and the text of RVL-CDIP pages, is reduced for every method. Other backbones or sizes may behave differently.
 - **The rate confound in the control comparison.** The contrastive methods and the control ran at different rates on most datasets (`end_to_end` / control / `supcon` / `ce_supcon`): Pets 1e-6 / 1e-6 / 1e-6 / 3e-7, Flowers-102 3e-7 / 1e-6 / 1e-6 / 3e-7, DTD 1e-6 / 1e-6 / 3e-7 / 3e-7, RVL-CDIP 1e-5 / 1e-5 / 3e-6 / 1e-5. Any comparison with the control mixes the loss and the rate.
 - **Tuned on accuracy only.** The embedding results describe settings chosen for accuracy, not the best a contrastive method can do on each embedding task.
 - **A small diagnostic.** One dataset, two seeds, the validation split, fixed rates, and rare-positive metrics only.
 - **Rate grids differ.** `ce_supcon` and the control were tuned over four rates. `end_to_end` and `supcon` were also tuned over 3e-5, in an earlier sweep with the same settings, whose results record no code commit.
 - **Four datasets, five seeds.** Other domains, and more seeds, may give different verdicts.
-- **RVL-CDIP repeats an earlier run.** Its `end_to_end` and `supcon` arms use the same settings, rates, and seeds as an earlier run, so they reproduce it rather than confirm it independently. The new information is the control.
+- **The test split was used before the final runs.** Before `ce_supcon` and the control were tuned or run, earlier runs on all four datasets evaluated `frozen`, `end_to_end`, `supcon`, and a pair-based method (`pair`, not reported here) on the test split. The `end_to_end` and `supcon` arms here use the same rates and seeds and repeat those runs rather than confirm them independently. On Pets and DTD, a first test run came before the rate grid was extended down to 3e-7 and the rates were chosen again. The lift rule was fixed before any test run of this study, and `ce_supcon` and the control were tuned when the other methods' test results were known. An older RVL-CDIP benchmark at 224 px had also scored `frozen`, `end_to_end`, and `supcon` on the same test sample, with other settings, before the rule was fixed.
+- **PatchCamelyon was left out.** It was run earlier under the same rule, with `supcon` and `pair` but without `ce_supcon` or the control. Neither method had lift, and it is not part of this study.
+- **The backbone has seen these domains.** DINOv2's pretraining set, LVD-142M, was built partly by retrieving web images close to the training splits of Oxford-IIIT Pets, Flowers-102, and DTD ([Oquab et al., 2023](https://arxiv.org/abs/2304.07193), Table 15). So the "unseen" classes are new to the fine-tuning, not to the backbone. This may be why `frozen` already reaches an `unseen_map` of about 0.97 on Pets and 0.98 on Flowers-102. It affects how to read those results, not the paired comparisons between methods.
+- **Smaller issues, the same for every method.** Rates were tuned on validation accuracy over all classes, including those later held out for the unseen-class metrics. RVL-CDIP used the natural-image augmentation, whose horizontal flips mirror document pages. The DTD pool has 3 pairs of identical images, and only exact copies between the pool and the evaluated split are dropped; near-duplicates are not detected.
 
 ## Reproducing it
 
 The code is at [github.com/spkc83/embedfit](https://github.com/spkc83/embedfit). The full benchmark page, with every table, the tuning grid, and the per-dataset rates, is [`docs/benchmarks/contrastive-adaptation.md`](https://github.com/spkc83/embedfit/blob/main/docs/benchmarks/contrastive-adaptation.md).
 
-The aggregate results are committed in the repository, one file per run, with each run's configuration and code commit. They hold per-seed metrics only, no images and no per-sample values:
+The aggregate results are committed in the repository, one file per run, with each run's configuration and code commit. The tuning runs, the earlier test runs, and the PatchCamelyon run are not committed. The files hold per-seed metrics only, no images and no per-sample values:
 
 - `benchmarks/results/contrastive_<dataset>_test.json`: accuracy of the four methods.
 - `benchmarks/results/contrastive_<dataset>_balanced_test.json`: accuracy of the control.
 - `benchmarks/results/contrastive_<dataset>_embedding.json` and `..._balanced_embedding.json`: the embedding metrics. On Flowers-102 they are split by task into `_embedding_open_set.json` and `_embedding_rare_positive.json`.
 - `benchmarks/results/contrastive_pets_diagnostic_*.json`: the Pets diagnostic.
 
-Here `<dataset>` is `pets`, `flowers`, `dtd`, or `rvl_cdip`.
+In these file names, `<dataset>` is `pets`, `flowers`, `dtd`, or `rvl_cdip`.
 
-The commands for Pets follow. For another dataset, change `--dataset` and use its rates and weight from the benchmark page.
+The commands for Pets follow. For another dataset, change `--dataset` to `flowers`, `dtd`, or `rvl-cdip`, and use its rates and weight from the benchmark page. On Flowers-102, run `open_set` with `--shots 4 8` and `rare_positive` with all three shot counts, as separate commands.
 
 ```bash
 git clone https://github.com/spkc83/embedfit.git
